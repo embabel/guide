@@ -24,9 +24,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 @EnableAgentShell
-@EnableAgents(loggingTheme = LoggingThemes.STAR_WARS)
-class ProjectNameApplication {
+@EnableAgents(loggingTheme = LoggingThemes.SEVERANCE)
+class GuideApplication {
     public static void main(String[] args) {
-        SpringApplication.run(ProjectNameApplication.class, args);
+        SpringApplication.run(GuideApplication.class, args);
     }
 }
