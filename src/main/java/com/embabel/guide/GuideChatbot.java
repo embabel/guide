@@ -43,6 +43,7 @@ public class GuideChatbot extends InMemoryChatbot {
         ));
         logger.info("Ingestion result: {}\nChatbot ready...", ingestionResult);
         var embabelApiReference = new ApiReference(
+                "Embabel Agent API: Core",
                 new ClassGraphApiReferenceExtractor().fromProjectClasspath(
                         "embabel-agent",
                         Set.of("com.embabel.agent"),

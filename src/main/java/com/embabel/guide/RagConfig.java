@@ -1,7 +1,9 @@
 package com.embabel.guide;
 
 import com.embabel.agent.rag.lucene.LuceneRagService;
-import com.embabel.common.ai.model.EmbeddingService;
+import com.embabel.common.ai.model.DefaultModelSelectionCriteria;
+import com.embabel.common.ai.model.ModelProvider;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -9,10 +11,16 @@ import org.springframework.context.annotation.Configuration;
 class RagConfig {
 
     @Bean
-    LuceneRagService ragService(EmbeddingService embeddingService) {
+    LuceneRagService ragService(ModelProvider modelProvider) {
+        var embeddingService = modelProvider.getEmbeddingService(DefaultModelSelectionCriteria.INSTANCE);
+        LoggerFactory.getLogger(LuceneRagService.class).info(
+                "Using embedding service {} with dimensions {}",
+                embeddingService.getName(),
+                embeddingService.getModel().dimensions()
+        );
         return new LuceneRagService(
                 "docs",
-                "data/index.md",
+                "Reference documentation for Embabel",
                 embeddingService.getModel()
         );
     }
