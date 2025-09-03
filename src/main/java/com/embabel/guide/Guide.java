@@ -13,23 +13,21 @@ import java.util.List;
  */
 public class Guide implements ChatSession {
 
-    private final String sessionId;
     private final AiBuilder aiBuilder;
     private final List<LlmReference> references;
+    private final GuideConfig guideConfig;
 
     private Conversation conversation = new InMemoryConversation();
 
     public Guide(AiBuilder aiBuilder,
-                 List<LlmReference> references
+                 List<LlmReference> references,
+                 GuideConfig guideConfig
     ) {
         this.references = references;
-        this.sessionId = java.util.UUID.randomUUID().toString();
         this.aiBuilder = aiBuilder;
+        this.guideConfig = guideConfig;
     }
 
-    public String getSessionId() {
-        return sessionId;
-    }
 
     @NotNull
     @Override
@@ -45,7 +43,9 @@ public class Guide implements ChatSession {
                 .ai()
                 .withLlmByRole("docs")
                 .withReferences(references)
-                .withRagTools(new RagOptions().withSimilarityThreshold(.0).withTopK(8))
+                .withRagTools(new RagOptions()
+                        .withSimilarityThreshold(guideConfig.similarityThreshold())
+                        .withTopK(guideConfig.topK()))
                 .withTemplate("guide_system")
                 .respondWithSystemPrompt(conversation);
         conversation = conversation.withMessage(assistantMessage);

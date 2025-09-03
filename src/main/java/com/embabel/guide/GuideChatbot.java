@@ -25,6 +25,7 @@ import java.util.Set;
 public class GuideChatbot extends InMemoryChatbot {
 
     private final AiBuilder aiBuilder;
+    private final GuideConfig guideConfig;
 
     private final Logger logger = LoggerFactory.getLogger(GuideChatbot.class);
 
@@ -32,8 +33,10 @@ public class GuideChatbot extends InMemoryChatbot {
 
     public GuideChatbot(
             AiBuilder aiBuilder,
-            Ingester ingester) {
+            Ingester ingester,
+            GuideConfig guideConfig) {
         this.aiBuilder = aiBuilder;
+        this.guideConfig = guideConfig;
         var utils = new IngestionUtils(ingester);
         var ingestionResult = utils.ingestFromDirectory(FileTools.readOnly(
                 Path.of(System.getProperty("user.dir"), "data", "docs").toString()
@@ -54,7 +57,7 @@ public class GuideChatbot extends InMemoryChatbot {
     @NotNull
     @Override
     protected ChatSession doCreateSession(@Nullable String systemMessage) {
-        return new Guide(aiBuilder, references);
+        return new Guide(aiBuilder, references, guideConfig);
     }
 
 }
