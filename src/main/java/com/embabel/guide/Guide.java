@@ -7,6 +7,7 @@ import com.embabel.chat.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * GuideLoader will have loaded content
@@ -28,7 +29,6 @@ public class Guide implements ChatSession {
         this.guideConfig = guideConfig;
     }
 
-
     @NotNull
     @Override
     public Conversation getConversation() {
@@ -41,13 +41,15 @@ public class Guide implements ChatSession {
         final var assistantMessage = aiBuilder
                 .withShowPrompts(true)
                 .ai()
-                .withLlmByRole("docs")
+                .withLlm(guideConfig.llm())
                 .withReferences(references)
                 .withRagTools(new RagOptions()
                         .withSimilarityThreshold(guideConfig.similarityThreshold())
                         .withTopK(guideConfig.topK()))
                 .withTemplate("guide_system")
-                .respondWithSystemPrompt(conversation);
+                .respondWithSystemPrompt(conversation,
+                        Map.of("persona", guideConfig.persona()));
+
         conversation = conversation.withMessage(assistantMessage);
         messageListener.onMessage(assistantMessage);
     }
