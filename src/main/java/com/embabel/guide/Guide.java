@@ -1,9 +1,12 @@
 package com.embabel.guide;
 
 import com.embabel.agent.api.common.AiBuilder;
+import com.embabel.agent.api.common.LlmReference;
 import com.embabel.agent.rag.tools.RagOptions;
 import com.embabel.chat.*;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.List;
 
 /**
  * GuideLoader will have loaded content
@@ -12,16 +15,15 @@ public class Guide implements ChatSession {
 
     private final String sessionId;
     private final AiBuilder aiBuilder;
+    private final List<LlmReference> references;
 
     private Conversation conversation = new InMemoryConversation();
 
-    public Guide(AiBuilder aiBuilder) {
+    public Guide(AiBuilder aiBuilder,
+                 List<LlmReference> references
+    ) {
+        this.references = references;
         this.sessionId = java.util.UUID.randomUUID().toString();
-        this.aiBuilder = aiBuilder;
-    }
-
-    public Guide(String sessionId, AiBuilder aiBuilder) {
-        this.sessionId = sessionId;
         this.aiBuilder = aiBuilder;
     }
 
@@ -42,6 +44,7 @@ public class Guide implements ChatSession {
                 .withShowPrompts(true)
                 .ai()
                 .withLlmByRole("docs")
+                .withReferences(references)
                 .withRagTools(new RagOptions().withSimilarityThreshold(.0).withTopK(8))
                 .withTemplate("guide_system")
                 .respondWithSystemPrompt(conversation);
