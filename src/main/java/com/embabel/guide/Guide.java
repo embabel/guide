@@ -1,6 +1,6 @@
 package com.embabel.guide;
 
-import com.embabel.agent.api.common.Ai;
+import com.embabel.agent.api.common.AiBuilder;
 import com.embabel.agent.rag.tools.RagOptions;
 import com.embabel.chat.*;
 import org.jetbrains.annotations.NotNull;
@@ -10,12 +10,23 @@ import org.jetbrains.annotations.NotNull;
  */
 public class Guide implements ChatSession {
 
-    private final Ai ai;
+    private final String sessionId;
+    private final AiBuilder aiBuilder;
 
     private Conversation conversation = new InMemoryConversation();
 
-    public Guide(Ai ai) {
-        this.ai = ai;
+    public Guide(AiBuilder aiBuilder) {
+        this.sessionId = java.util.UUID.randomUUID().toString();
+        this.aiBuilder = aiBuilder;
+    }
+
+    public Guide(String sessionId, AiBuilder aiBuilder) {
+        this.sessionId = sessionId;
+        this.aiBuilder = aiBuilder;
+    }
+
+    public String getSessionId() {
+        return sessionId;
     }
 
     @NotNull
@@ -27,7 +38,9 @@ public class Guide implements ChatSession {
     @Override
     public void respond(@NotNull UserMessage userMessage, @NotNull MessageListener messageListener) {
         conversation = conversation.withMessage(userMessage);
-        final var assistantMessage = ai
+        final var assistantMessage = aiBuilder
+                .withShowPrompts(true)
+                .ai()
                 .withLlmByRole("docs")
                 .withRagTools(new RagOptions().withSimilarityThreshold(.0).withTopK(8))
                 .withTemplate("guide_system")
