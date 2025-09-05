@@ -1,34 +1,26 @@
 package com.embabel.guide;
 
 import com.embabel.agent.api.common.AiBuilder;
-import com.embabel.agent.api.common.LlmReference;
-import com.embabel.agent.rag.tools.RagOptions;
 import com.embabel.chat.*;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * GuideLoader will have loaded content
  */
-public class Guide implements ChatSession {
+public class GuideChatSession implements ChatSession {
 
     // TODO could have memories
 
     private final AiBuilder aiBuilder;
-    private final List<LlmReference> references;
-    private final GuideConfig guideConfig;
+    private final GuideData guideData;
 
     private Conversation conversation = new InMemoryConversation();
 
-    public Guide(AiBuilder aiBuilder,
-                 List<LlmReference> references,
-                 GuideConfig guideConfig
+    public GuideChatSession(AiBuilder aiBuilder,
+                            GuideData guideData
     ) {
-        this.references = references;
+        this.guideData = guideData;
         this.aiBuilder = aiBuilder;
-        this.guideConfig = guideConfig;
     }
 
     @NotNull
@@ -43,14 +35,11 @@ public class Guide implements ChatSession {
         final var assistantMessage = aiBuilder
                 .withShowPrompts(true)
                 .ai()
-                .withLlm(guideConfig.llm())
-                .withReferences(references)
-                .withRagTools(new RagOptions()
-                        .withSimilarityThreshold(guideConfig.similarityThreshold())
-                        .withTopK(guideConfig.topK()))
+                .withLlm(guideData.guideConfig.llm())
+                .withReferences(guideData.references)
+                .withRagTools(guideData.ragOptions())
                 .withTemplate("guide_system")
-                .respondWithSystemPrompt(conversation,
-                        Map.of("persona", guideConfig.persona()));
+                .respondWithSystemPrompt(conversation, guideData.templateModel());
 
         conversation = conversation.withMessage(assistantMessage);
         messageListener.onMessage(assistantMessage);
