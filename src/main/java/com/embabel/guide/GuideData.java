@@ -5,10 +5,11 @@ import com.embabel.agent.api.common.LlmReference;
 import com.embabel.agent.rag.WritableRagService;
 import com.embabel.agent.rag.ingestion.HierarchicalContentReader;
 import com.embabel.agent.rag.tools.RagOptions;
+import com.embabel.agent.tools.file.FileTools;
 import com.embabel.coding.tools.api.ApiReference;
 import com.embabel.coding.tools.git.RepositoryReferenceProvider;
 import com.embabel.coding.tools.jvm.ClassGraphApiReferenceExtractor;
-import org.apache.tika.metadata.Metadata;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
@@ -32,17 +33,17 @@ public class GuideData {
             WritableRagService ragService,
             GuideConfig guideConfig) {
         this.guideConfig = guideConfig;
-//        var utils = new IngestionUtils(ingester);
-//        var ingestionResult = utils.ingestFromDirectory(FileTools.readOnly(
-//                Path.of(System.getProperty("user.dir"), "data", "docs").toString()
-//        ));
-
-        // TODO restore directory ingestion
-        var root = new HierarchicalContentReader().parseResource(
-                "file:" + Path.of(System.getProperty("user.dir"), "data", "docs", "index.md").toString(),
-                new Metadata()
+        var dir = FileTools.readOnly(
+                Path.of(System.getProperty("user.dir"), "data", "docs").toString()
         );
-        ragService.writeContent(root);
+
+        var directoryParsingResult = new HierarchicalContentReader().parseFromDirectory(
+                dir
+        );
+        for (var root : directoryParsingResult.getContentRoots()) {
+            LoggerFactory.getLogger(GuideData.class).info("Parsed root: {} with {} descendants", root.getTitle(), root.descendants().size());
+            ragService.writeContent(root);
+        }
 
 //        logger.info("Ingestion result: {}\nChatbot ready...", ingestionResult);
         var embabelAgentApiReference = new ApiReference(
