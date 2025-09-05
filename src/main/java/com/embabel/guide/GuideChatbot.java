@@ -2,7 +2,6 @@ package com.embabel.guide;
 
 import com.embabel.agent.api.common.AiBuilder;
 import com.embabel.agent.api.common.LlmReference;
-import com.embabel.agent.rag.WritableRagService;
 import com.embabel.chat.ChatSession;
 import com.embabel.chat.InMemoryChatbot;
 import org.jetbrains.annotations.NotNull;
@@ -25,7 +24,6 @@ public class GuideChatbot extends InMemoryChatbot {
 
     public GuideChatbot(
             AiBuilder aiBuilder,
-            WritableRagService ragService,
             GuideData guideData) {
         this.aiBuilder = aiBuilder;
         this.guideData = guideData;
