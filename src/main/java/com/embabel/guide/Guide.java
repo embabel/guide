@@ -14,6 +14,8 @@ import java.util.Map;
  */
 public class Guide implements ChatSession {
 
+    // TODO could have memories
+
     private final AiBuilder aiBuilder;
     private final List<LlmReference> references;
     private final GuideConfig guideConfig;
