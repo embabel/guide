@@ -17,3 +17,5 @@
 &nbsp;&nbsp;&nbsp;&nbsp;
 
 # Talk to the Docs
+
+Go into shell and type `talk`.
