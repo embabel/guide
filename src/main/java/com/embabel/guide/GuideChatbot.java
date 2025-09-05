@@ -2,14 +2,14 @@ package com.embabel.guide;
 
 import com.embabel.agent.api.common.AiBuilder;
 import com.embabel.agent.api.common.LlmReference;
-import com.embabel.agent.rag.ingestion.Ingester;
-import com.embabel.agent.rag.ingestion.IngestionUtils;
-import com.embabel.agent.tools.file.FileTools;
+import com.embabel.agent.rag.WritableRagService;
+import com.embabel.agent.rag.ingestion.HierarchicalContentReader;
 import com.embabel.chat.ChatSession;
 import com.embabel.chat.InMemoryChatbot;
 import com.embabel.coding.tools.api.ApiReference;
 import com.embabel.coding.tools.git.RepositoryReferenceProvider;
 import com.embabel.coding.tools.jvm.ClassGraphApiReferenceExtractor;
+import org.apache.tika.metadata.Metadata;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -33,15 +33,23 @@ public class GuideChatbot extends InMemoryChatbot {
 
     public GuideChatbot(
             AiBuilder aiBuilder,
-            Ingester ingester,
+            WritableRagService ragService,
             GuideConfig guideConfig) {
         this.aiBuilder = aiBuilder;
         this.guideConfig = guideConfig;
-        var utils = new IngestionUtils(ingester);
-        var ingestionResult = utils.ingestFromDirectory(FileTools.readOnly(
-                Path.of(System.getProperty("user.dir"), "data", "docs").toString()
-        ));
-        logger.info("Ingestion result: {}\nChatbot ready...", ingestionResult);
+//        var utils = new IngestionUtils(ingester);
+//        var ingestionResult = utils.ingestFromDirectory(FileTools.readOnly(
+//                Path.of(System.getProperty("user.dir"), "data", "docs").toString()
+//        ));
+
+        // TODO restore directory ingestion
+        var root = new HierarchicalContentReader().parseResource(
+                "file:" + Path.of(System.getProperty("user.dir"), "data", "docs", "index.md").toString(),
+                new Metadata()
+        );
+        ragService.writeContent(root);
+
+//        logger.info("Ingestion result: {}\nChatbot ready...", ingestionResult);
         var embabelApiReference = new ApiReference(
                 "Embabel Agent API: Core",
                 new ClassGraphApiReferenceExtractor().fromProjectClasspath(
