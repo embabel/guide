@@ -14,7 +14,7 @@ public class GuideChatSession implements ChatSession {
     private final AiBuilder aiBuilder;
     private final GuideData guideData;
 
-    private Conversation conversation = new InMemoryConversation();
+    private final Conversation conversation = new InMemoryConversation();
 
     public GuideChatSession(AiBuilder aiBuilder,
                             GuideData guideData
@@ -31,7 +31,7 @@ public class GuideChatSession implements ChatSession {
 
     @Override
     public void respond(@NotNull UserMessage userMessage, @NotNull MessageListener messageListener) {
-        conversation = conversation.withMessage(userMessage);
+        conversation.addMessage(userMessage);
         final var assistantMessage = aiBuilder
                 .withShowPrompts(true)
                 .ai()
@@ -41,7 +41,7 @@ public class GuideChatSession implements ChatSession {
                 .withTemplate("guide_system")
                 .respondWithSystemPrompt(conversation, guideData.templateModel());
 
-        conversation = conversation.withMessage(assistantMessage);
+        conversation.addMessage(assistantMessage);
         messageListener.onMessage(assistantMessage);
     }
 }
