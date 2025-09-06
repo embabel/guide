@@ -37,7 +37,7 @@ public class GuideChatSession implements ChatSession {
                 .ai()
                 .withLlm(guideData.guideConfig.llm())
                 .withReferences(guideData.references)
-                .withRagTools(guideData.ragOptions())
+                .withRag(guideData.ragOptions())
                 .withTemplate("guide_system")
                 .respondWithSystemPrompt(conversation, guideData.templateModel());
 

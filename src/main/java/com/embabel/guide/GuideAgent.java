@@ -30,7 +30,7 @@ public record GuideAgent(
         return ai
                 .withLlm(guideData.guideConfig.llm())
                 .withReferences(guideData.references)
-                .withRagTools(guideData.ragOptions())
+                .withRag(guideData.ragOptions())
                 .withTemplate("guide_system")
                 .createObject(GuideResponse.class, guideData.templateModel());
     }
