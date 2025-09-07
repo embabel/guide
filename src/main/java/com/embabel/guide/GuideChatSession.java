@@ -39,12 +39,12 @@ public class GuideChatSession implements ChatSession {
                 .withReferences(guideData.references)
                 .withRag(guideData.ragOptions().withListener(e -> {
                     var am = new AssistantMessage(e.toString());
-                    messageListener.onMessage(am);
+                    messageListener.onMessage(am, conversation);
                 }))
                 .withTemplate("guide_system")
                 .respondWithSystemPrompt(conversation, guideData.templateModel());
 
         conversation.addMessage(assistantMessage);
-        messageListener.onMessage(assistantMessage);
+        messageListener.onMessage(assistantMessage, conversation);
     }
 }
