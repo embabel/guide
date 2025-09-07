@@ -33,11 +33,14 @@ public class GuideChatSession implements ChatSession {
     public void respond(@NotNull UserMessage userMessage, @NotNull MessageListener messageListener) {
         conversation.addMessage(userMessage);
         final var assistantMessage = aiBuilder
-                .withShowPrompts(true)
+                .withShowPrompts(false)
                 .ai()
                 .withLlm(guideData.guideConfig.llm())
                 .withReferences(guideData.references)
-                .withRag(guideData.ragOptions())
+                .withRag(guideData.ragOptions().withListener(e -> {
+                    var am = new AssistantMessage(e.toString());
+                    messageListener.onMessage(am);
+                }))
                 .withTemplate("guide_system")
                 .respondWithSystemPrompt(conversation, guideData.templateModel());
 
