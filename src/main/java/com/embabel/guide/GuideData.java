@@ -41,7 +41,6 @@ public class GuideData {
             GuideConfig guideConfig,
             PlatformTransactionManager platformTransactionManager) {
         this.ragService = ragService;
-        ragService.provision();
         this.guideConfig = guideConfig;
         this.platformTransactionManager = platformTransactionManager;
         var embabelAgentApiReference = new ApiReference(
@@ -58,7 +57,15 @@ public class GuideData {
         references.add(examplesReference);
     }
 
+    /**
+     * Read all files under this directory
+     *
+     * @param dir absolute path
+     *            =
+     */
     public DirectoryParsingResult readContent(String dir) {
+        ragService.provision();
+
         var ft = FileTools.readOnly(dir);
 
         return new TransactionTemplate(platformTransactionManager).execute(ts -> {
