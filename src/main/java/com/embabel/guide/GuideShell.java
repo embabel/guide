@@ -7,10 +7,13 @@ import com.embabel.chat.Chatbot;
 import org.springframework.shell.standard.ShellComponent;
 import org.springframework.shell.standard.ShellMethod;
 
+import java.nio.file.Path;
+
 @ShellComponent
 public record GuideShell(
         TerminalServices terminalServices,
         Chatbot chatbot,
+        GuideData guideData,
         ContentElementRepository contentElementRepository) {
 
     @ShellMethod("talk to docs")
@@ -20,6 +23,13 @@ public record GuideShell(
                 guide,
                 "Welcome to the Guide! How can I assist you today?",
                 LumonColorPalette.INSTANCE);
+    }
+
+    @ShellMethod("load docs")
+    public String loadDocs() {
+        var dir = Path.of(System.getProperty("user.dir"), "data", "docs").toString();
+        var directoryParsingResult = guideData.readContent(dir);
+        return "Loaded docs: " + directoryParsingResult;
     }
 
 //    @ShellMethod("show chunks")

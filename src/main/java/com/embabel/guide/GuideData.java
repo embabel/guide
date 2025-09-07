@@ -5,7 +5,6 @@ import com.embabel.agent.rag.WritableRagService;
 import com.embabel.agent.rag.ingestion.DirectoryParsingResult;
 import com.embabel.agent.rag.ingestion.HierarchicalContentReader;
 import com.embabel.agent.rag.tools.RagOptions;
-import com.embabel.agent.tools.file.FileReadTools;
 import com.embabel.agent.tools.file.FileTools;
 import com.embabel.coding.tools.api.ApiReference;
 import com.embabel.coding.tools.git.RepositoryReferenceProvider;
@@ -16,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -34,21 +32,18 @@ public class GuideData {
 
     public final List<LlmReference> references = new LinkedList<>();
 
+    private final WritableRagService ragService;
+
     private final PlatformTransactionManager platformTransactionManager;
 
     public GuideData(
             WritableRagService ragService,
             GuideConfig guideConfig,
             PlatformTransactionManager platformTransactionManager) {
+        this.ragService = ragService;
+        ragService.provision();
         this.guideConfig = guideConfig;
         this.platformTransactionManager = platformTransactionManager;
-        var dir = FileTools.readOnly(
-                Path.of(System.getProperty("user.dir"), "data", "docs").toString()
-        );
-
-        var directoryParsingResult = initDatabase(ragService, dir);
-
-        logger.info("Ingestion result: {}\nChatbot ready...", directoryParsingResult);
         var embabelAgentApiReference = new ApiReference(
                 "Embabel Agent API: Core",
                 new ClassGraphApiReferenceExtractor().fromProjectClasspath(
@@ -63,11 +58,12 @@ public class GuideData {
         references.add(examplesReference);
     }
 
-    private DirectoryParsingResult initDatabase(WritableRagService ragService, FileReadTools dir) {
-        return new TransactionTemplate(platformTransactionManager).execute(ts -> {
+    public DirectoryParsingResult readContent(String dir) {
+        var ft = FileTools.readOnly(dir);
 
+        return new TransactionTemplate(platformTransactionManager).execute(ts -> {
             var directoryParsingResult = new HierarchicalContentReader()
-                    .parseFromDirectory(dir);
+                    .parseFromDirectory(ft);
             for (var root : directoryParsingResult.getContentRoots()) {
                 logger.info("Parsed root: {} with {} descendants", root.getTitle(), root.descendants().size());
                 ragService.writeContent(root);
