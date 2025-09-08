@@ -1,7 +1,7 @@
 package com.embabel.guide;
 
 import com.embabel.agent.api.common.LlmReference;
-import com.embabel.agent.rag.WritableRagService;
+import com.embabel.agent.rag.RepositoryRagService;
 import com.embabel.agent.rag.ingestion.DirectoryParsingResult;
 import com.embabel.agent.rag.ingestion.HierarchicalContentReader;
 import com.embabel.agent.rag.tools.RagOptions;
@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.*;
@@ -29,12 +30,12 @@ public class GuideData {
 
     public final List<LlmReference> references = new LinkedList<>();
 
-    private final WritableRagService ragService;
+    private final RepositoryRagService ragService;
 
     private final PlatformTransactionManager platformTransactionManager;
 
     public GuideData(
-            WritableRagService ragService,
+            RepositoryRagService ragService,
             GuideConfig guideConfig,
             PlatformTransactionManager platformTransactionManager) {
         this.ragService = ragService;
@@ -58,11 +59,15 @@ public class GuideData {
         ragService.provision();
     }
 
+    @Transactional(readOnly = true)
+    public int count() {
+        return ragService.count();
+    }
+
     /**
      * Read all files under this directory
      *
      * @param dir absolute path
-     *            =
      */
     public DirectoryParsingResult readContent(String dir) {
         ragService.provision();

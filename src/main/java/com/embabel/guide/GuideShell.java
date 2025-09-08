@@ -1,7 +1,6 @@
 package com.embabel.guide;
 
 import com.embabel.agent.event.logging.personality.severance.LumonColorPalette;
-import com.embabel.agent.rag.ingestion.ContentElementRepository;
 import com.embabel.agent.shell.TerminalServices;
 import com.embabel.chat.Chatbot;
 import org.springframework.shell.standard.ShellComponent;
@@ -13,8 +12,7 @@ import java.nio.file.Path;
 public record GuideShell(
         TerminalServices terminalServices,
         Chatbot chatbot,
-        GuideData guideData,
-        ContentElementRepository contentElementRepository) {
+        GuideData guideData) {
 
     @ShellMethod("talk to docs")
     public String talk() {
@@ -32,16 +30,14 @@ public record GuideShell(
         return "Loaded docs: " + directoryParsingResult;
     }
 
-    @ShellMethod("provision Neo")
+    @ShellMethod("provision database")
     public String provision() {
         guideData.provisionDatabase();
         return "Database provisioned";
     }
 
-//    @ShellMethod("show chunks")
-//    public String chunks() {
-//        return (contentElementRepository.findAll().stream()
-//                .map(chunk -> chunk.getId() + ": " + chunk.getText())
-//                .reduce("", (a, b) -> a + "\n" + "*".repeat(80) + "\n" + b);
-//    }
+    @ShellMethod("show chunks")
+    public String chunks() {
+        return guideData.count() + " chunks in the database";
+    }
 }
