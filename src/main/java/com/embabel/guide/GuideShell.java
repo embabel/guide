@@ -32,6 +32,12 @@ public record GuideShell(
         return "Loaded docs: " + directoryParsingResult;
     }
 
+    @ShellMethod("provision Neo")
+    public String provision() {
+        guideData.provisionDatabase();
+        return "Database provisioned";
+    }
+
 //    @ShellMethod("show chunks")
 //    public String chunks() {
 //        return (contentElementRepository.findAll().stream()
