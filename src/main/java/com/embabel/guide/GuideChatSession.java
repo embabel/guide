@@ -7,7 +7,7 @@ import com.embabel.chat.*;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.lang.Nullable;
 
-import java.util.Map;
+import java.util.Collections;
 
 /**
  * GuideLoader will have loaded content
@@ -60,7 +60,7 @@ public class GuideChatSession implements ChatSession {
                 }))
                 .withTemplate("guide_system")
                 .respondWithSystemPrompt(conversation,
-                        guideData.templateModel(Map.of("user", user)));
+                        guideData.templateModel(Collections.singletonMap("user", user)));
 
         conversation.addMessage(assistantMessage);
         messageListener.onMessage(assistantMessage, conversation);
