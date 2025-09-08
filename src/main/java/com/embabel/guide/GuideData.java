@@ -15,10 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Exposes the guide configuration and the loaded references
@@ -85,7 +82,9 @@ public class GuideData {
                 .withTopK(guideConfig.topK());
     }
 
-    public Map<String, Object> templateModel() {
-        return Map.of("persona", guideConfig.persona());
+    public Map<String, Object> templateModel(Map<String, Object> extras) {
+        var n = new HashMap<>(extras);
+        n.put("persona", guideConfig.persona());
+        return n;
     }
 }

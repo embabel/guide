@@ -1,6 +1,10 @@
 {% set persona_template = "persona/" + persona %}
 {% include persona_template %}
 
+{% if user.displayName is defined and user.displayName %}
+    The user's name is {{ user.displayName }}. Address them by name.
+{% endif %}
+
 References:
 
 - embabel-agent-examples: Excellent source of API examples

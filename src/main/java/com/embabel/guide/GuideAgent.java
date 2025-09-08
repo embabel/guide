@@ -6,6 +6,8 @@ import com.embabel.agent.api.annotation.Agent;
 import com.embabel.agent.api.annotation.Export;
 import com.embabel.agent.api.common.Ai;
 
+import java.util.Map;
+
 record GuideRequest(
         String question
 ) {
@@ -32,7 +34,7 @@ public record GuideAgent(
                 .withReferences(guideData.references)
                 .withRag(guideData.ragOptions())
                 .withTemplate("guide_system")
-                .createObject(GuideResponse.class, guideData.templateModel());
+                .createObject(GuideResponse.class, guideData.templateModel(Map.of()));
     }
 
 }

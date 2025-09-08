@@ -2,6 +2,7 @@ package com.embabel.guide;
 
 import com.embabel.agent.api.common.AiBuilder;
 import com.embabel.agent.api.common.LlmReference;
+import com.embabel.agent.identity.User;
 import com.embabel.chat.ChatSession;
 import com.embabel.chat.InMemoryChatbot;
 import org.jetbrains.annotations.NotNull;
@@ -31,8 +32,8 @@ public class GuideChatbot extends InMemoryChatbot {
 
     @NotNull
     @Override
-    protected ChatSession doCreateSession(@Nullable String systemMessage) {
-        return new GuideChatSession(aiBuilder, guideData);
+    protected ChatSession doCreateSession(@Nullable User user, @Nullable String systemMessage) {
+        return new GuideChatSession(aiBuilder, guideData, user);
     }
 
 }
