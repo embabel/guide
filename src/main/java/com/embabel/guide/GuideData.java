@@ -54,6 +54,10 @@ public class GuideData {
         references.add(examplesReference);
     }
 
+    public void provisionDatabase() {
+        ragService.provision();
+    }
+
     /**
      * Read all files under this directory
      *
