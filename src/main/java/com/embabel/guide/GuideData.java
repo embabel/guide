@@ -25,13 +25,9 @@ import java.util.*;
 public class GuideData {
 
     private final Logger logger = LoggerFactory.getLogger(GuideData.class);
-
     public final GuideConfig guideConfig;
-
     public final List<LlmReference> references = new LinkedList<>();
-
     private final RepositoryRagService ragService;
-
     private final PlatformTransactionManager platformTransactionManager;
 
     public GuideData(
@@ -69,7 +65,7 @@ public class GuideData {
      *
      * @param dir absolute path
      */
-    public DirectoryParsingResult readContent(String dir) {
+    public DirectoryParsingResult ingestDirectory(String dir) {
         ragService.provision();
 
         var ft = FileTools.readOnly(dir);

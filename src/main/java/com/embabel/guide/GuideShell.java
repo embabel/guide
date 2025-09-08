@@ -26,7 +26,7 @@ public record GuideShell(
     @ShellMethod("load docs")
     public String loadDocs() {
         var dir = Path.of(System.getProperty("user.dir"), "data", "docs").toString();
-        var directoryParsingResult = guideData.readContent(dir);
+        var directoryParsingResult = guideData.ingestDirectory(dir);
         return "Loaded docs: " + directoryParsingResult;
     }
 
