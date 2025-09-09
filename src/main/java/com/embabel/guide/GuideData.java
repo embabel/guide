@@ -11,6 +11,7 @@ import com.embabel.coding.tools.git.RepositoryReferenceProvider;
 import com.embabel.coding.tools.jvm.ClassGraphApiReferenceExtractor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,8 +26,8 @@ import java.util.*;
 public class GuideData {
 
     private final Logger logger = LoggerFactory.getLogger(GuideData.class);
-    public final GuideConfig guideConfig;
-    public final List<LlmReference> references = new LinkedList<>();
+    private final GuideConfig guideConfig;
+    private final List<LlmReference> references = new LinkedList<>();
     private final RepositoryRagService ragService;
     private final PlatformTransactionManager platformTransactionManager;
 
@@ -49,6 +50,16 @@ public class GuideData {
                 .cloneRepository("https://github.com/embabel/embabel-agent-examples.git");
         references.add(embabelAgentApiReference);
         references.add(examplesReference);
+    }
+
+    @NonNull
+    public GuideConfig guideConfig() {
+        return guideConfig;
+    }
+
+    @NonNull
+    public List<LlmReference> references() {
+        return Collections.unmodifiableList(references);
     }
 
     public void provisionDatabase() {

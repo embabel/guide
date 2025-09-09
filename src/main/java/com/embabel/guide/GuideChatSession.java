@@ -50,8 +50,8 @@ public class GuideChatSession implements ChatSession {
         final var assistantMessage = aiBuilder
                 .withShowPrompts(false)
                 .ai()
-                .withLlm(guideData.guideConfig.llm())
-                .withReferences(guideData.references)
+                .withLlm(guideData.guideConfig().llm())
+                .withReferences(guideData.references())
                 .withRag(guideData.ragOptions().withListener(e -> {
                     if (e instanceof RagPipelineEvent rpe) {
                         var am = new AssistantMessage(rpe.getDescription());
