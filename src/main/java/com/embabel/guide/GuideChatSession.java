@@ -60,7 +60,7 @@ public class GuideChatSession implements ChatSession {
     }
 
     @Override
-    public void respond(@NotNull UserMessage userMessage) {
+    public void onUserMessage(@NotNull UserMessage userMessage) {
         conversation.addMessage(userMessage);
         final var assistantMessage = aiBuilder
                 .withShowPrompts(false)

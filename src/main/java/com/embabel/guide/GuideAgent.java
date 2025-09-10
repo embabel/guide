@@ -4,9 +4,9 @@ import com.embabel.agent.api.annotation.AchievesGoal;
 import com.embabel.agent.api.annotation.Action;
 import com.embabel.agent.api.annotation.Agent;
 import com.embabel.agent.api.annotation.Export;
-import com.embabel.agent.api.common.Ai;
+import com.embabel.agent.api.common.OperationContext;
 
-import java.util.Map;
+import java.util.Collections;
 
 record GuideRequest(
         String question
@@ -28,13 +28,15 @@ public record GuideAgent(
     @AchievesGoal(description = "Answer a question about Embabel",
             export = @Export(remote = true, startingInputTypes = {GuideRequest.class}))
     @Action
-    GuideResponse answerQuestion(GuideRequest guideRequest, Ai ai) {
-        return ai
+    GuideResponse answerQuestion(GuideRequest guideRequest, OperationContext operationContext) {
+        return operationContext.ai()
                 .withLlm(guideData.guideConfig().llm())
                 .withReferences(guideData.references())
                 .withRag(guideData.ragOptions())
                 .withTemplate("guide_system")
-                .createObject(GuideResponse.class, guideData.templateModel(Map.of()));
+                .createObject(GuideResponse.class, guideData.templateModel(Collections.singletonMap(
+                        "user", operationContext.getProcessContext().getProcessOptions().getIdentities().getForUser()
+                )));
     }
 
 }
