@@ -1,9 +1,14 @@
 package com.embabel.guide;
 
 import com.embabel.agent.api.common.AiBuilder;
+import com.embabel.agent.channel.OutputChannel;
 import com.embabel.agent.identity.User;
 import com.embabel.agent.rag.pipeline.event.RagPipelineEvent;
-import com.embabel.chat.*;
+import com.embabel.chat.AssistantMessage;
+import com.embabel.chat.ChatSession;
+import com.embabel.chat.Conversation;
+import com.embabel.chat.UserMessage;
+import com.embabel.chat.support.InMemoryConversation;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.lang.Nullable;
 
@@ -21,15 +26,25 @@ public class GuideChatSession implements ChatSession {
     @Nullable
     private final User user;
 
+    private final OutputChannel outputChannel;
+
     private final Conversation conversation = new InMemoryConversation();
 
     public GuideChatSession(AiBuilder aiBuilder,
                             GuideData guideData,
-                            @Nullable User user
+                            @Nullable User user,
+                            @NotNull OutputChannel outputChannel
     ) {
         this.guideData = guideData;
         this.aiBuilder = aiBuilder;
         this.user = user;
+        this.outputChannel = outputChannel;
+    }
+
+    @NotNull
+    @Override
+    public OutputChannel getOutputChannel() {
+        return outputChannel;
     }
 
     @Nullable
@@ -45,7 +60,7 @@ public class GuideChatSession implements ChatSession {
     }
 
     @Override
-    public void respond(@NotNull UserMessage userMessage, @NotNull MessageListener messageListener) {
+    public void respond(@NotNull UserMessage userMessage) {
         conversation.addMessage(userMessage);
         final var assistantMessage = aiBuilder
                 .withShowPrompts(false)
@@ -55,14 +70,13 @@ public class GuideChatSession implements ChatSession {
                 .withRag(guideData.ragOptions().withListener(e -> {
                     if (e instanceof RagPipelineEvent rpe) {
                         var am = new AssistantMessage(rpe.getDescription());
-                        messageListener.onMessage(am, conversation);
+//                        messageListener.onMessage(am, conversation);
                     }
                 }))
                 .withTemplate("guide_system")
                 .respondWithSystemPrompt(conversation,
                         guideData.templateModel(Collections.singletonMap("user", user)));
 
-        conversation.addMessage(assistantMessage);
-        messageListener.onMessage(assistantMessage, conversation);
+        saveAndSend(assistantMessage);
     }
 }
