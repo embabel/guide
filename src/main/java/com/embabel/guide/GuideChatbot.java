@@ -8,7 +8,6 @@ import com.embabel.chat.ChatSession;
 import com.embabel.chat.support.InMemoryChatbot;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.springframework.stereotype.Service;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -16,7 +15,7 @@ import java.util.List;
 /**
  * Exposes Guide as a chatbot
  */
-@Service
+//@Service
 public class GuideChatbot extends InMemoryChatbot {
 
     private final AiBuilder aiBuilder;

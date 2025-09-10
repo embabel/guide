@@ -16,7 +16,8 @@ public record GuideShell(
 
     @ShellMethod("talk to docs")
     public String talk() {
-        var guide = chatbot.createSession(null,
+        var guide = chatbot.createSession(
+                null,
                 terminalServices.outputChannel(),
                 null);
         return terminalServices.chat(
