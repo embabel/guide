@@ -16,6 +16,7 @@
 package com.embabel;
 
 import com.embabel.agent.config.annotation.EnableAgents;
+import com.embabel.agent.config.annotation.LocalModels;
 import com.embabel.agent.config.annotation.LoggingThemes;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -24,7 +25,10 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
 @SpringBootApplication
 @ConfigurationPropertiesScan
-@EnableAgents(loggingTheme = LoggingThemes.SEVERANCE)
+@EnableAgents(
+        loggingTheme = LoggingThemes.SEVERANCE,
+        localModels = {LocalModels.OLLAMA}
+)
 class GuideApplication {
     public static void main(String[] args) {
         SpringApplication.run(GuideApplication.class, args);
