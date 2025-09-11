@@ -45,11 +45,16 @@ public class GuideData {
                         Set.of("com.embabel.agent", "com.embabel.common"),
                         Set.of()),
                 100);
-
-        var examplesReference = RepositoryReferenceProvider.create()
-                .cloneRepository("https://github.com/embabel/embabel-agent-examples.git");
         references.add(embabelAgentApiReference);
-        references.add(examplesReference);
+
+        try {
+            var examplesReference = RepositoryReferenceProvider.create()
+                    .cloneRepository("https://github.com/embabel/embabel-agent-examples.git");
+            references.add(examplesReference);
+        } catch (Throwable t) {
+            // Allows working offline
+            logger.warn("Failed to load Github");
+        }
     }
 
     @NonNull

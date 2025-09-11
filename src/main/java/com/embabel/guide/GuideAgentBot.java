@@ -57,14 +57,14 @@ public record GuideAgentBot(
                 .withReferences(guideData.references())
                 .withRag(guideData.ragOptions().withListener(e -> {
                     if (e instanceof RagPipelineEvent rpe) {
-                        var am = new AssistantMessage(rpe.getDescription());
-//                        messageListener.onMessage(am, conversation);
+                        context.updateProgress(rpe.getDescription());
                     }
                 }))
                 .withTemplate("guide_system")
                 .respondWithSystemPrompt(conversation,
                         guideData.templateModel(Collections.singletonMap("user",
-                                context.getProcessContext().getProcessOptions().getIdentities().getForUser())));
+                                context.getProcessContext().getProcessOptions().getIdentities().getForUser())),
+                        "chat_response");
         conversation.addMessage(assistantMessage);
         context.sendMessage(assistantMessage);
         return new ChatbotReturn(assistantMessage, null);
