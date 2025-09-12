@@ -9,6 +9,7 @@ import com.embabel.agent.api.common.OperationContext;
 import com.embabel.agent.api.common.SomeOf;
 import com.embabel.agent.core.AgentPlatform;
 import com.embabel.agent.rag.pipeline.event.RagPipelineEvent;
+import com.embabel.agent.rag.tools.DualShotConfig;
 import com.embabel.chat.AssistantMessage;
 import com.embabel.chat.Chatbot;
 import com.embabel.chat.Conversation;
@@ -19,6 +20,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.lang.Nullable;
 
 import javax.validation.constraints.Null;
+import java.time.Duration;
 import java.util.Collections;
 
 record ConversationOver(String why) {
@@ -55,11 +57,14 @@ public record GuideAgentBot(
                 .ai()
                 .withLlm(guideData.guideConfig().llm())
                 .withReferences(guideData.references())
-                .withRag(guideData.ragOptions().withListener(e -> {
-                    if (e instanceof RagPipelineEvent rpe) {
-                        context.updateProgress(rpe.getDescription());
-                    }
-                }))
+                .withRag(guideData.ragOptions()
+                        .withDesiredMaxLatency(Duration.ofMinutes(10))
+                        .withDualShot(new DualShotConfig(100))
+                        .withListener(e -> {
+                            if (e instanceof RagPipelineEvent rpe) {
+                                context.updateProgress(rpe.getDescription());
+                            }
+                        }))
                 .withTemplate("guide_system")
                 .respondWithSystemPrompt(conversation,
                         guideData.templateModel(Collections.singletonMap("user",
