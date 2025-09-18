@@ -1,7 +1,7 @@
 package com.embabel.guide;
 
 import com.embabel.agent.api.common.LlmReference;
-import com.embabel.agent.rag.RepositoryRagService;
+import com.embabel.agent.rag.WritableContentElementRepository;
 import com.embabel.agent.rag.ingestion.DirectoryParsingResult;
 import com.embabel.agent.rag.ingestion.HierarchicalContentReader;
 import com.embabel.agent.rag.tools.RagOptions;
@@ -28,14 +28,14 @@ public class GuideData {
     private final Logger logger = LoggerFactory.getLogger(GuideData.class);
     private final GuideConfig guideConfig;
     private final List<LlmReference> references = new LinkedList<>();
-    private final RepositoryRagService ragService;
+    private final WritableContentElementRepository store;
     private final PlatformTransactionManager platformTransactionManager;
 
     public GuideData(
-            RepositoryRagService ragService,
+            WritableContentElementRepository store,
             GuideConfig guideConfig,
             PlatformTransactionManager platformTransactionManager) {
-        this.ragService = ragService;
+        this.store = store;
         this.guideConfig = guideConfig;
         this.platformTransactionManager = platformTransactionManager;
         var embabelAgentApiReference = new ApiReference(
@@ -68,12 +68,12 @@ public class GuideData {
     }
 
     public void provisionDatabase() {
-        ragService.provision();
+        store.provision();
     }
 
     @Transactional(readOnly = true)
     public int count() {
-        return ragService.count();
+        return store.count();
     }
 
     /**
@@ -82,7 +82,7 @@ public class GuideData {
      * @param dir absolute path
      */
     public DirectoryParsingResult ingestDirectory(String dir) {
-        ragService.provision();
+        store.provision();
 
         var ft = FileTools.readOnly(dir);
 
@@ -91,7 +91,7 @@ public class GuideData {
                     .parseFromDirectory(ft);
             for (var root : directoryParsingResult.getContentRoots()) {
                 logger.info("Parsed root: {} with {} descendants", root.getTitle(), root.descendants().size());
-                ragService.writeContent(root);
+                store.writeContent(root);
             }
             return directoryParsingResult;
         });

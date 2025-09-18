@@ -16,8 +16,8 @@
 package com.embabel;
 
 import com.embabel.agent.config.annotation.EnableAgents;
-import com.embabel.agent.config.annotation.LocalModels;
 import com.embabel.agent.config.annotation.LoggingThemes;
+import com.embabel.agent.config.annotation.McpServers;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
@@ -27,7 +27,7 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 @ConfigurationPropertiesScan
 @EnableAgents(
         loggingTheme = LoggingThemes.SEVERANCE,
-        localModels = {LocalModels.OLLAMA}
+        mcpServers = {McpServers.DOCKER_DESKTOP}
 )
 class GuideApplication {
     public static void main(String[] args) {

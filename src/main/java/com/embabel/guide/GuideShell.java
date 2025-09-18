@@ -55,12 +55,14 @@ public record GuideShell(
             @ShellOption String query,
             @ShellOption(defaultValue = "10") int topK,
             @ShellOption(defaultValue = "0.2") double similarityThreshold) {
-        var raw = context.ai().rag().search(
-                RagRequest.query(query)
-                        .withTopK(topK)
-                        .withSimilarityThreshold(similarityThreshold)
-                        .withDesiredMaxLatency(Duration.ofMinutes(5))
-        );
+        var raw = context.ai()
+                .rag()
+                .search(
+                        RagRequest.query(query)
+                                .withTopK(topK)
+                                .withSimilarityThreshold(similarityThreshold)
+                                .withDesiredMaxLatency(Duration.ofMinutes(5))
+                );
         var ragResponseFormatter = SimpleRagResponseFormatter.INSTANCE;
         return "RAG response: \n" + ragResponseFormatter.format(raw);
     }

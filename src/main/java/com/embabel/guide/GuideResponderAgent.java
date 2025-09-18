@@ -8,8 +8,10 @@ import com.embabel.agent.api.common.ActionContext;
 import com.embabel.agent.api.common.OperationContext;
 import com.embabel.agent.api.common.SomeOf;
 import com.embabel.agent.core.AgentPlatform;
+import com.embabel.agent.core.CoreToolGroups;
+import com.embabel.agent.rag.ContentElementSearch;
+import com.embabel.agent.rag.HyDE;
 import com.embabel.agent.rag.pipeline.event.RagPipelineEvent;
-import com.embabel.agent.rag.tools.DualShotConfig;
 import com.embabel.chat.AssistantMessage;
 import com.embabel.chat.Chatbot;
 import com.embabel.chat.Conversation;
@@ -36,7 +38,7 @@ record ChatbotReturn(
 
 @Agent(description = "Embabel developer guide bot agent",
         name = "GuideAgent")
-public record GuideAgentBot(
+public record GuideResponderAgent(
         GuideData guideData
 ) {
 
@@ -57,9 +59,12 @@ public record GuideAgentBot(
                 .ai()
                 .withLlm(guideData.guideConfig().llm())
                 .withReferences(guideData.references())
+                .withTools(CoreToolGroups.WEB)
                 .withRag(guideData.ragOptions()
+                        .withHyDE(new HyDE(40))
+                        .withContentElementSearch(ContentElementSearch.CHUNKS_ONLY)
                         .withDesiredMaxLatency(Duration.ofMinutes(10))
-                        .withDualShot(new DualShotConfig(100))
+//                        .withDualShot(new DualShotConfig(100))
                         .withListener(e -> {
                             if (e instanceof RagPipelineEvent rpe) {
                                 context.updateProgress(rpe.getDescription());
@@ -90,7 +95,6 @@ public record GuideAgentBot(
 @Configuration
 class GuideAgentBotConfig {
 
-    // Agents aren't wired up yet
     @Bean
     Chatbot chatbot(AgentPlatform agentPlatform) {
         return AgentProcessChatbot.withAgentByName(
