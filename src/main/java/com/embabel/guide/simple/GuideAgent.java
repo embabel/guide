@@ -1,10 +1,10 @@
-package com.embabel.guide;
+package com.embabel.guide.simple;
 
 import com.embabel.agent.api.annotation.AchievesGoal;
 import com.embabel.agent.api.annotation.Action;
-import com.embabel.agent.api.annotation.Agent;
 import com.embabel.agent.api.annotation.Export;
 import com.embabel.agent.api.common.OperationContext;
+import com.embabel.guide.GuideData;
 
 import java.util.Collections;
 
@@ -20,7 +20,12 @@ record GuideResponse(
 ) {
 }
 
-@Agent(description = "Embabel developer guide")
+/**
+ * Single shot Q&A
+ *
+ * @param guideData
+ */
+//@Agent(description = "Embabel developer guide")
 public record GuideAgent(
         GuideData guideData
 ) {

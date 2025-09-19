@@ -10,6 +10,7 @@ import com.embabel.agent.api.common.SomeOf;
 import com.embabel.agent.core.AgentPlatform;
 import com.embabel.agent.core.CoreToolGroups;
 import com.embabel.agent.rag.ContentElementSearch;
+import com.embabel.agent.rag.EntitySearch;
 import com.embabel.agent.rag.HyDE;
 import com.embabel.agent.rag.pipeline.event.RagPipelineEvent;
 import com.embabel.chat.AssistantMessage;
@@ -24,6 +25,7 @@ import org.springframework.lang.Nullable;
 import javax.validation.constraints.Null;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.Set;
 
 record ConversationOver(String why) {
 }
@@ -37,10 +39,12 @@ record ChatbotReturn(
 
 
 @Agent(description = "Embabel developer guide bot agent",
-        name = "GuideAgent")
+        name = GuideResponderAgent.NAME)
 public record GuideResponderAgent(
         GuideData guideData
 ) {
+
+    static final String NAME = "GuideAgent";
 
     static final String LAST_EVENT_WAS_USER_MESSAGE = "user_last";
 
@@ -63,6 +67,9 @@ public record GuideResponderAgent(
                 .withRag(guideData.ragOptions()
                         .withHyDE(new HyDE(40))
                         .withContentElementSearch(ContentElementSearch.CHUNKS_ONLY)
+                        .withEntitySearch(new EntitySearch(Set.of(
+                                "Concept", "Example"
+                        ), false))
                         .withDesiredMaxLatency(Duration.ofMinutes(10))
 //                        .withDualShot(new DualShotConfig(100))
                         .withListener(e -> {
@@ -92,6 +99,10 @@ public record GuideResponderAgent(
 
 }
 
+/**
+ * Exposes the GuideAgent as a Chatbot bean
+ * so it can be picked up by Discord
+ */
 @Configuration
 class GuideAgentBotConfig {
 
@@ -99,6 +110,6 @@ class GuideAgentBotConfig {
     Chatbot chatbot(AgentPlatform agentPlatform) {
         return AgentProcessChatbot.withAgentByName(
                 agentPlatform,
-                "GuideAgent");
+                GuideResponderAgent.NAME);
     }
 }
