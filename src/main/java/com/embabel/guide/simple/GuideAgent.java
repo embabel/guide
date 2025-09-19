@@ -35,8 +35,8 @@ public record GuideAgent(
     @Action
     GuideResponse answerQuestion(GuideRequest guideRequest, OperationContext operationContext) {
         return operationContext.ai()
-                .withLlm(guideData.guideConfig().llm())
-                .withReferences(guideData.references())
+                .withLlm(guideData.config().llm())
+                .withReferences(guideData.referencesForUser(null))
                 .withRag(guideData.ragOptions())
                 .withTemplate("guide_system")
                 .createObject(GuideResponse.class, guideData.templateModel(Collections.singletonMap(

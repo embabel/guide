@@ -13,6 +13,7 @@ import com.embabel.agent.rag.ContentElementSearch;
 import com.embabel.agent.rag.EntitySearch;
 import com.embabel.agent.rag.HyDE;
 import com.embabel.agent.rag.pipeline.event.RagPipelineEvent;
+import com.embabel.agent.rag.tools.DualShotConfig;
 import com.embabel.chat.AssistantMessage;
 import com.embabel.chat.Chatbot;
 import com.embabel.chat.Conversation;
@@ -20,20 +21,19 @@ import com.embabel.chat.UserMessage;
 import com.embabel.chat.agent.AgentProcessChatbot;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 
-import javax.validation.constraints.Null;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Set;
 
-record ConversationOver(String why) {
+record ConversationOver(@NonNull String why) {
 }
 
-// TODO should go into common
 record ChatbotReturn(
         @Nullable AssistantMessage assistantMessage,
-        @Null ConversationOver termination
+        @Nullable ConversationOver termination
 ) implements SomeOf {
 }
 
@@ -61,22 +61,24 @@ public record GuideResponderAgent(
             ActionContext context) {
         var assistantMessage = context
                 .ai()
-                .withLlm(guideData.guideConfig().llm())
-                .withReferences(guideData.references())
+                .withLlm(guideData.config().llm())
+                .withReferences(guideData.referencesForUser(context.user()))
                 .withTools(CoreToolGroups.WEB)
-                .withRag(guideData.ragOptions()
-                        .withHyDE(new HyDE(40))
-                        .withContentElementSearch(ContentElementSearch.CHUNKS_ONLY)
-                        .withEntitySearch(new EntitySearch(Set.of(
-                                "Concept", "Example"
-                        ), false))
-                        .withDesiredMaxLatency(Duration.ofMinutes(10))
-//                        .withDualShot(new DualShotConfig(100))
-                        .withListener(e -> {
-                            if (e instanceof RagPipelineEvent rpe) {
-                                context.updateProgress(rpe.getDescription());
-                            }
-                        }))
+                .withRag(
+                        guideData
+                                .ragOptions()
+                                .withHyDE(new HyDE(40))
+                                .withContentElementSearch(ContentElementSearch.CHUNKS_ONLY)
+                                .withEntitySearch(new EntitySearch(Set.of(
+                                        "Concept", "Example"
+                                ), false))
+                                .withDesiredMaxLatency(Duration.ofMinutes(10))
+                                .withDualShot(new DualShotConfig(100))
+                                .withListener(e -> {
+                                    if (e instanceof RagPipelineEvent rpe) {
+                                        context.updateProgress(rpe.getDescription());
+                                    }
+                                }))
                 .withTemplate("guide_system")
                 .respondWithSystemPrompt(conversation,
                         guideData.templateModel(Collections.singletonMap("user",
@@ -89,7 +91,7 @@ public record GuideResponderAgent(
 
     @AchievesGoal(description = "Conversation completed")
     @Action
-    ConversationOver respondAndMaybeTerminate(
+    ConversationOver respondAndTerminate(
             ConversationOver conversationOver,
             Conversation conversation,
             ActionContext context) {

@@ -1,6 +1,7 @@
 package com.embabel.guide;
 
 import com.embabel.agent.api.common.LlmReference;
+import com.embabel.agent.identity.User;
 import com.embabel.agent.rag.WritableContentElementRepository;
 import com.embabel.agent.rag.ingestion.DirectoryParsingResult;
 import com.embabel.agent.rag.ingestion.HierarchicalContentReader;
@@ -12,6 +13,7 @@ import com.embabel.coding.tools.jvm.ClassGraphApiReferenceExtractor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,12 +60,12 @@ public class GuideData {
     }
 
     @NonNull
-    public GuideConfig guideConfig() {
+    public GuideConfig config() {
         return guideConfig;
     }
 
     @NonNull
-    public List<LlmReference> references() {
+    public List<LlmReference> referencesForUser(@Nullable User user) {
         return Collections.unmodifiableList(references);
     }
 

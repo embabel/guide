@@ -16,7 +16,7 @@ import org.springframework.lang.Nullable;
 import java.util.Collections;
 
 /**
- * GuideLoader will have loaded content
+ * Shows how to write a ChatSession without an agent backing it
  */
 public class GuideChatSession implements ChatSession {
 
@@ -66,8 +66,8 @@ public class GuideChatSession implements ChatSession {
         final var assistantMessage = aiBuilder
                 .withShowPrompts(false)
                 .ai()
-                .withLlm(guideData.guideConfig().llm())
-                .withReferences(guideData.references())
+                .withLlm(guideData.config().llm())
+                .withReferences(guideData.referencesForUser(getUser()))
                 .withRag(guideData.ragOptions().withListener(e -> {
                     if (e instanceof RagPipelineEvent rpe) {
                         var am = new AssistantMessage(rpe.getDescription());
