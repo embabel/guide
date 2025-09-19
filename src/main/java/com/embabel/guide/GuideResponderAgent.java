@@ -6,7 +6,6 @@ import com.embabel.agent.api.annotation.Agent;
 import com.embabel.agent.api.annotation.Condition;
 import com.embabel.agent.api.common.ActionContext;
 import com.embabel.agent.api.common.OperationContext;
-import com.embabel.agent.api.common.SomeOf;
 import com.embabel.agent.core.AgentPlatform;
 import com.embabel.agent.core.CoreToolGroups;
 import com.embabel.agent.rag.ContentElementSearch;
@@ -19,23 +18,14 @@ import com.embabel.chat.Chatbot;
 import com.embabel.chat.Conversation;
 import com.embabel.chat.UserMessage;
 import com.embabel.chat.agent.AgentProcessChatbot;
+import com.embabel.chat.agent.ChatbotReturn;
+import com.embabel.chat.agent.ConversationTermination;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
 
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Set;
-
-record ConversationOver(@NonNull String why) {
-}
-
-record ChatbotReturn(
-        @Nullable AssistantMessage assistantMessage,
-        @Nullable ConversationOver termination
-) implements SomeOf {
-}
 
 
 @Agent(description = "Embabel developer guide bot agent",
@@ -56,7 +46,6 @@ public record GuideResponderAgent(
     @Action(canRerun = true,
             pre = {LAST_EVENT_WAS_USER_MESSAGE})
     ChatbotReturn respond(
-            UserMessage userMessage,
             Conversation conversation,
             ActionContext context) {
         var assistantMessage = context
@@ -83,7 +72,7 @@ public record GuideResponderAgent(
                 .respondWithSystemPrompt(conversation,
                         guideData.templateModel(Collections.singletonMap("user",
                                 context.getProcessContext().getProcessOptions().getIdentities().getForUser())),
-                        "chat_response");
+                        "chat response");
         conversation.addMessage(assistantMessage);
         context.sendMessage(assistantMessage);
         return new ChatbotReturn(assistantMessage, null);
@@ -91,11 +80,11 @@ public record GuideResponderAgent(
 
     @AchievesGoal(description = "Conversation completed")
     @Action
-    ConversationOver respondAndTerminate(
-            ConversationOver conversationOver,
+    ConversationTermination respondAndTerminate(
+            ConversationTermination conversationOver,
             Conversation conversation,
             ActionContext context) {
-        context.sendMessage(new AssistantMessage("Conversation over: " + conversationOver.why()));
+        context.sendMessage(new AssistantMessage("Conversation over: " + conversationOver.getReason()));
         return conversationOver;
     }
 
