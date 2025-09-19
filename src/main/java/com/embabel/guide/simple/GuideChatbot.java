@@ -1,4 +1,4 @@
-package com.embabel.guide;
+package com.embabel.guide.simple;
 
 import com.embabel.agent.api.common.AiBuilder;
 import com.embabel.agent.api.common.LlmReference;
@@ -6,6 +6,7 @@ import com.embabel.agent.channel.OutputChannel;
 import com.embabel.agent.identity.User;
 import com.embabel.chat.ChatSession;
 import com.embabel.chat.support.InMemoryChatbot;
+import com.embabel.guide.GuideData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
