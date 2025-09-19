@@ -8,6 +8,7 @@ import com.embabel.agent.api.common.ActionContext;
 import com.embabel.agent.api.common.OperationContext;
 import com.embabel.agent.core.AgentPlatform;
 import com.embabel.agent.core.CoreToolGroups;
+import com.embabel.agent.identity.User;
 import com.embabel.agent.rag.ContentElementSearch;
 import com.embabel.agent.rag.EntitySearch;
 import com.embabel.agent.rag.HyDE;
@@ -20,8 +21,13 @@ import com.embabel.chat.UserMessage;
 import com.embabel.chat.agent.AgentProcessChatbot;
 import com.embabel.chat.agent.ChatbotReturn;
 import com.embabel.chat.agent.ConversationTermination;
+import com.embabel.guide.domain.GuideUser;
+import com.embabel.guide.domain.GuideUserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.lang.NonNull;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -30,9 +36,17 @@ import java.util.Set;
 
 @Agent(description = "Embabel developer guide bot agent",
         name = GuideResponderAgent.NAME)
-public record GuideResponderAgent(
-        GuideData guideData
-) {
+public class GuideResponderAgent {
+
+    private final GuideData guideData;
+    private final GuideUserRepository guideUserRepository;
+
+    private final Logger logger = LoggerFactory.getLogger(GuideResponderAgent.class);
+
+    public GuideResponderAgent(GuideData guideData, GuideUserRepository guideUserRepository) {
+        this.guideData = guideData;
+        this.guideUserRepository = guideUserRepository;
+    }
 
     static final String NAME = "GuideAgent";
 
@@ -43,11 +57,21 @@ public record GuideResponderAgent(
         return context.lastResult() instanceof UserMessage;
     }
 
+    private GuideUser getGuideUser(@NonNull User user) {
+        return guideUserRepository.findById(user.getId())
+                .orElseGet(() -> {
+                    var newUser = new GuideUser(user);
+                    logger.info("Created new guide user: {}", newUser);
+                    return guideUserRepository.save(newUser);
+                });
+    }
+
     @Action(canRerun = true,
             pre = {LAST_EVENT_WAS_USER_MESSAGE})
     ChatbotReturn respond(
             Conversation conversation,
             ActionContext context) {
+        var guideUser = context.user() != null ? getGuideUser(context.user()) : null;
         var assistantMessage = context
                 .ai()
                 .withLlm(guideData.config().llm())
