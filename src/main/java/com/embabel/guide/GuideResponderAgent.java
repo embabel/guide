@@ -31,7 +31,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.lang.NonNull;
 
 import java.time.Duration;
-import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 
 
@@ -82,6 +82,10 @@ public class GuideResponderAgent {
             Conversation conversation,
             ActionContext context) {
         var guideUser = context.user() != null ? getGuideUser(context.user()) : null;
+        var templateModel = Map.of(
+                "user", context.user(),
+                "persona", guideData.config().persona()
+        );
         var assistantMessage = context
                 .ai()
                 .withLlm(guideData.config().llm())
@@ -103,9 +107,7 @@ public class GuideResponderAgent {
                                     }
                                 }))
                 .withTemplate("guide_system")
-                .respondWithSystemPrompt(conversation,
-                        guideData.templateModel(Collections.singletonMap("user",
-                                context.getProcessContext().getProcessOptions().getIdentities().getForUser())),
+                .respondWithSystemPrompt(conversation, templateModel,
                         "chat response");
         conversation.addMessage(assistantMessage);
         context.sendMessage(assistantMessage);

@@ -6,7 +6,7 @@ import com.embabel.agent.api.annotation.Export;
 import com.embabel.agent.api.common.OperationContext;
 import com.embabel.guide.GuideData;
 
-import java.util.Collections;
+import java.util.Map;
 
 record GuideRequest(
         String question
@@ -34,14 +34,16 @@ public record GuideAgent(
             export = @Export(remote = true, startingInputTypes = {GuideRequest.class}))
     @Action
     GuideResponse answerQuestion(GuideRequest guideRequest, OperationContext operationContext) {
+        var templateModel = Map.of(
+                "user", operationContext.user(),
+                "persona", guideData.config().persona()
+        );
         return operationContext.ai()
                 .withLlm(guideData.config().llm())
                 .withReferences(guideData.referencesForUser(null))
                 .withRag(guideData.ragOptions())
                 .withTemplate("guide_system")
-                .createObject(GuideResponse.class, guideData.templateModel(Collections.singletonMap(
-                        "user", operationContext.getProcessContext().getProcessOptions().getIdentities().getForUser()
-                )));
+                .createObject(GuideResponse.class, templateModel);
     }
 
 }
