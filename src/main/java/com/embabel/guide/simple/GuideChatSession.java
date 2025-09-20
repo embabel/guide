@@ -65,7 +65,7 @@ public class GuideChatSession implements ChatSession {
         conversation.addMessage(userMessage);
         var templateModel = Map.of(
                 "user", user,
-                "persona", guideData.config().persona()
+                "defaultPersona", guideData.config().defaultPersona()
         );
         final var assistantMessage = aiBuilder
                 .withShowPrompts(false)

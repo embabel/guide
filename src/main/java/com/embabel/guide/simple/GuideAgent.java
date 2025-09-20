@@ -36,7 +36,7 @@ public record GuideAgent(
     GuideResponse answerQuestion(GuideRequest guideRequest, OperationContext operationContext) {
         var templateModel = Map.of(
                 "user", operationContext.user(),
-                "persona", guideData.config().persona()
+                "defaultPersona", guideData.config().defaultPersona()
         );
         return operationContext.ai()
                 .withLlm(guideData.config().llm())

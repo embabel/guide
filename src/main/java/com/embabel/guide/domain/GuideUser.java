@@ -1,27 +1,33 @@
 package com.embabel.guide.domain;
 
 import com.embabel.agent.discord.DiscordUser;
+import com.embabel.agent.identity.User;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
+import org.neo4j.ogm.annotation.Relationship;
+import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 
 import java.util.UUID;
 
 @NodeEntity
-public class GuideUser {
+public class GuideUser implements User {
 
     @Id
     private String id;
 
     @Nullable
-    private String discordUserId;
+    private String persona = null;
 
-    // TODO persist DiscordUser, needs to be a node
+    @Nullable
+    @Relationship(type = "IS_DISCORD_USER", direction = Relationship.Direction.OUTGOING)
+    private MappedDiscordUserInfo discordUserInfo = null;
 
     public static GuideUser createFromDiscord(DiscordUser user) {
-        GuideUser guideUser = new GuideUser();
+        var guideUser = new GuideUser();
         guideUser.id = UUID.randomUUID().toString();
-        guideUser.discordUserId = user.getId();
+        guideUser.discordUserInfo = new MappedDiscordUserInfo(user.getDiscordUser());
         return guideUser;
     }
     // TODO personality
@@ -30,8 +36,38 @@ public class GuideUser {
         this.id = UUID.randomUUID().toString();
     }
 
+    public void setPersona(@NonNull String persona) {
+        this.persona = persona;
+    }
+
+    public @Nullable String persona() {
+        return persona;
+    }
+
     public String getId() {
         return id;
+    }
+
+    public @Nullable MappedDiscordUserInfo discordUserInfo() {
+        return discordUserInfo;
+    }
+
+    @NotNull
+    @Override
+    public String getDisplayName() {
+        return discordUserInfo != null ? discordUserInfo.getDisplayName() : id;
+    }
+
+    @NotNull
+    @Override
+    public String getUsername() {
+        return discordUserInfo != null ? discordUserInfo.getUsername() : id;
+    }
+
+    @Nullable
+    @Override
+    public String getEmail() {
+        return null;
     }
 
     @Override
