@@ -28,7 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 
 import java.time.Duration;
 import java.util.Map;
@@ -38,6 +38,8 @@ import java.util.Set;
 @Agent(description = "Embabel developer guide bot agent",
         name = GuideResponderAgent.NAME)
 public class GuideResponderAgent {
+
+    private static final String DEFAULT_PERSONA = "adaptive";
 
     private final GuideData guideData;
     private final GuideUserRepository guideUserRepository;
@@ -58,22 +60,26 @@ public class GuideResponderAgent {
         return context.lastResult() instanceof UserMessage;
     }
 
-    private GuideUser getGuideUser(@NonNull User user) {
-        return guideUserRepository.findById(user.getId())
-                .orElseGet(() -> {
-                    switch (user) {
-                        case DiscordUser du -> {
+    private GuideUser getGuideUser(@Nullable User user) {
+        switch (user) {
+            case null -> {
+                logger.warn("user is null: Cannot create or fetch GuideUser");
+                return null;
+            }
+            case DiscordUser du -> {
+                return guideUserRepository.findByDiscordUserId(du.getId())
+                        .orElseGet(() -> {
                             var newUser = GuideUser.createFromDiscord(du);
                             logger.info("Created new Discord user: {}", newUser);
                             return guideUserRepository.save(newUser);
-                        }
-                        default -> {
-                            var newUser = new GuideUser();
-                            logger.info("Created new guide user: {}", newUser);
-                            return guideUserRepository.save(newUser);
-                        }
-                    }
-                });
+                        });
+            }
+            default -> {
+                var newUser = new GuideUser();
+                logger.info("Created new guide user: {}", newUser);
+                return guideUserRepository.save(newUser);
+            }
+        }
     }
 
     @Action(canRerun = true,
@@ -81,10 +87,12 @@ public class GuideResponderAgent {
     ChatbotReturn respond(
             Conversation conversation,
             ActionContext context) {
-        var guideUser = context.user() != null ? getGuideUser(context.user()) : null;
+        logger.info("Incoming request from user {}", context.user());
+        var guideUser = getGuideUser(context.user());
+        var persona = guideUser != null && guideUser.persona() != null ? guideUser.persona() : DEFAULT_PERSONA;
         var templateModel = Map.of(
-                "user", context.user(),
-                "persona", guideData.config().persona()
+                "user", guideUser != null ? guideUser : context.user(),
+                "persona", persona
         );
         var assistantMessage = context
                 .ai()
