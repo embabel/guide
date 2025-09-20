@@ -13,7 +13,7 @@ import com.embabel.guide.GuideData;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.lang.Nullable;
 
-import java.util.Collections;
+import java.util.Map;
 
 /**
  * Shows how to write a ChatSession without an agent backing it
@@ -63,6 +63,10 @@ public class GuideChatSession implements ChatSession {
     @Override
     public void onUserMessage(@NotNull UserMessage userMessage) {
         conversation.addMessage(userMessage);
+        var templateModel = Map.of(
+                "user", user,
+                "persona", guideData.config().persona()
+        );
         final var assistantMessage = aiBuilder
                 .withShowPrompts(false)
                 .ai()
@@ -75,8 +79,7 @@ public class GuideChatSession implements ChatSession {
                     }
                 }))
                 .withTemplate("guide_system")
-                .respondWithSystemPrompt(conversation,
-                        guideData.templateModel(Collections.singletonMap("user", user)));
+                .respondWithSystemPrompt(conversation, templateModel);
 
         saveAndSend(assistantMessage);
     }

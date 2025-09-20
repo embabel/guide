@@ -19,7 +19,10 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Exposes the guide configuration and the loaded references
@@ -110,12 +113,6 @@ public class GuideData {
         return new RagOptions()
                 .withSimilarityThreshold(guideConfig.similarityThreshold())
                 .withTopK(guideConfig.topK());
-    }
-
-    public Map<String, Object> templateModel(Map<String, Object> extras) {
-        var n = new HashMap<>(extras);
-        n.put("persona", guideConfig.persona());
-        return n;
     }
 
 }
