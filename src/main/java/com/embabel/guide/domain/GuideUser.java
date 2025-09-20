@@ -11,6 +11,10 @@ import org.springframework.lang.Nullable;
 
 import java.util.UUID;
 
+/**
+ * Persona if set is a default personality for the user
+ * Custom prompt if set is a custom prompt for the user
+ */
 @NodeEntity
 public class GuideUser implements User {
 
@@ -19,6 +23,9 @@ public class GuideUser implements User {
 
     @Nullable
     private String persona = null;
+
+    @Nullable
+    private String customPrompt = null;
 
     @Nullable
     @Relationship(type = "IS_DISCORD_USER", direction = Relationship.Direction.OUTGOING)
@@ -42,6 +49,14 @@ public class GuideUser implements User {
 
     public @Nullable String persona() {
         return persona;
+    }
+
+    public void setCustomPrompt(@NonNull String customPrompt) {
+        this.customPrompt = customPrompt;
+    }
+
+    public @Nullable String customPersona() {
+        return customPrompt;
     }
 
     public String getId() {

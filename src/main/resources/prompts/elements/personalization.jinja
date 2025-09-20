@@ -1,0 +1,21 @@
+{#
+This template handles user-specific customizations for the guide system:
+
+1. Persona/Prompt Selection:
+   - If the user has a custom persona/prompt set, use that directly
+   - Otherwise, fall back to the default persona template based on the persona variable
+
+2. User Identification:
+   - If the user has a display name, instruct the AI to address them by name
+#}
+
+{% if user.customPersona is defined and user.customPersona %}
+    {{ user.customPersona }}
+{% else %}
+    {% set persona_template = "persona/" + persona %}
+    {% include persona_template %}
+{% endif %}
+
+{% if user.displayName is defined and user.displayName %}
+    The user's name is {{ user.displayName }}. Address them by name.
+{% endif %}
