@@ -8,6 +8,7 @@ import com.embabel.agent.api.common.ActionContext;
 import com.embabel.agent.api.common.OperationContext;
 import com.embabel.agent.core.AgentPlatform;
 import com.embabel.agent.core.CoreToolGroups;
+import com.embabel.agent.discord.DiscordUser;
 import com.embabel.agent.identity.User;
 import com.embabel.agent.rag.ContentElementSearch;
 import com.embabel.agent.rag.EntitySearch;
@@ -60,9 +61,18 @@ public class GuideResponderAgent {
     private GuideUser getGuideUser(@NonNull User user) {
         return guideUserRepository.findById(user.getId())
                 .orElseGet(() -> {
-                    var newUser = new GuideUser(user);
-                    logger.info("Created new guide user: {}", newUser);
-                    return guideUserRepository.save(newUser);
+                    switch (user) {
+                        case DiscordUser du -> {
+                            var newUser = GuideUser.createFromDiscord(du);
+                            logger.info("Created new Discord user: {}", newUser);
+                            return guideUserRepository.save(newUser);
+                        }
+                        default -> {
+                            var newUser = new GuideUser();
+                            logger.info("Created new guide user: {}", newUser);
+                            return guideUserRepository.save(newUser);
+                        }
+                    }
                 });
     }
 

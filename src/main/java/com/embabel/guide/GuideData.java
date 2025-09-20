@@ -49,13 +49,20 @@ public class GuideData {
                 100);
         references.add(embabelAgentApiReference);
 
+        // TODO this could be data driven
+        addGithubReference("https://github.com/embabel/embabel-agent-examples.git", "Embabel examples repo");
+        addGithubReference("https://github.com/embabel/embabel-agent.git", "Embabel agent implementation repo: Look to check code under embabel-agent-api");
+    }
+
+    private void addGithubReference(@NonNull String repoUrl, @NonNull String description) {
         try {
             var examplesReference = RepositoryReferenceProvider.create()
-                    .cloneRepository("https://github.com/embabel/embabel-agent-examples.git");
+                    .cloneRepository(repoUrl, description);
             references.add(examplesReference);
+            logger.info("Loaded Github repo {} for tool access", repoUrl);
         } catch (Throwable t) {
             // Allows working offline
-            logger.warn("Failed to load Github");
+            logger.warn("Failed to load Github repo {} for tool access", repoUrl);
         }
     }
 
