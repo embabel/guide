@@ -15,38 +15,18 @@
  */
 package com.embabel.guide.domain
 
-import com.embabel.guide.Neo4jTestContainer
+import com.embabel.guide.TestApplicationContext
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.annotation.Rollback
-import org.springframework.test.context.DynamicPropertyRegistry
-import org.springframework.test.context.DynamicPropertySource
+import org.springframework.test.context.ContextConfiguration
 
 @SpringBootTest
+@ContextConfiguration(classes = [TestApplicationContext::class])
 @Rollback(false)
 class GuideUserServiceTest {
-
-    companion object {
-        private val useLocalNeo4j = true
-
-        @JvmStatic
-        @DynamicPropertySource
-        fun neo4jProperties(registry: DynamicPropertyRegistry) {
-            if (!useLocalNeo4j) {
-                val container = Neo4jTestContainer.instance
-                registry.add("spring.neo4j.uri") { container.boltUrl }
-                registry.add("spring.neo4j.authentication.username") { "neo4j" }
-                registry.add("spring.neo4j.authentication.password") { container.adminPassword }
-            } else {
-                // Use local Neo4j - load properties from application-test-local.properties
-                registry.add("spring.neo4j.uri") { "bolt://localhost:7687" }
-                registry.add("spring.neo4j.authentication.username") { "neo4j" }
-                registry.add("spring.neo4j.authentication.password") { "h4ckM3\$\$\$\$" }
-            }
-        }
-    }
 
     @Autowired
     private lateinit var guideUserService: GuideUserService
@@ -98,13 +78,7 @@ class GuideUserServiceTest {
         val anonymousUser = guideUserService.getOrCreateAnonymousWebUser()
 
         // Then: The display name should be "Friend"
-        // Note: We need to verify via the repository query to ensure the WebUser relationship is loaded
-        val found = guideUserRepository.findAnonymousWebUser()
-        assertTrue(found.isPresent)
-
-        // The GuideUser itself will have a webUser relationship
-        // We can't directly test displayName here since GuideUser.getDisplayName()
-        // currently only looks at discordUserInfo
-        // This is a limitation we could address by updating GuideUser.getDisplayName()
+        val found = guideUserRepository.findAnonymousWebUser().orElseThrow()
+        assertEquals(found.displayName, "Friend")
     }
 }

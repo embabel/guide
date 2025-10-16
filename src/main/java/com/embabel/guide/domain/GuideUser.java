@@ -72,6 +72,7 @@ public class GuideUser implements User {
         return customPrompt;
     }
 
+    @NotNull
     public String getId() {
         return id;
     }
@@ -83,7 +84,13 @@ public class GuideUser implements User {
     @NotNull
     @Override
     public String getDisplayName() {
-        return discordUserInfo != null ? discordUserInfo.getDisplayName() : id;
+        if (webUser != null) {
+            return webUser.getDisplayName();
+        }
+        if (discordUserInfo != null) {
+            return discordUserInfo.getDisplayName();
+        }
+        return id;
     }
 
     @NotNull
