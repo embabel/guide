@@ -4,6 +4,7 @@ import com.embabel.agent.channel.*
 import com.embabel.chat.AssistantMessage
 import com.embabel.chat.Chatbot
 import com.embabel.chat.UserMessage
+import com.embabel.guide.domain.GuideUserRepository
 import com.embabel.guide.domain.WebUser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -25,10 +26,18 @@ import org.springframework.stereotype.Service
     matchIfMissing = false
 )
 class GuideRagServiceAdapter(
-    private val chatbot: Chatbot
+    private val chatbot: Chatbot,
+    private val guideUserRepository: GuideUserRepository
 ) : RagServiceAdapter {
 
     private val logger = LoggerFactory.getLogger(GuideRagServiceAdapter::class.java)
+
+    companion object {
+        private const val RESPONSE_TIMEOUT_MS = 120000 // 2 minutes
+        private const val POLL_INTERVAL_MS = 500L
+        private const val DEFAULT_ERROR_MESSAGE =
+            "I received your message but had trouble generating a response. Please try again."
+    }
 
     override suspend fun sendMessage(
         message: String,
@@ -40,65 +49,69 @@ class GuideRagServiceAdapter(
         val responseBuilder = StringBuilder()
         var isComplete = false
 
-        // Create an output channel that captures events and responses
-        val outputChannel = object : OutputChannel {
-            override fun send(event: OutputChannelEvent) {
-                logger.debug("OutputChannel received event: {}", event)
-
-                when (event) {
-                    is MessageOutputChannelEvent -> {
-                        // Extract actual message content
-                        when (val msg = event.message) {
-                            is AssistantMessage -> {
-                                responseBuilder.append(msg.content)
-                                isComplete = true
-                            }
-                            else -> {
-                                logger.debug("Received non-assistant message: {}", msg)
-                            }
-                        }
-                    }
-                    is ProgressOutputChannelEvent -> {
-                        // Send progress updates to the UI
-                        onEvent(event.message)
-                    }
-                    is LoggingOutputChannelEvent -> {
-                        // Ignore logging events for now
-                        logger.debug("Logging event: {}", event.message)
-                    }
-                    else -> {
-                        logger.debug("Unknown event type: {}", event)
-                    }
-                }
-            }
-        }
+        val outputChannel = createOutputChannel(responseBuilder, onEvent) { isComplete = true }
 
         try {
-            // Create a web user for this session
-            val webUser = WebUser(fromUserId, null, null, null)
-
-            // Create a chat session with the Guide chatbot
+            val webUser = guideUserRepository.findById(fromUserId)
+                .orElseThrow { RuntimeException("No user found with id: $fromUserId") }
             val session = chatbot.createSession(webUser, outputChannel, null)
 
-            // Send the user's message to the chatbot
             session.onUserMessage(UserMessage(message))
 
-            // Wait for the response with a timeout
-            var waited = 0
-            while (!isComplete && waited < 120000) { // 2 minute timeout
-                delay(500)
-                waited += 500
-            }
+            waitForResponse { isComplete }
 
-            val response = responseBuilder.toString()
-            if (response.isBlank()) {
-                "I received your message but had trouble generating a response. Please try again."
-            } else {
-                response
-            }
+            responseBuilder.toString().ifBlank { DEFAULT_ERROR_MESSAGE }
         } catch (e: Exception) {
             logger.error("Error processing message from user {}: {}", fromUserId, e.message, e)
             throw e
+        }
+    }
+
+    /**
+     * Creates an output channel that captures chatbot events and responses.
+     */
+    private fun createOutputChannel(
+        responseBuilder: StringBuilder,
+        onEvent: (String) -> Unit,
+        onComplete: () -> Unit
+    ): OutputChannel = object : OutputChannel {
+        override fun send(event: OutputChannelEvent) {
+            logger.debug("OutputChannel received event: {}", event)
+
+            when (event) {
+                is MessageOutputChannelEvent -> handleMessageEvent(event, responseBuilder, onComplete)
+                is ProgressOutputChannelEvent -> onEvent(event.message)
+                is LoggingOutputChannelEvent -> logger.debug("Logging event: {}", event.message)
+                else -> logger.debug("Unknown event type: {}", event)
+            }
+        }
+    }
+
+    /**
+     * Handles message events from the chatbot output channel.
+     */
+    private fun handleMessageEvent(
+        event: MessageOutputChannelEvent,
+        responseBuilder: StringBuilder,
+        onComplete: () -> Unit
+    ) {
+        when (val msg = event.message) {
+            is AssistantMessage -> {
+                responseBuilder.append(msg.content)
+                onComplete()
+            }
+            else -> logger.debug("Received non-assistant message: {}", msg)
+        }
+    }
+
+    /**
+     * Waits for the chatbot response with a timeout.
+     */
+    private suspend fun waitForResponse(isComplete: () -> Boolean) {
+        var waited = 0
+        while (!isComplete() && waited < RESPONSE_TIMEOUT_MS) {
+            delay(POLL_INTERVAL_MS)
+            waited += POLL_INTERVAL_MS.toInt()
         }
     }
 }

@@ -15,11 +15,20 @@ public class GuideUserService {
    * Returns the anonymous web user for non-authenticated sessions.
    * If the user doesn't exist yet, creates it with a random UUID and displayName "Friend".
    *
+   * Synchronized to prevent race condition where multiple concurrent requests
+   * could create duplicate GuideUser instances.
+   *
    * @return the anonymous web user GuideUser
    */
-  public GuideUser getOrCreateAnonymousWebUser() {
+  public synchronized GuideUser findOrCreateAnonymousWebUser() {
     return guideUserRepository.findAnonymousWebUser()
         .orElseGet(() -> {
+          // Double-check after acquiring lock to avoid duplicate creation
+          var existing = guideUserRepository.findAnonymousWebUser();
+          if (existing.isPresent()) {
+            return existing.get();
+          }
+
           // Create new anonymous web user
           WebUser anonymousWebUser = AnonymousWebUser.create();
           GuideUser guideUser = GuideUser.createFromWebUser(anonymousWebUser);

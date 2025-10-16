@@ -70,6 +70,9 @@ public class GuideResponderAgent {
                 logger.warn("user is null: Cannot create or fetch GuideUser");
                 return null;
             }
+            case GuideUser gu -> {
+                return gu;
+            }
             case DiscordUser du -> {
                 return guideUserRepository.findByDiscordUserId(du.getId())
                         .orElseGet(() -> {
@@ -79,12 +82,7 @@ public class GuideResponderAgent {
                         });
             }
             case WebUser wu -> {
-                return guideUserRepository.findById(wu.getId())
-                        .orElseGet(() -> {
-                            var newUser = new GuideUser();
-                            logger.info("Created new web user: {}", newUser);
-                            return guideUserRepository.save(newUser);
-                        });
+                return wu.getGuideUser();
             }
             default -> {
                 var newUser = new GuideUser();
