@@ -20,6 +20,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
+import org.neo4j.ogm.annotation.Relationship;
 
 /**
  * Represents a user connecting through the web interface.
@@ -35,6 +36,11 @@ public class WebUser implements User {
     private String userDisplayName;
     private String userUsername;
     private String userEmail;
+
+    @Nullable
+    @Relationship(type = "IS_WEB_USER", direction = Relationship.Direction.INCOMING)
+    private GuideUser guideUser;
+
 
     // No-arg constructor for Neo4j OGM
     public WebUser() {
@@ -77,4 +83,14 @@ public class WebUser implements User {
     public String toString() {
         return "WebUser(id='" + userId + "', displayName='" + getDisplayName() + "')";
     }
+
+    @Nullable
+    public GuideUser getGuideUser() {
+        return guideUser;
+    }
+
+    public void setGuideUser(@Nullable GuideUser guideUser) {
+        this.guideUser = guideUser;
+    }
+
 }

@@ -40,7 +40,7 @@ class GuideUserServiceTest {
         guideUserRepository.deleteAll()
 
         // When: We request the anonymous web user
-        val anonymousUser = guideUserService.getOrCreateAnonymousWebUser()
+        val anonymousUser = guideUserService.findOrCreateAnonymousWebUser()
 
         // Then: A new GuideUser is created with an AnonymousWebUser relationship
         assertNotNull(anonymousUser)
@@ -55,11 +55,11 @@ class GuideUserServiceTest {
     fun `test getOrCreateAnonymousWebUser returns existing user when one exists`() {
         // Given: An anonymous web user already exists
         guideUserRepository.deleteAll()
-        val firstCall = guideUserService.getOrCreateAnonymousWebUser()
+        val firstCall = guideUserService.findOrCreateAnonymousWebUser()
         val firstUserId = firstCall.id
 
         // When: We request the anonymous web user again
-        val secondCall = guideUserService.getOrCreateAnonymousWebUser()
+        val secondCall = guideUserService.findOrCreateAnonymousWebUser()
 
         // Then: The same user is returned
         assertEquals(firstUserId, secondCall.id)
@@ -75,7 +75,7 @@ class GuideUserServiceTest {
         guideUserRepository.deleteAll()
 
         // When: We request the anonymous web user
-        val anonymousUser = guideUserService.getOrCreateAnonymousWebUser()
+        val anonymousUser = guideUserService.findOrCreateAnonymousWebUser()
 
         // Then: The display name should be "Friend"
         val found = guideUserRepository.findAnonymousWebUser().orElseThrow()
