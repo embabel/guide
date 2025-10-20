@@ -32,7 +32,7 @@ public class AnonymousWebUser extends WebUser {
     }
 
     public AnonymousWebUser(String id) {
-        super(id, "Friend", "anonymous", null);
+        super(id, "Friend", "anonymous", null, null, null);
     }
 
     public static AnonymousWebUser create() {

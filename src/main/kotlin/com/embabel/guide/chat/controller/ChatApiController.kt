@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/api/messages")
-class ApiController(private val chat: ChatService, private val jesseService: JesseService) {
+class ChatApiController(private val chat: ChatService, private val jesseService: JesseService) {
     data class Outbound(val toUserId: String, val body: String, val fromUserId: String)
     data class JesseMessage(val fromUserId: String, val body: String)
 

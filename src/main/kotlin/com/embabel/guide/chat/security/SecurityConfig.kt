@@ -28,7 +28,8 @@ class SecurityConfig {
                 it.requestMatchers(*patterns).permitAll()
                 it.requestMatchers(
                     HttpMethod.POST,
-                    "/api/messages/user"
+                    "/api/messages/user",
+                    "/api/hub/register"
                 ).permitAll()
                 it.anyRequest().authenticated()
             }

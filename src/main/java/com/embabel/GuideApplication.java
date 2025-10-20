@@ -32,7 +32,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         loggingTheme = LoggingThemes.SEVERANCE,
         mcpServers = {McpServers.DOCKER_DESKTOP}
 )
-class GuideApplication {
+public class GuideApplication {
     public static void main(String[] args) {
         SpringApplication app = new SpringApplication(GuideApplication.class);
         app.setWebApplicationType(WebApplicationType.SERVLET);

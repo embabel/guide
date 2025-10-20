@@ -36,6 +36,8 @@ public class WebUser implements User {
     private String userDisplayName;
     private String userUsername;
     private String userEmail;
+    private String passwordHash;
+    private String refreshToken;
 
     @Nullable
     @Relationship(type = "IS_WEB_USER", direction = Relationship.Direction.INCOMING)
@@ -47,11 +49,13 @@ public class WebUser implements User {
         this.userId = "";
     }
 
-    public WebUser(String userId, String userDisplayName, String userUsername, String userEmail) {
+    public WebUser(String userId, String userDisplayName, String userUsername, String userEmail, String passwordHash, String refreshToken) {
         this.userId = userId;
         this.userDisplayName = userDisplayName;
         this.userUsername = userUsername;
         this.userEmail = userEmail;
+        this.passwordHash = passwordHash;
+        this.refreshToken = refreshToken;
     }
 
     @NotNull
@@ -89,8 +93,28 @@ public class WebUser implements User {
         return guideUser;
     }
 
-    public void setGuideUser(@Nullable GuideUser guideUser) {
-        this.guideUser = guideUser;
+    public String getUserId() {
+        return userId;
+    }
+
+    public String getUserDisplayName() {
+        return userDisplayName;
+    }
+
+    public String getUserUsername() {
+        return userUsername;
+    }
+
+    public String getUserEmail() {
+        return userEmail;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public String getRefreshToken() {
+        return refreshToken;
     }
 
 }

@@ -15,7 +15,9 @@
  */
 package com.embabel.guide
 
+import com.embabel.GuideApplication
 import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.context.annotation.Import
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 
@@ -25,8 +27,11 @@ import org.springframework.test.context.DynamicPropertySource
  * Controls whether tests use local Neo4j or Testcontainers:
  * - Set useLocalNeo4j = true to use local Neo4j at localhost:7687
  * - Set useLocalNeo4j = false to use Testcontainers (slower, but isolated)
+ *
+ * Imports GuideApplication to enable full component scanning.
  */
 @TestConfiguration
+@Import(GuideApplication::class)
 class TestApplicationContext {
 
     companion object {
@@ -35,7 +40,7 @@ class TestApplicationContext {
          * Set to true for faster tests with local Neo4j (requires Neo4j running on localhost:7687).
          * Set to false to use Testcontainers (slower startup, but fully isolated).
          */
-        const val useLocalNeo4j = false
+        const val useLocalNeo4j = true
 
         // Local Neo4j connection details
         private const val LOCAL_NEO4J_URI = "bolt://localhost:7687"

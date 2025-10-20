@@ -2,6 +2,8 @@ package com.embabel.guide.domain;
 
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 public class GuideUserService {
 
@@ -35,6 +37,27 @@ public class GuideUserService {
 
           return guideUserRepository.save(guideUser);
         });
+  }
+
+  /**
+   * Finds a GuideUser by their WebUser ID.
+   *
+   * @param webUserId the WebUser's ID
+   * @return the GuideUser if found
+   */
+  public Optional<GuideUser> findByWebUserId(String webUserId) {
+    return guideUserRepository.findByWebUserId(webUserId);
+  }
+
+  /**
+   * Creates and saves a new GuideUser from a WebUser.
+   *
+   * @param webUser the WebUser to create a GuideUser from
+   * @return the saved GuideUser
+   */
+  public GuideUser saveFromWebUser(WebUser webUser) {
+    GuideUser guideUser = GuideUser.createFromWebUser(webUser);
+    return guideUserRepository.save(guideUser);
   }
 
 }

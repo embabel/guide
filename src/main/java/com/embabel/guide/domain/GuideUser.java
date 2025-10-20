@@ -81,6 +81,10 @@ public class GuideUser implements User {
         return discordUserInfo;
     }
 
+    public @Nullable WebUser getWebUser() {
+        return webUser;
+    }
+
     @NotNull
     @Override
     public String getDisplayName() {
@@ -96,12 +100,21 @@ public class GuideUser implements User {
     @NotNull
     @Override
     public String getUsername() {
-        return discordUserInfo != null ? discordUserInfo.getUsername() : id;
+        if (webUser != null) {
+            return webUser.getUsername();
+        }
+        if (discordUserInfo != null) {
+            return discordUserInfo.getUsername();
+        }
+        return id;
     }
 
     @Nullable
     @Override
     public String getEmail() {
+        if (webUser != null) {
+            return webUser.getEmail();
+        }
         return null;
     }
 
