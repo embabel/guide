@@ -255,4 +255,260 @@ class HubApiControllerTest {
         assertEquals("frankgreen", foundUser.get().username)
         assertEquals("frank.green@example.com", foundUser.get().email)
     }
+
+    // ========== Login Tests ==========
+
+    @Test
+    fun `POST login should successfully authenticate user with valid credentials`() {
+        // Given - First register a user
+        val registerRequest = UserRegistrationRequest(
+            userDisplayName = "Test User",
+            username = "testuser",
+            userEmail = "test@example.com",
+            password = "SecurePassword123!",
+            passwordConfirmation = "SecurePassword123!"
+        )
+        mockMvc.perform(
+            post("/api/hub/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(registerRequest))
+        )
+
+        // When - Login with valid credentials
+        val loginRequest = UserLoginRequest(
+            username = "testuser",
+            password = "SecurePassword123!"
+        )
+
+        val result = mockMvc.perform(
+            post("/api/hub/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.token").exists())
+            .andExpect(jsonPath("$.userId").exists())
+            .andExpect(jsonPath("$.username").value("testuser"))
+            .andExpect(jsonPath("$.displayName").value("Test User"))
+            .andExpect(jsonPath("$.email").value("test@example.com"))
+            .andReturn()
+
+        // Verify the token is valid
+        val responseBody = result.response.contentAsString
+        val loginResponse = objectMapper.readValue(responseBody, LoginResponse::class.java)
+
+        val userId = jwtTokenService.validateRefreshToken(loginResponse.token)
+        assertEquals(loginResponse.userId, userId)
+    }
+
+    @Test
+    fun `POST login should return 401 when username does not exist`() {
+        // Given - No user registered
+        val loginRequest = UserLoginRequest(
+            username = "nonexistent",
+            password = "SomePassword123!"
+        )
+
+        // When & Then
+        mockMvc.perform(
+            post("/api/hub/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest))
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.error").value("Invalid username or password"))
+    }
+
+    @Test
+    fun `POST login should return 401 when password is incorrect`() {
+        // Given - Register a user first
+        val registerRequest = UserRegistrationRequest(
+            userDisplayName = "Password Test User",
+            username = "passwordtest",
+            userEmail = "passwordtest@example.com",
+            password = "CorrectPassword123!",
+            passwordConfirmation = "CorrectPassword123!"
+        )
+        mockMvc.perform(
+            post("/api/hub/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(registerRequest))
+        )
+
+        // When - Try to login with wrong password
+        val loginRequest = UserLoginRequest(
+            username = "passwordtest",
+            password = "WrongPassword123!"
+        )
+
+        // Then
+        mockMvc.perform(
+            post("/api/hub/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest))
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.error").value("Invalid username or password"))
+    }
+
+    @Test
+    fun `POST login should return 401 when username is blank`() {
+        // Given
+        val loginRequest = UserLoginRequest(
+            username = "",
+            password = "SomePassword123!"
+        )
+
+        // When & Then
+        mockMvc.perform(
+            post("/api/hub/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest))
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.error").value("Username is required"))
+    }
+
+    @Test
+    fun `POST login should return 401 when password is blank`() {
+        // Given
+        val loginRequest = UserLoginRequest(
+            username = "someuser",
+            password = ""
+        )
+
+        // When & Then
+        mockMvc.perform(
+            post("/api/hub/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest))
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.error").value("Password is required"))
+    }
+
+    @Test
+    fun `POST login should return 400 when request body is malformed`() {
+        // Given - malformed JSON
+        val malformedJson = """{"username": "test"}"""
+
+        // When & Then
+        mockMvc.perform(
+            post("/api/hub/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(malformedJson)
+        )
+            .andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `POST login should handle multiple login attempts with same credentials`() {
+        // Given - Register a user
+        val registerRequest = UserRegistrationRequest(
+            userDisplayName = "Multi Login User",
+            username = "multilogin",
+            userEmail = "multilogin@example.com",
+            password = "SecurePassword123!",
+            passwordConfirmation = "SecurePassword123!"
+        )
+        mockMvc.perform(
+            post("/api/hub/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(registerRequest))
+        )
+
+        val loginRequest = UserLoginRequest(
+            username = "multilogin",
+            password = "SecurePassword123!"
+        )
+
+        // When - Login multiple times
+        val firstLogin = mockMvc.perform(
+            post("/api/hub/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest))
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+
+        val secondLogin = mockMvc.perform(
+            post("/api/hub/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest))
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+
+        // Then - Both logins should return the same token
+        val firstResponse = objectMapper.readValue(firstLogin.response.contentAsString, LoginResponse::class.java)
+        val secondResponse = objectMapper.readValue(secondLogin.response.contentAsString, LoginResponse::class.java)
+
+        assertEquals(firstResponse.token, secondResponse.token)
+        assertEquals(firstResponse.userId, secondResponse.userId)
+    }
+
+    @Test
+    fun `POST login should be case-sensitive for username`() {
+        // Given - Register a user with lowercase username
+        val registerRequest = UserRegistrationRequest(
+            userDisplayName = "Case Test User",
+            username = "casetest",
+            userEmail = "casetest@example.com",
+            password = "SecurePassword123!",
+            passwordConfirmation = "SecurePassword123!"
+        )
+        mockMvc.perform(
+            post("/api/hub/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(registerRequest))
+        )
+
+        // When - Try to login with uppercase username
+        val loginRequest = UserLoginRequest(
+            username = "CASETEST",
+            password = "SecurePassword123!"
+        )
+
+        // Then - Should fail because usernames are case-sensitive
+        mockMvc.perform(
+            post("/api/hub/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest))
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.error").value("Invalid username or password"))
+    }
+
+    @Test
+    fun `POST login should work with special characters in password`() {
+        // Given - Register a user with special characters in password
+        val registerRequest = UserRegistrationRequest(
+            userDisplayName = "Special Char User",
+            username = "specialchar",
+            userEmail = "specialchar@example.com",
+            password = "P@ssw0rd!#$%^&*()",
+            passwordConfirmation = "P@ssw0rd!#$%^&*()"
+        )
+        mockMvc.perform(
+            post("/api/hub/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(registerRequest))
+        )
+
+        // When - Login with same special character password
+        val loginRequest = UserLoginRequest(
+            username = "specialchar",
+            password = "P@ssw0rd!#$%^&*()"
+        )
+
+        // Then - Should succeed
+        mockMvc.perform(
+            post("/api/hub/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.token").exists())
+            .andExpect(jsonPath("$.username").value("specialchar"))
+    }
 }

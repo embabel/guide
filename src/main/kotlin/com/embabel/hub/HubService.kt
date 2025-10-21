@@ -70,4 +70,45 @@ class HubService(
         return guideUserService.saveFromWebUser(webUser)
     }
 
+    /**
+     * Authenticates a user with username and password.
+     *
+     * Validates the credentials and returns a login response with a JWT token.
+     *
+     * @param request The login request with username and password
+     * @return LoginResponse containing the JWT token and user information
+     * @throws LoginException if the credentials are invalid
+     */
+    fun loginUser(request: UserLoginRequest): LoginResponse {
+        // Validate required fields
+        if (request.username.isBlank()) {
+            throw LoginException("Username is required")
+        }
+        if (request.password.isBlank()) {
+            throw LoginException("Password is required")
+        }
+
+        // Find the user by username
+        val guideUser = guideUserService.findByUsername(request.username)
+            ?: throw LoginException("Invalid username or password")
+
+        // Get the WebUser
+        val webUser = guideUser.webUser
+            ?: throw LoginException("Invalid username or password")
+
+        // Verify the password
+        if (!passwordEncoder.matches(request.password, webUser.passwordHash)) {
+            throw LoginException("Invalid username or password")
+        }
+
+        // Return the login response with the refresh token
+        return LoginResponse(
+            token = webUser.refreshToken,
+            userId = webUser.userId,
+            username = webUser.username,
+            displayName = webUser.displayName,
+            email = webUser.email ?: ""
+        )
+    }
+
 }

@@ -60,4 +60,14 @@ public class GuideUserService {
     return guideUserRepository.save(guideUser);
   }
 
+  /**
+   * Finds a GuideUser by their username.
+   *
+   * @param username the username to search for
+   * @return the GuideUser if found, null otherwise
+   */
+  public GuideUser findByUsername(String username) {
+    return guideUserRepository.findByUsername(username).orElse(null);
+  }
+
 }

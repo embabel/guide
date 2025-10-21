@@ -25,4 +25,16 @@ class HubApiController(private val hubService: HubService) {
                 .body(ErrorResponse(e.message ?: "Registration failed"))
         }
     }
+
+    @PostMapping("/login")
+    fun loginUser(@RequestBody request: UserLoginRequest): ResponseEntity<*> {
+        return try {
+            val loginResponse = hubService.loginUser(request)
+            ResponseEntity.ok(loginResponse)
+        } catch (e: LoginException) {
+            ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ErrorResponse(e.message ?: "Login failed"))
+        }
+    }
 }
