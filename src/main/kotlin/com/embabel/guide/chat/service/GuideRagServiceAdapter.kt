@@ -52,7 +52,7 @@ class GuideRagServiceAdapter(
         val outputChannel = createOutputChannel(responseBuilder, onEvent) { isComplete = true }
 
         try {
-            val webUser = guideUserRepository.findById(fromUserId)
+            val webUser = guideUserRepository.findByWebUserId(fromUserId)
                 .orElseThrow { RuntimeException("No user found with id: $fromUserId") }
             val session = chatbot.createSession(webUser, outputChannel, null)
 

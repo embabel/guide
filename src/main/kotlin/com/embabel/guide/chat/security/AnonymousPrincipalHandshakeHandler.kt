@@ -19,29 +19,39 @@ class AnonymousPrincipalHandshakeHandler(
         wsHandler: WebSocketHandler,
         attributes: MutableMap<String, Any>
     ): Principal {
+        logger.info("WebSocket handshake - URI: ${request.uri}")
+
         // First check if there's already a principal from Spring Security
         val existing = request.principal
         if (existing != null) {
+            logger.info("Using existing principal from Spring Security: ${existing.name}")
             return existing
         }
 
         // Try to extract JWT token from query parameter (common for WebSocket)
         val token = extractTokenFromRequest(request)
         if (token != null) {
+            logger.info("JWT token found in WebSocket handshake request")
             try {
                 val userId = jwtTokenService.validateRefreshToken(token)
+                logger.info("JWT token validated successfully for user: $userId")
                 return object : Principal {
                     override fun getName(): String = userId
                 }
             } catch (e: Exception) {
-                logger.debug("JWT token validation failed during WebSocket handshake: ${e.message}")
+                logger.warn("JWT token validation failed during WebSocket handshake: ${e.message}", e)
             }
+        } else {
+            logger.info("No JWT token found in WebSocket handshake request")
         }
 
         // Fall back to anonymous user
+        logger.info("Falling back to anonymous user")
         return object : Principal {
             private val user = guideUserService.findOrCreateAnonymousWebUser()
-            override fun getName(): String = user.id
+            private val webUser = requireNotNull(user.webUser) { "webUser should not be null here" }
+
+            override fun getName(): String = webUser.id
         }
     }
 
