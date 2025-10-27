@@ -26,17 +26,14 @@ class HubService(
      * @throws RegistrationException if validation fails or registration cannot be completed
      */
     fun registerUser(request: UserRegistrationRequest): GuideUser {
-        // Validate password confirmation
         if (request.password != request.passwordConfirmation) {
             throw RegistrationException("Password and password confirmation do not match")
         }
 
-        // Validate password strength (minimum requirements)
         if (request.password.length < 8) {
             throw RegistrationException("Password must be at least 8 characters long")
         }
 
-        // Validate required fields
         if (request.username.isBlank()) {
             throw RegistrationException("Username is required")
         }
@@ -88,20 +85,16 @@ class HubService(
             throw LoginException("Password is required")
         }
 
-        // Find the user by username
         val guideUser = guideUserService.findByUsername(request.username)
             ?: throw LoginException("Invalid username or password")
 
-        // Get the WebUser
         val webUser = guideUser.webUser
             ?: throw LoginException("Invalid username or password")
 
-        // Verify the password
         if (!passwordEncoder.matches(request.password, webUser.passwordHash)) {
             throw LoginException("Invalid username or password")
         }
 
-        // Return the login response with the refresh token
         return LoginResponse(
             token = webUser.refreshToken,
             userId = webUser.userId,
@@ -120,12 +113,58 @@ class HubService(
      * @return the updated GuideUser
      */
     fun updatePersona(userId: String, persona: String): GuideUser {
-        // Validate persona is not blank
         if (persona.isBlank()) {
             throw IllegalArgumentException("Persona cannot be blank")
         }
         val user = guideUserService.findByWebUserId(userId).orElseThrow()
         return guideUserService.updatePersona(user.id, persona)
+    }
+
+    /**
+     * Changes the password for a user.
+     *
+     * Validates the current password, ensures the new password meets requirements,
+     * and updates the password hash.
+     *
+     * @param userId the user's ID (from authentication)
+     * @param request the change password request
+     * @throws ChangePasswordException if validation fails
+     */
+    fun changePassword(userId: String, request: ChangePasswordRequest) {
+        if (request.currentPassword.isBlank()) {
+            throw ChangePasswordException("Current password is required")
+        }
+        if (request.newPassword.isBlank()) {
+            throw ChangePasswordException("New password is required")
+        }
+
+        if (request.newPassword != request.newPasswordConfirmation) {
+            throw ChangePasswordException("New password and confirmation do not match")
+        }
+
+        if (request.newPassword.length < 8) {
+            throw ChangePasswordException("New password must be at least 8 characters long")
+        }
+
+        val guideUser = guideUserService.findByWebUserId(userId)
+            .orElseThrow { ChangePasswordException("User not found") }
+
+        val webUser = guideUser.webUser
+            ?: throw ChangePasswordException("User not found")
+
+        if (!passwordEncoder.matches(request.currentPassword, webUser.passwordHash)) {
+            throw ChangePasswordException("Current password is incorrect")
+        }
+
+        // Check that new password is different from current
+        if (passwordEncoder.matches(request.newPassword, webUser.passwordHash)) {
+            throw ChangePasswordException("New password must be different from current password")
+        }
+
+        val newPasswordHash = passwordEncoder.encode(request.newPassword)
+        webUser.passwordHash = newPasswordHash
+
+        guideUserService.saveUser(guideUser)
     }
 
 }

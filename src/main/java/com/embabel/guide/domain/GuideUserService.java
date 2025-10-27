@@ -84,4 +84,14 @@ public class GuideUserService {
     return guideUserRepository.save(user);
   }
 
+  /**
+   * Saves a GuideUser.
+   *
+   * @param guideUser the GuideUser to save
+   * @return the saved GuideUser
+   */
+  public GuideUser saveUser(GuideUser guideUser) {
+    return guideUserRepository.save(guideUser);
+  }
+
 }

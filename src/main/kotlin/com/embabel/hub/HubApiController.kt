@@ -69,4 +69,23 @@ class HubApiController(
             ResponseEntity.status(HttpStatus.BAD_REQUEST).build()
         }
     }
+
+    @PutMapping("/password")
+    fun changePassword(
+        @RequestBody request: ChangePasswordRequest,
+        authentication: Authentication?
+    ): ResponseEntity<*> {
+        return try {
+            val userId = authentication?.principal as? String
+                ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ErrorResponse("Unauthorized"))
+
+            hubService.changePassword(userId, request)
+            ResponseEntity.ok().build<Void>()
+        } catch (e: ChangePasswordException) {
+            ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse(e.message ?: "Password change failed"))
+        }
+    }
 }
