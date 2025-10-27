@@ -4,6 +4,7 @@ import com.embabel.agent.api.annotation.AchievesGoal;
 import com.embabel.agent.api.annotation.Action;
 import com.embabel.agent.api.annotation.Export;
 import com.embabel.agent.api.common.OperationContext;
+import com.embabel.agent.rag.tools.RagReference;
 import com.embabel.guide.GuideData;
 
 import java.util.Map;
@@ -33,15 +34,17 @@ public record GuideAgent(
     @AchievesGoal(description = "Answer a question about Embabel",
             export = @Export(remote = true, startingInputTypes = {GuideRequest.class}))
     @Action
-    GuideResponse answerQuestion(GuideRequest guideRequest, OperationContext operationContext) {
+    GuideResponse answerQuestion(GuideRequest guideRequest, OperationContext context) {
         var templateModel = Map.of(
-                "user", operationContext.user(),
+                "user", context.user(),
                 "defaultPersona", guideData.config().defaultPersona()
         );
-        return operationContext.ai()
+        return context.ai()
                 .withLlm(guideData.config().llm())
                 .withReferences(guideData.referencesForUser(null))
-                .withRag(guideData.ragOptions())
+                .withReference(
+                        new RagReference("docs", "docs", guideData.ragOptions(),
+                                context.ai().withLlmByRole("summarizer")))
                 .withTemplate("guide_system")
                 .createObject(GuideResponse.class, templateModel);
     }

@@ -2,16 +2,12 @@ package com.embabel.guide;
 
 import com.embabel.agent.api.common.OperationContext;
 import com.embabel.agent.event.logging.personality.severance.LumonColorPalette;
-import com.embabel.agent.rag.RagRequest;
-import com.embabel.agent.rag.SimpleRagResponseFormatter;
 import com.embabel.agent.shell.TerminalServices;
 import com.embabel.chat.Chatbot;
 import org.springframework.shell.standard.ShellComponent;
 import org.springframework.shell.standard.ShellMethod;
-import org.springframework.shell.standard.ShellOption;
 
 import java.nio.file.Path;
-import java.time.Duration;
 
 @ShellComponent
 public record GuideShell(
@@ -50,21 +46,21 @@ public record GuideShell(
         return guideData.count() + " chunks in the database";
     }
 
-    @ShellMethod("rag query")
-    public String rag(
-            @ShellOption String query,
-            @ShellOption(defaultValue = "10") int topK,
-            @ShellOption(defaultValue = "0.2") double similarityThreshold) {
-        var raw = context.ai()
-                .rag()
-                .search(
-                        RagRequest.query(query)
-                                .withTopK(topK)
-                                .withSimilarityThreshold(similarityThreshold)
-                                .withDesiredMaxLatency(Duration.ofMinutes(5))
-                );
-        var ragResponseFormatter = SimpleRagResponseFormatter.INSTANCE;
-        return "RAG response: \n" + ragResponseFormatter.format(raw);
-    }
+//    @ShellMethod("rag query")
+//    public String rag(
+//            @ShellOption String query,
+//            @ShellOption(defaultValue = "10") int topK,
+//            @ShellOption(defaultValue = "0.2") double similarityThreshold) {
+//        var raw = context.ai()
+//                .rag()
+//                .search(
+//                        RagRequest.query(query)
+//                                .withTopK(topK)
+//                                .withSimilarityThreshold(similarityThreshold)
+//                                .withDesiredMaxLatency(Duration.ofMinutes(5))
+//                );
+//        var ragResponseFormatter = SimpleRagResponseFormatter.INSTANCE;
+//        return "RAG response: \n" + ragResponseFormatter.format(raw);
+//    }
 
 }

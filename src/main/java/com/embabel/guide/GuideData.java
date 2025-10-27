@@ -2,6 +2,7 @@ package com.embabel.guide;
 
 import com.embabel.agent.api.common.LlmReference;
 import com.embabel.agent.identity.User;
+import com.embabel.agent.rag.RagService;
 import com.embabel.agent.rag.WritableContentElementRepository;
 import com.embabel.agent.rag.ingestion.DirectoryParsingResult;
 import com.embabel.agent.rag.ingestion.HierarchicalContentReader;
@@ -35,13 +36,16 @@ public class GuideData {
     private final List<LlmReference> references = new LinkedList<>();
     private final WritableContentElementRepository store;
     private final PlatformTransactionManager platformTransactionManager;
+    private final RagService ragService;
 
     public GuideData(
             WritableContentElementRepository store,
             GuideConfig guideConfig,
-            PlatformTransactionManager platformTransactionManager) {
+            PlatformTransactionManager platformTransactionManager,
+            RagService ragService) {
         this.store = store;
         this.guideConfig = guideConfig;
+        this.ragService = ragService;
         this.platformTransactionManager = platformTransactionManager;
         var embabelAgentApiReference = new ApiReference(
                 "Embabel Agent API: Core",
@@ -110,7 +114,7 @@ public class GuideData {
     }
 
     public RagOptions ragOptions() {
-        return new RagOptions()
+        return new RagOptions(ragService)
                 .withSimilarityThreshold(guideConfig.similarityThreshold())
                 .withTopK(guideConfig.topK());
     }
