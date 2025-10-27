@@ -117,4 +117,8 @@ public class WebUser implements User {
         return refreshToken;
     }
 
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
 }
