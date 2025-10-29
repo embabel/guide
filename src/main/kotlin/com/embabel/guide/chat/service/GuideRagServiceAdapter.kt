@@ -2,6 +2,7 @@ package com.embabel.guide.chat.service
 
 import com.embabel.agent.channel.*
 import com.embabel.chat.AssistantMessage
+import com.embabel.chat.ChatSession
 import com.embabel.chat.Chatbot
 import com.embabel.chat.UserMessage
 import com.embabel.guide.domain.GuideUserRepository
@@ -12,6 +13,7 @@ import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Real implementation of RagServiceAdapter that integrates with the Guide chatbot.
@@ -32,11 +34,35 @@ class GuideRagServiceAdapter(
 
     private val logger = LoggerFactory.getLogger(GuideRagServiceAdapter::class.java)
 
+    // Session cache to maintain conversation continuity per user
+    private val userSessions = ConcurrentHashMap<String, SessionContext>()
+
     companion object {
         private const val RESPONSE_TIMEOUT_MS = 120000 // 2 minutes
         private const val POLL_INTERVAL_MS = 500L
         private const val DEFAULT_ERROR_MESSAGE =
             "I received your message but had trouble generating a response. Please try again."
+    }
+
+    /**
+     * Holds a chat session with a dynamic output channel that can be updated per message
+     */
+    private class SessionContext(
+        val session: ChatSession,
+        val dynamicChannel: DynamicOutputChannel
+    )
+
+    /**
+     * Output channel wrapper that delegates to a current channel, allowing the delegate to be updated
+     */
+    private class DynamicOutputChannel : OutputChannel {
+        @Volatile
+        var currentDelegate: OutputChannel? = null
+
+        override fun send(event: OutputChannelEvent) {
+            currentDelegate?.send(event)
+                ?: throw IllegalStateException("No output channel delegate set")
+        }
     }
 
     override suspend fun sendMessage(
@@ -49,14 +75,29 @@ class GuideRagServiceAdapter(
         val responseBuilder = StringBuilder()
         var isComplete = false
 
-        val outputChannel = createOutputChannel(responseBuilder, onEvent) { isComplete = true }
+        // Create output channel for this specific message
+        val messageOutputChannel = createOutputChannel(responseBuilder, onEvent) { isComplete = true }
 
         try {
             val webUser = guideUserRepository.findByWebUserId(fromUserId)
                 .orElseThrow { RuntimeException("No user found with id: $fromUserId") }
-            val session = chatbot.createSession(webUser, outputChannel, null)
 
-            session.onUserMessage(UserMessage(message))
+            // Get or create session context for this user to maintain conversation continuity
+            val sessionContext = userSessions.computeIfAbsent(fromUserId) {
+                logger.info("Creating new chat session for user: {}", fromUserId)
+                val dynamicChannel = DynamicOutputChannel()
+                // Set the delegate before creating the session to avoid initialization errors
+                dynamicChannel.currentDelegate = messageOutputChannel
+                val session = chatbot.createSession(webUser, dynamicChannel, null)
+                SessionContext(session, dynamicChannel)
+            }
+
+            // Update the dynamic channel to point to this message's output channel
+            // (for existing sessions, or if this is a new session this ensures it's set)
+            sessionContext.dynamicChannel.currentDelegate = messageOutputChannel
+
+            // Process the message with the cached session (which maintains conversation history)
+            sessionContext.session.onUserMessage(UserMessage(message))
 
             waitForResponse { isComplete }
 
