@@ -35,7 +35,9 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Set;
 
-
+/**
+ * Core chatbot agent
+ */
 @Agent(description = "Embabel developer guide bot agent",
         name = GuideResponderAgent.NAME)
 public class GuideResponderAgent {
@@ -122,7 +124,7 @@ public class GuideResponderAgent {
                 .respondWithSystemPrompt(conversation, templateModel);
         conversation.addMessage(assistantMessage);
         context.sendMessage(assistantMessage);
-        return ConversationContinues.INSTANCE;
+        return ConversationContinues.with(assistantMessage);
     }
 
     @AchievesGoal(description = "Conversation completed")
