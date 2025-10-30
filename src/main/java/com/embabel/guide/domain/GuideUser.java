@@ -31,12 +31,25 @@ public class GuideUser implements User {
     @Relationship(type = "IS_DISCORD_USER", direction = Relationship.Direction.OUTGOING)
     private MappedDiscordUserInfo discordUserInfo = null;
 
+    @Nullable
+    @Relationship(type = "IS_WEB_USER", direction = Relationship.Direction.OUTGOING)
+    private WebUser webUser = null;
+
+
     public static GuideUser createFromDiscord(DiscordUser user) {
         var guideUser = new GuideUser();
         guideUser.id = UUID.randomUUID().toString();
         guideUser.discordUserInfo = new MappedDiscordUserInfo(user.getDiscordUser());
         return guideUser;
     }
+
+    public static GuideUser createFromWebUser(WebUser webUser) {
+        var guideUser = new GuideUser();
+        guideUser.id = UUID.randomUUID().toString();
+        guideUser.webUser = webUser;
+        return guideUser;
+    }
+
     // TODO personality
 
     public GuideUser() {

@@ -11,6 +11,7 @@ import com.embabel.agent.core.CoreToolGroups;
 import com.embabel.agent.discord.DiscordUser;
 import com.embabel.agent.identity.User;
 import com.embabel.agent.rag.ContentElementSearch;
+import com.embabel.guide.domain.WebUser;
 import com.embabel.agent.rag.EntitySearch;
 import com.embabel.agent.rag.HyDE;
 import com.embabel.agent.rag.tools.DualShotConfig;
@@ -74,6 +75,14 @@ public class GuideResponderAgent {
                         .orElseGet(() -> {
                             var newUser = GuideUser.createFromDiscord(du);
                             logger.info("Created new Discord user: {}", newUser);
+                            return guideUserRepository.save(newUser);
+                        });
+            }
+            case WebUser wu -> {
+                return guideUserRepository.findById(wu.getId())
+                        .orElseGet(() -> {
+                            var newUser = new GuideUser();
+                            logger.info("Created new web user: {}", newUser);
                             return guideUserRepository.save(newUser);
                         });
             }

@@ -4,6 +4,7 @@ import com.embabel.agent.api.common.OperationContext;
 import com.embabel.agent.event.logging.personality.severance.LumonColorPalette;
 import com.embabel.agent.shell.TerminalServices;
 import com.embabel.chat.Chatbot;
+import com.embabel.guide.domain.GuideUser;
 import org.springframework.shell.standard.ShellComponent;
 import org.springframework.shell.standard.ShellMethod;
 
@@ -18,8 +19,9 @@ public record GuideShell(
 
     @ShellMethod("talk to docs")
     public String talk() {
+        var defaultShellUser = new GuideUser();
         var guide = chatbot.createSession(
-                null,
+                defaultShellUser,
                 terminalServices.outputChannel(),
                 null);
         return terminalServices.chat(
