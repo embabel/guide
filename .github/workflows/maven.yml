@@ -34,4 +34,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_DUMMY_KEY }} # Dummy key for testing only
         run: mvn -U -B test verify
