@@ -19,18 +19,23 @@ import com.embabel.agent.config.annotation.EnableAgents;
 import com.embabel.agent.config.annotation.LoggingThemes;
 import com.embabel.agent.config.annotation.McpServers;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 
 @SpringBootApplication
 @ConfigurationPropertiesScan
+@EnableScheduling
 @EnableAgents(
         loggingTheme = LoggingThemes.SEVERANCE,
         mcpServers = {McpServers.DOCKER_DESKTOP}
 )
 class GuideApplication {
     public static void main(String[] args) {
-        SpringApplication.run(GuideApplication.class, args);
+        SpringApplication app = new SpringApplication(GuideApplication.class);
+        app.setWebApplicationType(WebApplicationType.SERVLET);
+        app.run(args);
     }
 }
