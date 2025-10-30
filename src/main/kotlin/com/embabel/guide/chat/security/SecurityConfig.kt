@@ -40,7 +40,8 @@ class SecurityConfig(
                 ).permitAll()
                 it.requestMatchers(
                     HttpMethod.GET,
-                    "/api/auth/me"
+                    "/api/auth/me",
+                    "/api/hub/personas"
                 ).permitAll()
                 it.anyRequest().authenticated()
             }

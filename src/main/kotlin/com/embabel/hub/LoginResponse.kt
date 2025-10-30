@@ -8,11 +8,13 @@ package com.embabel.hub
  * @property username The username
  * @property displayName The user's display name
  * @property email The user's email address
+ * @property persona The user's selected persona (optional)
  */
 data class LoginResponse(
     val token: String,
     val userId: String,
     val username: String,
     val displayName: String,
-    val email: String
+    val email: String,
+    val persona: String?
 )

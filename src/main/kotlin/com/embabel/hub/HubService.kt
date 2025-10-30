@@ -107,8 +107,25 @@ class HubService(
             userId = webUser.userId,
             username = webUser.username,
             displayName = webUser.displayName,
-            email = webUser.email ?: ""
+            email = webUser.email ?: "",
+            persona = guideUser.persona()
         )
+    }
+
+    /**
+     * Updates the persona preference for a user.
+     *
+     * @param userId the user's ID (from authentication)
+     * @param persona the persona name to set
+     * @return the updated GuideUser
+     */
+    fun updatePersona(userId: String, persona: String): GuideUser {
+        // Validate persona is not blank
+        if (persona.isBlank()) {
+            throw IllegalArgumentException("Persona cannot be blank")
+        }
+        val user = guideUserService.findByWebUserId(userId).orElseThrow()
+        return guideUserService.updatePersona(user.id, persona)
     }
 
 }

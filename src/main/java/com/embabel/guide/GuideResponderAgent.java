@@ -43,16 +43,16 @@ import java.util.Set;
         name = GuideResponderAgent.NAME)
 public class GuideResponderAgent {
 
-    private static final String DEFAULT_PERSONA = "adaptive";
-
     private final GuideData guideData;
     private final GuideUserRepository guideUserRepository;
 
     private final Logger logger = LoggerFactory.getLogger(GuideResponderAgent.class);
+    private final GuideConfig guideConfig;
 
-    public GuideResponderAgent(GuideData guideData, GuideUserRepository guideUserRepository) {
+    public GuideResponderAgent(GuideData guideData, GuideUserRepository guideUserRepository, GuideConfig guideConfig) {
         this.guideData = guideData;
         this.guideUserRepository = guideUserRepository;
+        this.guideConfig = guideConfig;
     }
 
     static final String NAME = "GuideAgent";
@@ -99,10 +99,11 @@ public class GuideResponderAgent {
             ActionContext context) {
         logger.info("Incoming request from user {}", context.user());
         var guideUser = getGuideUser(context.user());
-        var persona = guideUser != null && guideUser.persona() != null ? guideUser.persona() : DEFAULT_PERSONA;
+
+        var persona = guideUser != null && guideUser.persona() != null ? guideUser.persona() : guideConfig.defaultPersona();
         var templateModel = new HashMap<String, Object>();
         if (guideUser != null) {
-            templateModel.put("guideUser", guideUser);
+          templateModel.put("guideUser", guideUser);
         }
         templateModel.put("persona", persona);
         var assistantMessage = context

@@ -70,4 +70,18 @@ public class GuideUserService {
     return guideUserRepository.findByUsername(username).orElse(null);
   }
 
+  /**
+   * Updates the persona for a user.
+   *
+   * @param userId the user's ID
+   * @param persona the persona name to set
+   * @return the updated GuideUser
+   */
+  public GuideUser updatePersona(String userId, String persona) {
+    GuideUser user = guideUserRepository.findById(userId)
+        .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+    user.setPersona(persona);
+    return guideUserRepository.save(user);
+  }
+
 }
