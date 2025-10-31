@@ -17,9 +17,10 @@ package com.embabel.guide
 
 import com.embabel.GuideApplication
 import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.context.ApplicationContextInitializer
+import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.context.annotation.Import
-import org.springframework.test.context.DynamicPropertyRegistry
-import org.springframework.test.context.DynamicPropertySource
+import org.springframework.core.env.MapPropertySource
 
 /**
  * Shared test configuration for all tests.
@@ -32,7 +33,13 @@ import org.springframework.test.context.DynamicPropertySource
  */
 @TestConfiguration
 @Import(GuideApplication::class)
-class TestApplicationContext {
+class TestApplicationContext
+
+/**
+ * Initializer that configures Neo4j properties before Spring context starts.
+ * Add to test classes with: @ContextConfiguration(initializers = [Neo4jPropertiesInitializer::class])
+ */
+class Neo4jPropertiesInitializer : ApplicationContextInitializer<ConfigurableApplicationContext> {
 
     companion object {
         /**
@@ -46,31 +53,37 @@ class TestApplicationContext {
         private const val LOCAL_NEO4J_URI = "bolt://localhost:7687"
         private const val LOCAL_NEO4J_USERNAME = "neo4j"
         private const val LOCAL_NEO4J_PASSWORD = "brahmsian"
+    }
 
-        @JvmStatic
-        @DynamicPropertySource
-        fun neo4jProperties(registry: DynamicPropertyRegistry) {
-            if (useLocalNeo4j) {
-                // Use local Neo4j instance - OGM property namespace
-                registry.add("embabel.agent.rag.neo.uri") { LOCAL_NEO4J_URI }
-                registry.add("embabel.agent.rag.neo.username") { LOCAL_NEO4J_USERNAME }
-                registry.add("embabel.agent.rag.neo.password") { LOCAL_NEO4J_PASSWORD }
-            } else {
-                // Use Testcontainers - only initialized when actually needed
-                val container = Neo4jTestContainer.instance
-                registry.add("embabel.agent.rag.neo.uri") { container.boltUrl }
-                registry.add("embabel.agent.rag.neo.username") { "neo4j" }
-                registry.add("embabel.agent.rag.neo.password") { container.adminPassword }
-            }
+    override fun initialize(applicationContext: ConfigurableApplicationContext) {
+        println("@@@ Neo4jPropertiesInitializer.initialize() CALLED! useLocalNeo4j=$useLocalNeo4j @@@")
+
+        val properties = if (useLocalNeo4j) {
+            println("@@@ Using local Neo4j at $LOCAL_NEO4J_URI @@@")
+            mapOf(
+                "embabel.agent.rag.neo.uri" to LOCAL_NEO4J_URI,
+                "embabel.agent.rag.neo.username" to LOCAL_NEO4J_USERNAME,
+                "embabel.agent.rag.neo.password" to LOCAL_NEO4J_PASSWORD,
+                "spring.neo4j.uri" to LOCAL_NEO4J_URI,
+                "spring.neo4j.authentication.username" to LOCAL_NEO4J_USERNAME,
+                "spring.neo4j.authentication.password" to LOCAL_NEO4J_PASSWORD
+            )
+        } else {
+            println("@@@ Using TestContainers @@@")
+            val container = Neo4jTestContainer.instance
+            println("@@@ TestContainer URL: ${container.boltUrl} @@@")
+            mapOf(
+                "embabel.agent.rag.neo.uri" to container.boltUrl,
+                "embabel.agent.rag.neo.username" to "neo4j",
+                "embabel.agent.rag.neo.password" to container.adminPassword,
+                "spring.neo4j.uri" to container.boltUrl,
+                "spring.neo4j.authentication.username" to "neo4j",
+                "spring.neo4j.authentication.password" to container.adminPassword
+            )
         }
 
-        /**
-         * Get the Neo4j container instance only when using Testcontainers.
-         * This is lazy-loaded to avoid starting the container when using local Neo4j.
-         */
-        @JvmStatic
-        fun getContainerIfNeeded(): Neo4jTestContainer? {
-            return if (useLocalNeo4j) null else Neo4jTestContainer.instance
-        }
+        applicationContext.environment.propertySources.addFirst(
+            MapPropertySource("testNeo4jProperties", properties)
+        )
     }
 }

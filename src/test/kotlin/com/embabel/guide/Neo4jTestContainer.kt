@@ -17,7 +17,6 @@ package com.embabel.guide
 
 import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.utility.MountableFile
-import java.nio.file.Paths
 
 class Neo4jTestContainer : Neo4jContainer<Neo4jTestContainer> {
     private constructor(imageName: String) : super(imageName)
@@ -29,11 +28,10 @@ class Neo4jTestContainer : Neo4jContainer<Neo4jTestContainer> {
          */
         val instance: Neo4jTestContainer by lazy {
             Neo4jTestContainer("neo4j:5.26.1-enterprise")
-                .apply {
-                    // Resolve the JAR in the user's ~/.m2 repository
-                    // Mount it inside the container's plugins directory
-                    withFileSystemBind(apocJarPath(), "/plugins/apoc-extended-5.26.0.jar")
-                }
+                .withCopyFileToContainer(
+                    MountableFile.forClasspathResource("apoc-extended-5.26.0.jar"),
+                    "/plugins/apoc-extended-5.26.0.jar"
+                )
                 .withNeo4jConfig("dbms.security.procedures.unrestricted", "apoc.*")
                 .withNeo4jConfig("dbms.logs.query.enabled", "INFO")
                 .withNeo4jConfig("dbms.logs.query.parameter_logging_enabled", "true")
@@ -49,30 +47,14 @@ class Neo4jTestContainer : Neo4jContainer<Neo4jTestContainer> {
                 // Commented out: Log binding causes permission issues
                 // .withFileSystemBind("../../../test-neo4j-logs", "/logs")
                 .withAdminPassword("embabel$$$$")
-                .withCopyFileToContainer(
-                    MountableFile.forClasspathResource("reference-data.cypher"),
-                    "/var/lib/neo4j/import/reference-data.cypher"
-                )
+//                .withCopyFileToContainer(
+//                    MountableFile.forClasspathResource("reference-data.cypher"),
+//                    "/var/lib/neo4j/import/reference-data.cypher"
+//                )
                 .apply {
                     // Start the container
                     start()
                 }
-        }
-
-        //TODO: We might be able to clean this up using copyFileToContainer and a classpath resource
-        private fun apocJarPath(): String {
-            val apocJar = Paths.get(
-                System.getProperty("user.home"),
-                ".m2",
-                "repository",
-                "org",
-                "neo4j",
-                "procedure",
-                "apoc-extended",
-                "5.26.0",
-                "apoc-extended-5.26.0.jar"
-            ).toString()
-            return apocJar
         }
     }
 }
