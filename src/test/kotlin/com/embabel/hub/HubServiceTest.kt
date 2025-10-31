@@ -1,17 +1,18 @@
 package com.embabel.hub
 
-import com.embabel.guide.TestApplicationContext
+import com.embabel.guide.Neo4jPropertiesInitializer
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.springframework.ai.mcp.client.autoconfigure.McpClientAutoConfiguration
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
-import org.springframework.test.annotation.Rollback
 import org.springframework.test.context.ContextConfiguration
 
 @SpringBootTest
-@ContextConfiguration(classes = [TestApplicationContext::class])
-@Rollback(false)
+@ContextConfiguration(initializers = [Neo4jPropertiesInitializer::class])
+@ImportAutoConfiguration(exclude = [McpClientAutoConfiguration::class])
 class HubServiceTest {
 
     @Autowired

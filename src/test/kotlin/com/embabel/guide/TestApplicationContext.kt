@@ -15,25 +15,9 @@
  */
 package com.embabel.guide
 
-import com.embabel.GuideApplication
-import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.ApplicationContextInitializer
 import org.springframework.context.ConfigurableApplicationContext
-import org.springframework.context.annotation.Import
 import org.springframework.core.env.MapPropertySource
-
-/**
- * Shared test configuration for all tests.
- *
- * Controls whether tests use local Neo4j or Testcontainers:
- * - Set useLocalNeo4j = true to use local Neo4j at localhost:7687
- * - Set useLocalNeo4j = false to use Testcontainers (slower, but isolated)
- *
- * Imports GuideApplication to enable full component scanning.
- */
-@TestConfiguration
-@Import(GuideApplication::class)
-class TestApplicationContext
 
 /**
  * Initializer that configures Neo4j properties before Spring context starts.

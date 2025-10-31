@@ -1,6 +1,6 @@
 package com.embabel.hub
 
-import com.embabel.guide.TestApplicationContext
+import com.embabel.guide.Neo4jPropertiesInitializer
 import com.embabel.guide.domain.GuideUserRepository
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.Assertions.*
@@ -20,9 +20,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 
 @SpringBootTest
-@AutoConfigureMockMvc
-@ContextConfiguration(classes = [TestApplicationContext::class])
-@Rollback(false)
+@ContextConfiguration(initializers = [Neo4jPropertiesInitializer::class])
 @ImportAutoConfiguration(exclude = [McpClientAutoConfiguration::class])
 class HubApiControllerTest {
 
