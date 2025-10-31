@@ -40,7 +40,7 @@ class TestApplicationContext {
          * Set to true for faster tests with local Neo4j (requires Neo4j running on localhost:7687).
          * Set to false to use Testcontainers (slower startup, but fully isolated).
          */
-        const val useLocalNeo4j = true
+        const val useLocalNeo4j = false
 
         // Local Neo4j connection details
         private const val LOCAL_NEO4J_URI = "bolt://localhost:7687"
