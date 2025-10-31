@@ -4,7 +4,6 @@ import com.embabel.agent.api.annotation.AchievesGoal;
 import com.embabel.agent.api.annotation.Action;
 import com.embabel.agent.api.annotation.Export;
 import com.embabel.agent.api.common.OperationContext;
-import com.embabel.agent.rag.tools.RagReference;
 import com.embabel.guide.GuideData;
 
 import java.util.Map;
@@ -42,9 +41,7 @@ public record GuideAgent(
         return context.ai()
                 .withLlm(guideData.config().llm())
                 .withReferences(guideData.referencesForUser(null))
-                .withReference(
-                        new RagReference("docs", "docs", guideData.ragOptions(),
-                                context.ai().withLlmByRole("summarizer")))
+                .withRag(guideData.ragOptions())
                 .withTemplate("guide_system")
                 .createObject(GuideResponse.class, templateModel);
     }

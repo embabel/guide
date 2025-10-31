@@ -40,27 +40,27 @@ class TestApplicationContext {
          * Set to true for faster tests with local Neo4j (requires Neo4j running on localhost:7687).
          * Set to false to use Testcontainers (slower startup, but fully isolated).
          */
-        const val useLocalNeo4j = false
+        const val useLocalNeo4j = true
 
         // Local Neo4j connection details
         private const val LOCAL_NEO4J_URI = "bolt://localhost:7687"
         private const val LOCAL_NEO4J_USERNAME = "neo4j"
-        private const val LOCAL_NEO4J_PASSWORD = "h4ckM3\$\$\$\$"
+        private const val LOCAL_NEO4J_PASSWORD = "brahmsian"
 
         @JvmStatic
         @DynamicPropertySource
         fun neo4jProperties(registry: DynamicPropertyRegistry) {
             if (useLocalNeo4j) {
-                // Use local Neo4j instance
-                registry.add("spring.neo4j.uri") { LOCAL_NEO4J_URI }
-                registry.add("spring.neo4j.authentication.username") { LOCAL_NEO4J_USERNAME }
-                registry.add("spring.neo4j.authentication.password") { LOCAL_NEO4J_PASSWORD }
+                // Use local Neo4j instance - OGM property namespace
+                registry.add("embabel.agent.rag.neo.uri") { LOCAL_NEO4J_URI }
+                registry.add("embabel.agent.rag.neo.username") { LOCAL_NEO4J_USERNAME }
+                registry.add("embabel.agent.rag.neo.password") { LOCAL_NEO4J_PASSWORD }
             } else {
                 // Use Testcontainers - only initialized when actually needed
                 val container = Neo4jTestContainer.instance
-                registry.add("spring.neo4j.uri") { container.boltUrl }
-                registry.add("spring.neo4j.authentication.username") { "neo4j" }
-                registry.add("spring.neo4j.authentication.password") { container.adminPassword }
+                registry.add("embabel.agent.rag.neo.uri") { container.boltUrl }
+                registry.add("embabel.agent.rag.neo.username") { "neo4j" }
+                registry.add("embabel.agent.rag.neo.password") { container.adminPassword }
             }
         }
 

@@ -14,16 +14,15 @@ import com.embabel.agent.rag.ContentElementSearch;
 import com.embabel.guide.domain.WebUser;
 import com.embabel.agent.rag.EntitySearch;
 import com.embabel.agent.rag.HyDE;
+import com.embabel.agent.rag.pipeline.event.RagPipelineEvent;
 import com.embabel.agent.rag.tools.DualShotConfig;
-import com.embabel.agent.rag.tools.RagReference;
 import com.embabel.chat.AssistantMessage;
 import com.embabel.chat.Chatbot;
 import com.embabel.chat.Conversation;
 import com.embabel.chat.UserMessage;
 import com.embabel.chat.agent.AgentProcessChatbot;
-import com.embabel.chat.agent.ConversationContinues;
-import com.embabel.chat.agent.ConversationOver;
-import com.embabel.chat.agent.ConversationStatus;
+import com.embabel.chat.agent.ChatbotReturn;
+import com.embabel.chat.agent.ConversationTermination;
 import com.embabel.guide.domain.GuideUser;
 import com.embabel.guide.domain.GuideUserRepository;
 import org.slf4j.Logger;
@@ -94,7 +93,7 @@ public class GuideResponderAgent {
 
     @Action(canRerun = true,
             pre = {LAST_EVENT_WAS_USER_MESSAGE})
-    ConversationStatus respond(
+    ChatbotReturn respond(
             Conversation conversation,
             ActionContext context) {
         logger.info("Incoming request from user {}", context.user());
@@ -111,34 +110,33 @@ public class GuideResponderAgent {
                 .withLlm(guideData.config().llm())
                 .withReferences(guideData.referencesForUser(context.user()))
                 .withTools(CoreToolGroups.WEB)
-                .withReference(new RagReference("", "",
+                .withRag(
                         guideData
                                 .ragOptions()
-                                .withHyDE(new HyDE("The Embabel Agent Framework", 40))
+                                .withHyDE(new HyDE(40))
                                 .withContentElementSearch(ContentElementSearch.CHUNKS_ONLY)
                                 .withEntitySearch(new EntitySearch(Set.of(
                                         "Concept", "Example"
                                 ), false))
                                 .withDesiredMaxLatency(Duration.ofMinutes(10))
-                                .withDualShot(new DualShotConfig(100)),
-//                                .withListener(e -> {
-//                                    if (e instanceof RagPipelineEvent rpe) {
-//                                        context.updateProgress(rpe.getDescription());
-//                                    }
-//                                }),
-                        context.ai().withLlmByRole("summarizer")))
-                .withId("chat_response")
+                                .withDualShot(new DualShotConfig(100))
+                                .withListener(e -> {
+                                    if (e instanceof RagPipelineEvent rpe) {
+                                        context.updateProgress(rpe.getDescription());
+                                    }
+                                }))
                 .withTemplate("guide_system")
-                .respondWithSystemPrompt(conversation, templateModel);
+                .respondWithSystemPrompt(conversation, templateModel,
+                        "chat response");
         conversation.addMessage(assistantMessage);
         context.sendMessage(assistantMessage);
-        return ConversationContinues.with(assistantMessage);
+        return new ChatbotReturn(assistantMessage, null);
     }
 
     @AchievesGoal(description = "Conversation completed")
     @Action
-    ConversationOver respondAndTerminate(
-            ConversationOver conversationOver,
+    ConversationTermination respondAndTerminate(
+            ConversationTermination conversationOver,
             Conversation conversation,
             ActionContext context) {
         context.sendMessage(new AssistantMessage("Conversation over: " + conversationOver.getReason()));
