@@ -12,7 +12,8 @@ class WebConfig : WebMvcConfigurer {
                 "http://localhost:3000",      // Next.js dev server
                 "http://localhost:3001",      // Alternative dev port
                 "https://embabel.com",        // Production domain
-                "https://www.embabel.com"     // Production domain with www
+                "https://www.embabel.com",    // Production domain with www
+                "app://-"                     // Electron/Tauri app
             )
             .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
             .allowedHeaders("*")
