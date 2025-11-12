@@ -1,0 +1,94 @@
+#embabel.models.default-embedding-service: nomic-embed-text:latest
+
+# Server Configuration
+server:
+  port: 1337
+
+
+# Spring configuration
+# Force web application type (needed because Spring Shell is present)
+spring:
+  main:
+    banner-mode: off
+    web-application-type: servlet
+  output:
+    ansi:
+      enabled: always
+  profiles:
+    active: local  # Change to 'default' in tests to use TestContainers datasource
+    config:
+      activate:
+        on-profile: local
+
+
+# RAG Adapter Configuration (use "guide" to enable real Guide chatbot, "fake" for testing)
+rag:
+  adapter:
+    type: guide
+
+embabel:
+  models:
+    llms:
+      cypher-query-generator: gpt-4.1
+      summarizer: gpt-4.1-nano
+    # This is actually the default but it's good to show
+    # How to change it
+    #default-embedding-model: nomic-embed-text:latest
+    default-embedding-model: text-embedding-3-small
+
+  agent:
+    rag:
+      neo:
+        uri: ${NEO4J_URI:bolt://localhost:7687}
+        username: ${NEO4J_USERNAME:neo4j}
+        password: ${NEO4J_PASSWORD:brahmsian}
+        max-chunk-size: 1500
+        overlap-size: 200
+        # Packages that OGM should scan for entities
+        #packages:
+
+      compression-llm:
+        model: ${guide.rag-llm}
+      reranking-llm:
+        model: ${guide.rag-llm}
+
+  discord:
+    token: MTQyNTIyNTE3ODMyNTE4ODcwOQ.GuFIAF.v107gigwakwhine3gkSxO5DagzQ1qJNjnXlCLM
+
+  shell:
+    line-length: 140
+
+guide:
+  rag-llm: gpt-4.1-nano
+  default-persona: adaptive
+  top-k: 10
+  similarity-threshold: 0.3
+  llm:
+    model: gpt-4.1-mini
+    #model: qwen3:4b
+
+logging:
+  level:
+    com.embabel.agent.rag: INFO
+    com.embabel.agent.rag.tools: DEBUG
+    com.embabel.agent.rag.pipeline: DEBUG
+    # Drivine logging
+    org.drivine: TRACE
+    org.drivine.manager: TRACE
+    org.drivine.transaction: TRACE
+    # WebSocket and Chat logging
+    org.springframework.web.socket: INFO
+    org.springframework.messaging: INFO
+    com.embabel.guide.chat: DEBUG
+
+# Data-source below is used then the 'local' config is active
+
+database:
+  dataSources:
+    neo:
+      type: NEO4J
+      userName: neo4j
+      password: brahmsian
+      host: localhost
+      port: 7687
+      databaseName: neo4j

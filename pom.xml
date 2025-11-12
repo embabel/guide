@@ -29,7 +29,12 @@
             <groupId>com.embabel.agent</groupId>
             <artifactId>embabel-agent-starter</artifactId>
             <version>${embabel-agent.version}</version>
+        </dependency>
 
+        <dependency>
+            <groupId>org.drivine</groupId>
+            <artifactId>drivine4j</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
         </dependency>
 
         <!-- Commented out: Shell prevents web server from starting -->

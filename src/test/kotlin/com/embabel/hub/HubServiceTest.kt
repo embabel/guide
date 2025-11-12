@@ -38,8 +38,8 @@ class HubServiceTest {
         val result = service.registerUser(request)
 
         // Then
-        assertNotNull(result)
-        assertNotNull(result.id)
+        assertNotNull(result.guideUserData())
+        assertNotNull(result.guideUserData().id)
         assertEquals("John Doe", result.displayName)
         assertEquals("johndoe", result.username)
         assertEquals("john.doe@example.com", result.email)
@@ -47,13 +47,13 @@ class HubServiceTest {
         // Verify password is hashed (not stored as plain text)
         val webUser = result.webUser
         assertNotNull(webUser)
-        assertNotEquals("SecurePassword123!", webUser!!.passwordHash)
+        assertNotEquals("SecurePassword123!", webUser.passwordHash)
         assertTrue(passwordEncoder.matches("SecurePassword123!", webUser.passwordHash))
 
         // Verify refresh token is a valid JWT
         assertNotNull(webUser.refreshToken)
-        val userId = jwtTokenService.validateRefreshToken(webUser.refreshToken)
-        assertEquals(webUser.userId, userId)
+        val userId = jwtTokenService.validateRefreshToken(webUser.refreshToken!!)
+        assertEquals(webUser.id, userId)
     }
 
     @Test

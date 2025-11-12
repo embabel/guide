@@ -31,22 +31,10 @@ public class GuideUser implements User {
     @Relationship(type = "IS_DISCORD_USER", direction = Relationship.Direction.OUTGOING)
     private MappedDiscordUserInfo discordUserInfo = null;
 
-    @Nullable
-    @Relationship(type = "IS_WEB_USER", direction = Relationship.Direction.OUTGOING)
-    private WebUser webUser = null;
-
-
     public static GuideUser createFromDiscord(DiscordUser user) {
         var guideUser = new GuideUser();
         guideUser.id = UUID.randomUUID().toString();
         guideUser.discordUserInfo = new MappedDiscordUserInfo(user.getDiscordUser());
-        return guideUser;
-    }
-
-    public static GuideUser createFromWebUser(WebUser webUser) {
-        var guideUser = new GuideUser();
-        guideUser.id = UUID.randomUUID().toString();
-        guideUser.webUser = webUser;
         return guideUser;
     }
 
@@ -81,40 +69,22 @@ public class GuideUser implements User {
         return discordUserInfo;
     }
 
-    public @Nullable WebUser getWebUser() {
-        return webUser;
-    }
 
     @NotNull
     @Override
     public String getDisplayName() {
-        if (webUser != null) {
-            return webUser.getDisplayName();
-        }
-        if (discordUserInfo != null) {
-            return discordUserInfo.getDisplayName();
-        }
         return id;
     }
 
     @NotNull
     @Override
     public String getUsername() {
-        if (webUser != null) {
-            return webUser.getUsername();
-        }
-        if (discordUserInfo != null) {
-            return discordUserInfo.getUsername();
-        }
         return id;
     }
 
     @Nullable
     @Override
     public String getEmail() {
-        if (webUser != null) {
-            return webUser.getEmail();
-        }
         return null;
     }
 
@@ -124,4 +94,5 @@ public class GuideUser implements User {
                 "id='" + id + '\'' +
                 '}';
     }
+
 }

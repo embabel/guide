@@ -2,7 +2,9 @@ package com.embabel.hub
 
 import com.embabel.guide.Neo4jPropertiesInitializer
 import com.embabel.guide.domain.GuideUserRepository
+import com.embabel.guide.domain.drivine.DrivineGuideUserRepository
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.drivine.test.DrivineTest
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -23,6 +25,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 @AutoConfigureMockMvc
 @ContextConfiguration(initializers = [Neo4jPropertiesInitializer::class])
 @ImportAutoConfiguration(exclude = [McpClientAutoConfiguration::class])
+@DrivineTest
 class HubApiControllerTest {
 
     @Autowired
@@ -33,6 +36,9 @@ class HubApiControllerTest {
 
     @Autowired
     lateinit var guideUserRepository: GuideUserRepository
+
+    @Autowired
+    lateinit var drivineGuideUserRepository: DrivineGuideUserRepository
 
     @Autowired
     lateinit var jwtTokenService: JwtTokenService
@@ -68,22 +74,23 @@ class HubApiControllerTest {
             .andExpect(jsonPath("$.username").value("janedoe"))
             .andExpect(jsonPath("$.email").value("jane.doe@example.com"))
             .andExpect(jsonPath("$.webUser").exists())
-            .andExpect(jsonPath("$.webUser.userId").exists())
+            .andExpect(jsonPath("$.webUser.id").exists())
             .andExpect(jsonPath("$.webUser.refreshToken").exists())
             .andReturn()
 
         // Verify the password was properly hashed
         val responseBody = result.response.contentAsString
-        val createdUser = objectMapper.readValue(responseBody, com.embabel.guide.domain.GuideUser::class.java)
+        val createdUser = objectMapper.readValue(responseBody, com.embabel.guide.domain.drivine.GuideUserWithWebUser::class.java)
 
-        assertNotNull(createdUser.webUser)
-        val webUser = createdUser.webUser!!
+        assertNotNull(createdUser.getWebUser())
+        val webUser = createdUser.getWebUser()
         assertNotEquals("SecurePassword123!", webUser.passwordHash)
         assertTrue(passwordEncoder.matches("SecurePassword123!", webUser.passwordHash))
 
         // Verify refresh token is valid
-        val userId = jwtTokenService.validateRefreshToken(webUser.refreshToken)
-        assertEquals(webUser.userId, userId)
+        assertNotNull(webUser.refreshToken)
+        val userId = jwtTokenService.validateRefreshToken(webUser.refreshToken!!)
+        assertEquals(webUser.id, userId)
     }
 
     @Test
@@ -249,13 +256,14 @@ class HubApiControllerTest {
 
         // Then - Verify user was persisted to database
         val responseBody = result.response.contentAsString
-        val createdUser = objectMapper.readValue(responseBody, com.embabel.guide.domain.GuideUser::class.java)
+        val createdUser = objectMapper.readValue(responseBody, com.embabel.guide.domain.drivine.GuideUserWithWebUser::class.java)
 
-        val foundUser = guideUserRepository.findById(createdUser.id)
+        val foundUser = drivineGuideUserRepository.findByWebUserId(createdUser.getWebUser().id)
         assertTrue(foundUser.isPresent)
-        assertEquals("Frank Green", foundUser.get().displayName)
-        assertEquals("frankgreen", foundUser.get().username)
-        assertEquals("frank.green@example.com", foundUser.get().email)
+        val foundWebUser = foundUser.get() as com.embabel.guide.domain.drivine.GuideUserWithWebUser
+        assertEquals("Frank Green", foundWebUser.displayName)
+        assertEquals("frankgreen", foundWebUser.username)
+        assertEquals("frank.green@example.com", foundWebUser.email)
     }
 
     // ========== Login Tests ==========
