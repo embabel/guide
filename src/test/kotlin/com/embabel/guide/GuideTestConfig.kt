@@ -30,20 +30,15 @@ import org.springframework.transaction.PlatformTransactionManager
  */
 @org.springframework.context.annotation.Configuration
 @EnableNeo4jRepositories(basePackages = ["com.embabel.guide.domain"])
-@org.springframework.context.annotation.Profile("test")
+@Profile("test")
 class GuideTestConfig {
 
     @Bean
-    fun neo4jTestContainer(): Neo4jTestContainer {
-        return Neo4jTestContainer.instance
-    }
-
-    @Bean
     fun ogmConfiguration(): Configuration {
-        val container = neo4jTestContainer()
+        // Use Neo4jTestContainer helper methods which check USE_LOCAL_NEO4J internally
         return Configuration.Builder()
-            .uri(container.boltUrl)
-            .credentials("neo4j", container.adminPassword)
+            .uri(Neo4jTestContainer.getBoltUrl())
+            .credentials(Neo4jTestContainer.getUsername(), Neo4jTestContainer.getPassword())
             .build()
     }
 

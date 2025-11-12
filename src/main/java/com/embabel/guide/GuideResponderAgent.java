@@ -11,7 +11,6 @@ import com.embabel.agent.core.CoreToolGroups;
 import com.embabel.agent.discord.DiscordUser;
 import com.embabel.agent.identity.User;
 import com.embabel.agent.rag.ContentElementSearch;
-import com.embabel.guide.domain.WebUser;
 import com.embabel.agent.rag.EntitySearch;
 import com.embabel.agent.rag.HyDE;
 import com.embabel.agent.rag.pipeline.event.RagPipelineEvent;
@@ -24,7 +23,9 @@ import com.embabel.chat.agent.AgentProcessChatbot;
 import com.embabel.chat.agent.ChatbotReturn;
 import com.embabel.chat.agent.ConversationTermination;
 import com.embabel.guide.domain.GuideUser;
-import com.embabel.guide.domain.GuideUserRepository;
+import com.embabel.guide.domain.drivine.DrivineGuideUserRepository;
+import com.embabel.guide.domain.drivine.GuideUserWithDiscordUserInfo;
+import com.embabel.guide.domain.drivine.HasGuideUserData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -43,12 +44,12 @@ import java.util.Set;
 public class GuideResponderAgent {
 
     private final GuideData guideData;
-    private final GuideUserRepository guideUserRepository;
+    private final DrivineGuideUserRepository guideUserRepository;
 
     private final Logger logger = LoggerFactory.getLogger(GuideResponderAgent.class);
     private final GuideConfig guideConfig;
 
-    public GuideResponderAgent(GuideData guideData, GuideUserRepository guideUserRepository, GuideConfig guideConfig) {
+    public GuideResponderAgent(GuideData guideData, DrivineGuideUserRepository guideUserRepository, GuideConfig guideConfig) {
         this.guideData = guideData;
         this.guideUserRepository = guideUserRepository;
         this.guideConfig = guideConfig;
@@ -63,30 +64,29 @@ public class GuideResponderAgent {
         return context.lastResult() instanceof UserMessage;
     }
 
-    private GuideUser getGuideUser(@Nullable User user) {
+    private HasGuideUserData getGuideUser(@Nullable User user) {
         switch (user) {
             case null -> {
                 logger.warn("user is null: Cannot create or fetch GuideUser");
                 return null;
             }
-            case GuideUser gu -> {
-                return gu;
-            }
             case DiscordUser du -> {
                 return guideUserRepository.findByDiscordUserId(du.getId())
                         .orElseGet(() -> {
-                            var newUser = GuideUser.createFromDiscord(du);
-                            logger.info("Created new Discord user: {}", newUser);
-                            return guideUserRepository.save(newUser);
+                            var composed = GuideUserWithDiscordUserInfo.fromDiscordUser(du);
+                            var created = guideUserRepository.createWithDiscord(
+                                composed.getGuideUserData(),
+                                composed.getDiscordUserInfo()
+                            );
+                            logger.info("Created new Discord user: {}", created);
+                            return created;
                         });
             }
-            case WebUser wu -> {
-                return wu.getGuideUser();
+            case HasGuideUserData gu -> {
+                return gu;
             }
             default -> {
-                var newUser = new GuideUser();
-                logger.info("Created new guide user: {}", newUser);
-                return guideUserRepository.save(newUser);
+                throw new RuntimeException("Unknown user type: " + user);
             }
         }
     }
@@ -97,9 +97,9 @@ public class GuideResponderAgent {
             Conversation conversation,
             ActionContext context) {
         logger.info("Incoming request from user {}", context.user());
-        var guideUser = getGuideUser(context.user());
+        var guideUser = getGuideUser(context.user()).guideUserData();
 
-        var persona = guideUser != null && guideUser.persona() != null ? guideUser.persona() : guideConfig.defaultPersona();
+        var persona = guideUser != null && guideUser.getPersona() != null ? guideUser.getPersona() : guideConfig.defaultPersona();
         var templateModel = new HashMap<String, Object>();
         if (guideUser != null) {
           templateModel.put("guideUser", guideUser);

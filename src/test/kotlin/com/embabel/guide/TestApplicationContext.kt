@@ -15,8 +15,21 @@
  */
 package com.embabel.guide
 
+import org.drivine.connection.ConnectionProperties
+import org.drivine.connection.DataSourceMap
+import org.drivine.connection.DatabaseType
+import org.drivine.connection.PropertyProvidedDataSourceMap
+import org.drivine.manager.PersistenceManager
+import org.drivine.manager.PersistenceManagerFactory
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.ApplicationContextInitializer
 import org.springframework.context.ConfigurableApplicationContext
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.ComponentScan
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.EnableAspectJAutoProxy
+import org.springframework.context.annotation.Profile
+import org.springframework.context.annotation.PropertySource
 import org.springframework.core.env.MapPropertySource
 
 /**
@@ -26,13 +39,6 @@ import org.springframework.core.env.MapPropertySource
 class Neo4jPropertiesInitializer : ApplicationContextInitializer<ConfigurableApplicationContext> {
 
     companion object {
-        /**
-         * Toggle between local Neo4j and Testcontainers.
-         * Set to true for faster tests with local Neo4j (requires Neo4j running on localhost:7687).
-         * Set to false to use Testcontainers (slower startup, but fully isolated).
-         */
-        const val useLocalNeo4j = false
-
         // Local Neo4j connection details
         private const val LOCAL_NEO4J_URI = "bolt://localhost:7687"
         private const val LOCAL_NEO4J_USERNAME = "neo4j"
@@ -40,7 +46,12 @@ class Neo4jPropertiesInitializer : ApplicationContextInitializer<ConfigurableApp
     }
 
     override fun initialize(applicationContext: ConfigurableApplicationContext) {
-        println("@@@ Neo4jPropertiesInitializer.initialize() CALLED! useLocalNeo4j=$useLocalNeo4j @@@")
+        // Check Neo4jTestContainer.USE_LOCAL_NEO4J constant to determine whether to use local Neo4j
+        val useLocalNeo4j = Neo4jTestContainer.USE_LOCAL_NEO4J
+
+        val activeProfiles = applicationContext.environment.activeProfiles
+
+        println("@@@ Neo4jPropertiesInitializer.initialize() CALLED! useLocalNeo4j=$useLocalNeo4j (from Neo4jTestContainer.USE_LOCAL_NEO4J), activeProfiles=${activeProfiles.joinToString(",")} @@@")
 
         val properties = if (useLocalNeo4j) {
             println("@@@ Using local Neo4j at $LOCAL_NEO4J_URI @@@")
@@ -54,7 +65,7 @@ class Neo4jPropertiesInitializer : ApplicationContextInitializer<ConfigurableApp
             )
         } else {
             println("@@@ Using TestContainers @@@")
-            val container = Neo4jTestContainer.instance
+            val container = Neo4jTestContainer.instance!!
             println("@@@ TestContainer URL: ${container.boltUrl} @@@")
             mapOf(
                 "embabel.agent.rag.neo.uri" to container.boltUrl,
@@ -71,3 +82,44 @@ class Neo4jPropertiesInitializer : ApplicationContextInitializer<ConfigurableApp
         )
     }
 }
+
+@Configuration
+@ComponentScan(basePackages = ["org.drivine", "com.embabel"])
+@PropertySource("classpath:application.yaml")
+@EnableAspectJAutoProxy(proxyTargetClass = true)
+@EnableConfigurationProperties(value = [PropertyProvidedDataSourceMap::class])
+class TestAppContext {
+
+    @Bean
+    @Profile("test")
+    fun dataSourceMap(): DataSourceMap {
+        // Use Neo4jTestContainer helper methods which check USE_LOCAL_NEO4J internally
+        val neo4jProperties = ConnectionProperties(
+            host = extractHost(Neo4jTestContainer.getBoltUrl()),
+            port = extractPort(Neo4jTestContainer.getBoltUrl()),
+            userName = Neo4jTestContainer.getUsername(),
+            password = Neo4jTestContainer.getPassword(),
+            type = DatabaseType.NEO4J,
+            databaseName = "neo4j"
+        )
+        return DataSourceMap(mapOf("neo" to neo4jProperties))
+    }
+
+    private fun extractHost(boltUrl: String): String {
+        return boltUrl.substringAfter("bolt://").substringBefore(":")
+    }
+
+    private fun extractPort(boltUrl: String): Int {
+        val portPart = boltUrl.substringAfter("bolt://").substringAfter(":")
+        return try {
+            if (portPart.contains("/")) {
+                portPart.substringBefore("/").toInt()
+            } else {
+                portPart.toIntOrNull() ?: 7687
+            }
+        } catch (e: Exception) {
+            7687
+        }
+    }
+}
+

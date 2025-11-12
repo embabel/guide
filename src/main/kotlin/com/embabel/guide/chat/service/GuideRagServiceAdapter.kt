@@ -6,7 +6,6 @@ import com.embabel.chat.ChatSession
 import com.embabel.chat.Chatbot
 import com.embabel.chat.UserMessage
 import com.embabel.guide.domain.GuideUserRepository
-import com.embabel.guide.domain.WebUser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
