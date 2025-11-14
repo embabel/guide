@@ -27,7 +27,7 @@ class Neo4jTestContainer : Neo4jContainer<Neo4jTestContainer> {
          * Set to true to use local Neo4j (requires Neo4j running on localhost:7687).
          * Set to false to use TestContainers (slower startup, but fully isolated).
          */
-        const val USE_LOCAL_NEO4J = true
+        const val USE_LOCAL_NEO4J = false
 
         private const val LOCAL_NEO4J_URL = "bolt://localhost:7687"
         private const val LOCAL_NEO4J_USERNAME = "neo4j"
