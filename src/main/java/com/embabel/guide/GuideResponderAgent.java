@@ -22,7 +22,6 @@ import com.embabel.chat.UserMessage;
 import com.embabel.chat.agent.AgentProcessChatbot;
 import com.embabel.chat.agent.ChatbotReturn;
 import com.embabel.chat.agent.ConversationTermination;
-import com.embabel.guide.domain.GuideUser;
 import com.embabel.guide.domain.drivine.DrivineGuideUserRepository;
 import com.embabel.guide.domain.drivine.GuideUserWithDiscordUserInfo;
 import com.embabel.guide.domain.drivine.HasGuideUserData;
@@ -99,7 +98,7 @@ public class GuideResponderAgent {
         logger.info("Incoming request from user {}", context.user());
         var guideUser = getGuideUser(context.user()).guideUserData();
 
-        var persona = guideUser != null && guideUser.getPersona() != null ? guideUser.getPersona() : guideConfig.defaultPersona();
+        var persona = guideUser.getPersona() != null ? guideUser.getPersona() : guideConfig.defaultPersona();
         var templateModel = new HashMap<String, Object>();
         if (guideUser != null) {
           templateModel.put("guideUser", guideUser);

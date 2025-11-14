@@ -8,8 +8,11 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
 
 /**
  * Drivine-based implementation of GuideUser repository.
@@ -19,14 +22,17 @@ import java.util.Optional;
 public class DrivineGuideUserRepository {
 
     private final PersistenceManager manager;
+    private final GuideUserMapper mapper;
 
     @Autowired
-    public DrivineGuideUserRepository(@Qualifier("neo") PersistenceManager manager) {
+    public DrivineGuideUserRepository(@Qualifier("neo") PersistenceManager manager,
+                                      GuideUserMapper mapper) {
         this.manager = manager;
+        this.mapper = mapper;
     }
 
     /**
-     * Find a GuideUser by Discord user ID, returning composed result
+     * Find a GuideUser by Discord user ID, returning a composed result
      */
     @Transactional(readOnly = true)
     public Optional<GuideUserWithDiscordUserInfo> findByDiscordUserId(String discordUserId) {
@@ -42,7 +48,7 @@ public class DrivineGuideUserRepository {
         return manager.optionalGetOne(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(java.util.Map.of("discordUserId", discordUserId))
+                .bind(Map.of("discordUserId", discordUserId))
                 .transform(GuideUserWithDiscordUserInfo.class)
         );
     }
@@ -64,7 +70,7 @@ public class DrivineGuideUserRepository {
         return manager.optionalGetOne(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(java.util.Map.of("webUserId", webUserId))
+                .bind(Map.of("webUserId", webUserId))
                 .transform(GuideUserWithWebUser.class)
         );
     }
@@ -83,13 +89,12 @@ public class DrivineGuideUserRepository {
             LIMIT 1
             """;
 
-        Optional<GuideUserWithWebUser> guideUserWithWebUser = manager.optionalGetOne(
+        return manager.optionalGetOne(
             QuerySpecification
                 .withStatement(cypher)
                 .bind(Map.of())
                 .transform(GuideUserWithWebUser.class)
         );
-        return guideUserWithWebUser;
     }
 
     /**
@@ -109,7 +114,7 @@ public class DrivineGuideUserRepository {
         return manager.optionalGetOne(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(java.util.Map.of("userName", userName))
+                .bind(Map.of("userName", userName))
                 .transform(GuideUserWithWebUser.class)
         );
     }
@@ -135,7 +140,7 @@ public class DrivineGuideUserRepository {
         return manager.getOne(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(java.util.Map.of(
+                .bind(Map.of(
                     "guideUserProps", ObjectUtils.primitiveProps(guideUserData),
                     "discordProps", ObjectUtils.primitiveProps(discordUserInfo)
                 ))
@@ -169,7 +174,7 @@ public class DrivineGuideUserRepository {
         return manager.getOne(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(java.util.Map.of(
+                .bind(Map.of(
                     "guideUserProps", ObjectUtils.primitiveProps(guideUserData),
                     "webUserProps", ObjectUtils.primitiveProps(webUserData)
                 ))
@@ -190,7 +195,7 @@ public class DrivineGuideUserRepository {
         manager.execute(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(java.util.Map.of(
+                .bind(Map.of(
                     "id", guideUserId,
                     "persona", persona
                 ))
@@ -211,7 +216,7 @@ public class DrivineGuideUserRepository {
         manager.execute(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(java.util.Map.of(
+                .bind(Map.of(
                     "id", guideUserId,
                     "customPrompt", customPrompt
                 ))
@@ -232,84 +237,37 @@ public class DrivineGuideUserRepository {
             RETURN {
               guideUserData: properties(u),
               discordUserInfo: properties(d),
-              webUser: properties(w),
-              hasDiscord: d IS NOT NULL,
-              hasWebUser: w IS NOT NULL
+              webUser: properties(w)
             }
             """;
 
         var result = manager.optionalGetOne(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(java.util.Map.of("id", id))
-                .transform(java.util.Map.class)
+                .bind(Map.of("id", id))
+                .transform(Map.class)
         );
 
-        return result.map(map -> {
-            boolean hasDiscord = (Boolean) map.getOrDefault("hasDiscord", false);
-            boolean hasWebUser = (Boolean) map.getOrDefault("hasWebUser", false);
-
-            GuideUserData userData = new GuideUserData();
-            Map<String, Object> userDataMap = (Map<String, Object>) map.get("guideUserData");
-            if (userDataMap != null) {
-                userData.setId((String) userDataMap.get("id"));
-                userData.setPersona((String) userDataMap.get("persona"));
-                userData.setCustomPrompt((String) userDataMap.get("customPrompt"));
-            }
-
-            if (hasDiscord) {
-                Map<String, Object> discordMap = (Map<String, Object>) map.get("discordUserInfo");
-                DiscordUserInfoData discordData = null;
-                if (discordMap != null) {
-                    discordData = new DiscordUserInfoData(
-                        (String) discordMap.get("id"),
-                        (String) discordMap.get("username"),
-                        (String) discordMap.get("discriminator"),
-                        (String) discordMap.get("displayName"),
-                        (Boolean) discordMap.get("isBot"),
-                        (String) discordMap.get("avatarUrl")
-                    );
-                } else {
-                    discordData = new DiscordUserInfoData();
-                }
-                return new GuideUserWithDiscordUserInfo(userData, discordData);
-            } else if (hasWebUser) {
-                java.util.Map<String, Object> webUserMap = (java.util.Map<String, Object>) map.get("webUser");
-                WebUserData webUserData = new WebUserData();
-                if (webUserMap != null) {
-                    webUserData.setId((String) webUserMap.get("id"));
-                    webUserData.setDisplayName((String) webUserMap.get("displayName"));
-                    webUserData.setUserName((String) webUserMap.get("userName"));
-                    webUserData.setUserEmail((String) webUserMap.get("userEmail"));
-                    webUserData.setPasswordHash((String) webUserMap.get("passwordHash"));
-                    webUserData.setRefreshToken((String) webUserMap.get("refreshToken"));
-                }
-                return new GuideUserWithWebUser(userData, webUserData);
-            }
-
-            // Return a plain GuideUserData when there are no relationships
-            return userData;
-        });
+        return result.map(mapper::mapToGuideUserComposite);
     }
 
     /**
      * Save a GuideUser - this is a simplified version that updates persona/customPrompt
      */
     @Transactional
-    public HasGuideUserData save(com.embabel.guide.domain.GuideUser guideUser) {
+    public HasGuideUserData save(GuideUserData guideUser) {
         String cypher = """
             MERGE (u:GuideUser {id: $id})
-            SET u.persona = $persona,
-                u.customPrompt = $customPrompt
+            SET u += props
             """;
+
+        Map<String, Object> props = ObjectUtils.primitiveProps(guideUser);
 
         manager.execute(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(java.util.Map.of(
-                    "id", guideUser.getId(),
-                    "persona", guideUser.persona() != null ? guideUser.persona() : "",
-                    "customPrompt", guideUser.customPersona() != null ? guideUser.customPersona() : ""
+                .bind(Map.of(
+                    "propsid", props
                 ))
         );
 
@@ -340,7 +298,7 @@ public class DrivineGuideUserRepository {
      * Find all GuideUsers (for testing)
      */
     @Transactional(readOnly = true)
-    public java.util.List<HasGuideUserData> findAllGuideUsers() {
+    public List<HasGuideUserData> findAllGuideUsers() {
         String cypher = """
             MATCH (u:GuideUser)
             OPTIONAL MATCH (u)-[:IS_DISCORD_USER]->(d:DiscordUserInfo)
@@ -348,9 +306,7 @@ public class DrivineGuideUserRepository {
             RETURN {
               guideUserData: properties(u),
               discordUserInfo: properties(d),
-              webUser: properties(w),
-              hasDiscord: d IS NOT NULL,
-              hasWebUser: w IS NOT NULL
+              webUser: properties(w)
             }
             """;
 
@@ -358,54 +314,11 @@ public class DrivineGuideUserRepository {
             QuerySpecification
                 .withStatement(cypher)
                 .bind(Map.of())
-                .transform(java.util.Map.class)
+                .transform(Map.class)
         ).stream()
-            .map(map -> {
-                boolean hasDiscord = (Boolean) map.getOrDefault("hasDiscord", false);
-                boolean hasWebUser = (Boolean) map.getOrDefault("hasWebUser", false);
-
-                GuideUserData userData = new GuideUserData();
-                java.util.Map<String, Object> userDataMap = (java.util.Map<String, Object>) map.get("guideUserData");
-                if (userDataMap != null) {
-                    userData.setId((String) userDataMap.get("id"));
-                    userData.setPersona((String) userDataMap.get("persona"));
-                    userData.setCustomPrompt((String) userDataMap.get("customPrompt"));
-                }
-
-                if (hasDiscord) {
-                    java.util.Map<String, Object> discordMap = (java.util.Map<String, Object>) map.get("discordUserInfo");
-                    DiscordUserInfoData discordData = null;
-                    if (discordMap != null) {
-                        discordData = new DiscordUserInfoData(
-                            (String) discordMap.get("id"),
-                            (String) discordMap.get("username"),
-                            (String) discordMap.get("discriminator"),
-                            (String) discordMap.get("displayName"),
-                            (Boolean) discordMap.get("isBot"),
-                            (String) discordMap.get("avatarUrl")
-                        );
-                    } else {
-                        discordData = new DiscordUserInfoData();
-                    }
-                    return (HasGuideUserData) new GuideUserWithDiscordUserInfo(userData, discordData);
-                } else if (hasWebUser) {
-                    java.util.Map<String, Object> webUserMap = (java.util.Map<String, Object>) map.get("webUser");
-                    WebUserData webUserData = new WebUserData();
-                    if (webUserMap != null) {
-                        webUserData.setId((String) webUserMap.get("id"));
-                        webUserData.setDisplayName((String) webUserMap.get("displayName"));
-                        webUserData.setUserName((String) webUserMap.get("userName"));
-                        webUserData.setUserEmail((String) webUserMap.get("userEmail"));
-                        webUserData.setPasswordHash((String) webUserMap.get("passwordHash"));
-                        webUserData.setRefreshToken((String) webUserMap.get("refreshToken"));
-                    }
-                    return (HasGuideUserData) new GuideUserWithWebUser(userData, webUserData);
-                }
-
-                // Return just the GuideUserData if no relationships
-                return (HasGuideUserData) userData;
-            })
-            .collect(java.util.stream.Collectors.toList());
+            .map(mapper::mapToGuideUserComposite)
+            .collect(Collectors.toList());
     }
+
 
 }

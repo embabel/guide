@@ -1,12 +1,10 @@
 package com.embabel.hub
 
 import com.embabel.guide.Neo4jPropertiesInitializer
-import com.embabel.guide.domain.GuideUserRepository
 import com.embabel.guide.domain.drivine.DrivineGuideUserRepository
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.drivine.test.DrivineTest
 import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.ai.mcp.client.autoconfigure.McpClientAutoConfiguration
 import org.springframework.beans.factory.annotation.Autowired
@@ -35,21 +33,12 @@ class HubApiControllerTest {
     lateinit var objectMapper: ObjectMapper
 
     @Autowired
-    lateinit var guideUserRepository: GuideUserRepository
-
-    @Autowired
     lateinit var drivineGuideUserRepository: DrivineGuideUserRepository
 
     @Autowired
     lateinit var jwtTokenService: JwtTokenService
 
     private val passwordEncoder = BCryptPasswordEncoder()
-
-    @BeforeEach
-    fun setUp() {
-        // Clean up any existing test users to avoid conflicts
-        guideUserRepository.deleteAll()
-    }
 
     @Test
     fun `POST register should successfully create a new user`() {

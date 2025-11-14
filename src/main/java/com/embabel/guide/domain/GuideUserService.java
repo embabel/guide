@@ -91,7 +91,7 @@ public class GuideUserService {
      * @param guideUser the GuideUser to save
      * @return the saved HasGuideUser composite
      */
-    public HasGuideUserData saveUser(GuideUser guideUser) {
+    public HasGuideUserData saveUser(GuideUserData guideUser) {
         return guideUserRepository.save(guideUser);
     }
 
