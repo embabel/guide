@@ -1,6 +1,5 @@
 package com.embabel.hub
 
-import com.embabel.guide.domain.GuideUser
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication

@@ -25,7 +25,7 @@ public class DrivineConfig {
     @Value("${spring.neo4j.authentication.username:neo4j}")
     private String username;
 
-    @Value("${spring.neo4j.authentication.password:password}")
+    @Value("${spring.neo4j.authentication.password:brahmsian}")
     private String password;
 
     @Value("${spring.data.neo4j.database:neo4j}")

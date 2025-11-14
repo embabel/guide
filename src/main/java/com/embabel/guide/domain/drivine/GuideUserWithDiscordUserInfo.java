@@ -2,10 +2,7 @@ package com.embabel.guide.domain.drivine;
 
 import com.embabel.agent.discord.DiscordUser;
 import com.embabel.agent.identity.User;
-import com.embabel.guide.domain.GuideUser;
-import com.embabel.guide.domain.MappedDiscordUserInfo;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import org.checkerframework.checker.units.qual.N;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
