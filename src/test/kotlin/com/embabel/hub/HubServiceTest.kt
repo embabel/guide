@@ -3,7 +3,7 @@ package com.embabel.hub
 import com.embabel.guide.Neo4jPropertiesInitializer
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import org.springframework.ai.mcp.client.autoconfigure.McpClientAutoConfiguration
+//import org.springframework.ai.mcp.client.autoconfigure.McpClientAutoConfiguration
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration
 import org.springframework.boot.test.context.SpringBootTest
@@ -12,7 +12,7 @@ import org.springframework.test.context.ContextConfiguration
 
 @SpringBootTest
 @ContextConfiguration(initializers = [Neo4jPropertiesInitializer::class])
-@ImportAutoConfiguration(exclude = [McpClientAutoConfiguration::class])
+//@ImportAutoConfiguration(exclude = [McpClientAutoConfiguration::class])
 class HubServiceTest {
 
     @Autowired

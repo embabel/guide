@@ -14,11 +14,16 @@ import com.embabel.agent.rag.store.DocumentDeletionResult
 import com.embabel.common.ai.model.DefaultModelSelectionCriteria
 import com.embabel.common.ai.model.ModelProvider
 import com.embabel.common.core.types.SimilarityResult
+import org.drivine.manager.PersistenceManager
+import org.drivine.query.QuerySpecification
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
+import kotlin.collections.get
 
 @Service
 class DrivineStore(
+    @param:Qualifier("neo") val persistenceManager: PersistenceManager,
     override val enhancers: List<RetrievableEnhancer> = emptyList(),
     val properties: NeoRagServiceProperties,
     private val cypherSearch: CypherSearch,
@@ -49,7 +54,7 @@ class DrivineStore(
                 params = mapOf("uri" to uri)
             )
 
-            val deletedCount = TODO()//result.queryStatistics().nodesDeleted
+            val deletedCount = result.items().firstOrNull()?.get("deletedCount") as? Int ?: 0
 
             if (deletedCount == 0) {
                 logger.warn("No document found with URI: {}", uri)
@@ -70,22 +75,22 @@ class DrivineStore(
     override fun findContentRootByUri(uri: String): ContentRoot? {
         logger.debug("Finding root document with URI: {}", uri)
 
-//        try {
-//            val session = cypherSearch.currentSession()
-//            val rows = session.query(
-//                cypherContentElementQuery(" WHERE c.uri = \$uri AND ('Document' IN labels(c) OR 'ContentRoot' IN labels(c)) "),
-//                mapOf("uri" to uri),
-//                true
-//            )
-//
-//            val element = rows.mapNotNull(::rowToContentElement).firstOrNull()
-//            logger.debug("Root document with URI {} found: {}", uri, element != null)
-//            return element as? ContentRoot
-//        } catch (e: Exception) {
-//            logger.error("Error finding root with URI: {}", uri, e)
-//            return null
-//        }
-        TODO()
+        try {
+            val statement = cypherContentElementQuery(
+                " WHERE c.uri = \$uri AND ('Document' IN labels(c) OR 'ContentRoot' IN labels(c)) ")
+            val spec = QuerySpecification
+                .withStatement(statement)
+                .bind(mapOf("uri" to uri))
+                .transform(Map::class.java)
+                .map({rowToContentElement(it)})
+
+            val result = persistenceManager.maybeGetOne(spec)
+            logger.debug("Root document with URI {} found: {}", uri, result != null)
+            return result as? ContentRoot
+        } catch (e: Exception) {
+            logger.error("Error finding root with URI: {}", uri, e)
+            return null
+        }
     }
 
     override fun onNewRetrievables(retrievables: List<Retrievable>) {
@@ -116,14 +121,14 @@ class DrivineStore(
             query = cypher,
             params = params,
         )
-//        val propertiesSet = result.queryStatistics().propertiesSet
-//        if (propertiesSet == 0) {
-//            logger.warn(
-//                "Expected to set embedding properties, but set 0. chunkId={}, cypher={}",
-//                retrievable.id,
-//                cypher,
-//            )
-//        }
+        val nodesUpdated = result.items().firstOrNull()?.get("nodesUpdated") as? Int ?: 0
+        if (nodesUpdated == 0) {
+            logger.warn(
+                "Expected to set embedding properties, but set 0. chunkId={}, cypher={}",
+                retrievable.id,
+                cypher,
+            )
+        }
     }
 
     override fun count(): Int {
@@ -131,37 +136,47 @@ class DrivineStore(
     }
 
     override fun findAllChunksById(chunkIds: List<String>): Iterable<Chunk> {
-//        val session = c.currentSession()
-//        val rows = session.query(
-//            cypherContentElementQuery(" WHERE c:Chunk AND c.id IN \$ids "),
-//            mapOf("ids" to chunkIds),
-//            true,
-//        )
-//        return rows.map(::rowToContentElement).filterIsInstance<Chunk>()
-        TODO()
+        val statement = cypherContentElementQuery(" WHERE c:Chunk AND c.id IN \$ids ")
+        val spec = QuerySpecification
+            .withStatement(statement)
+            .bind(mapOf("ids" to chunkIds))
+            .transform(Map::class.java)
+            .map({rowToContentElement(it)})
+            .filter { it is Chunk }
+            .map { it as Chunk }
+
+        return persistenceManager.query(spec)
     }
 
     override fun findById(id: String): ContentElement? {
-//        val session = cypherSearch.currentSession()
-//        val rows = session.query(
-//            cypherContentElementQuery(" WHERE c.id = \$id "),
-//            mapOf("id" to id),
-//            true,
-//        )
-//        return rows.mapNotNull(::rowToContentElement).firstOrNull()
-        TODO("Not yet implemented")
+        val statement = cypherContentElementQuery(" WHERE c.id = \$id ")
+        val spec = QuerySpecification
+            .withStatement(statement)
+            .bind(mapOf("id" to id))
+            .transform(Map::class.java)
+            .map({rowToContentElement(it)})
+        return persistenceManager.maybeGetOne(spec)
     }
 
     override fun findChunksForEntity(entityId: String): List<Chunk> {
-//        return cypherSearch.currentSession().query(
-//            MappedChunk::class.java,
-//            """
-//            MATCH (e:Entity {id: ${'$'}entityId})<-[:HAS_ENTITY]-(chunk:Chunk)
-//            RETURN chunk
-//            """.trimIndent(),
-//            mapOf("entityId" to entityId),
-//        ).toList()
-        TODO()
+
+        val statement = """
+            MATCH (e:Entity {id: ${'$'}entityId})<-[:HAS_ENTITY]-(chunk:Chunk)
+            RETURN properties(chunk)
+            """.trimIndent()
+        val spec = QuerySpecification
+            .withStatement(statement)
+            .bind(mapOf("entityId" to entityId))
+            .transform(Map::class.java)
+            .map({
+                Chunk(
+                    id = it["id"] as String,
+                    text = it["text"] as String,
+                    parentId = it["parentId"] as String,
+                    metadata = emptyMap(), //TODO Can it ever be populated?
+                )
+            })
+        return persistenceManager.query(spec)
     }
 
     override fun save(element: ContentElement): ContentElement {
@@ -212,4 +227,53 @@ class DrivineStore(
             )
         )
     }
+
+    private fun cypherContentElementQuery(whereClause: String): String =
+        """
+            MATCH (c:ContentElement)
+            $whereClause
+            RETURN
+              {
+                id: c.id,
+                uri: c.uri,
+                text: c.text,
+                parentId: c.parentId,
+                ingestionDate: c.ingestionTimestamp,
+                metadata_source: c.metadata.source,
+                labels: labels(c)
+              } AS result
+            """.trimIndent()
+
+    private fun rowToContentElement(row: Map<*, *>): ContentElement {
+        val metadata = mutableMapOf<String, Any>()
+        metadata["source"] = row["metadata_source"] ?: "unknown"
+        val labels = row["labels"] as? Array<String> ?: error("Must have labels")
+        if (labels.contains("Chunk"))
+            return Chunk(
+                id = row["id"] as String,
+                text = row["text"] as String,
+                parentId = row["parentId"] as String,
+                metadata = metadata,
+            )
+        if (labels.contains("Document")) {
+            val ingestionDate = when (val rawDate = row["ingestionDate"]) {
+                is java.time.Instant -> rawDate
+                is java.time.ZonedDateTime -> rawDate.toInstant()
+                is Long -> java.time.Instant.ofEpochMilli(rawDate)
+                is String -> java.time.Instant.parse(rawDate)
+                null -> java.time.Instant.now()
+                else -> java.time.Instant.now()
+            }
+            return MaterializedDocument(
+                id = row["id"] as String,
+                title = row["id"] as String,
+                children = emptyList(),
+                metadata = metadata,
+                uri = row["uri"] as String,
+                ingestionTimestamp = ingestionDate,
+            )
+        }
+        throw RuntimeException("Don't know how to map: $labels")
+    }
+
 }

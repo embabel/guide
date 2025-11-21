@@ -20,13 +20,9 @@ import org.drivine.test.DrivineTest
 import org.drivine.transaction.TransactionContextHolder
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import org.springframework.ai.mcp.client.autoconfigure.McpClientAutoConfiguration
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.autoconfigure.ImportAutoConfiguration
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.annotation.Rollback
 import org.springframework.test.context.ContextConfiguration
-import org.springframework.transaction.annotation.Transactional
 import java.util.*
 
 /**
@@ -38,9 +34,7 @@ import java.util.*
  */
 @SpringBootTest
 @ContextConfiguration(initializers = [Neo4jPropertiesInitializer::class])
-@ImportAutoConfiguration(exclude = [McpClientAutoConfiguration::class])
 @DrivineTest
-@Rollback(true)
 class DrivineGuideUserRepositoryTest {
 
     @Autowired
