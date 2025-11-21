@@ -15,45 +15,17 @@
  */
 package com.embabel.guide
 
-import org.neo4j.ogm.config.Configuration
-import org.neo4j.ogm.session.SessionFactory
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Primary
+import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
-import org.springframework.data.neo4j.repository.config.EnableNeo4jRepositories
-import org.springframework.data.neo4j.transaction.Neo4jTransactionManager
-import org.springframework.transaction.PlatformTransactionManager
 
 /**
  * Test-specific Neo4j configuration that provides beans for integration tests.
  * This overrides the production NeoOgmConfig which is disabled during tests (@Profile("!test")).
  */
-@org.springframework.context.annotation.Configuration
-@EnableNeo4jRepositories(basePackages = ["com.embabel.guide.domain"])
+@Configuration
 @Profile("test")
 class GuideTestConfig {
 
-    @Bean
-    fun ogmConfiguration(): Configuration {
-        // Use Neo4jTestContainer helper methods which check USE_LOCAL_NEO4J internally
-        return Configuration.Builder()
-            .uri(Neo4jTestContainer.getBoltUrl())
-            .credentials(Neo4jTestContainer.getUsername(), Neo4jTestContainer.getPassword())
-            .build()
-    }
 
-    @Bean
-    @Primary
-    fun sessionFactory(): SessionFactory {
-        return SessionFactory(
-            ogmConfiguration(),
-            "com.embabel.guide.domain"
-        )
-    }
 
-    @Bean
-    @Primary
-    fun transactionManager(): PlatformTransactionManager {
-        return Neo4jTransactionManager(sessionFactory())
-    }
 }
