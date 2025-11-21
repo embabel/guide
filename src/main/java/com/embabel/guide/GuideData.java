@@ -2,14 +2,17 @@ package com.embabel.guide;
 
 import com.embabel.agent.api.common.LlmReference;
 import com.embabel.agent.identity.User;
-import com.embabel.agent.rag.WritableContentElementRepository;
+import com.embabel.agent.rag.ingestion.DirectoryParsingConfig;
 import com.embabel.agent.rag.ingestion.DirectoryParsingResult;
-import com.embabel.agent.rag.ingestion.HierarchicalContentReader;
+import com.embabel.agent.rag.ingestion.TikaHierarchicalContentReader;
+import com.embabel.agent.rag.service.RagService;
+import com.embabel.agent.rag.store.ChunkingContentElementRepository;
 import com.embabel.agent.rag.tools.RagOptions;
 import com.embabel.agent.tools.file.FileTools;
 import com.embabel.coding.tools.api.ApiReference;
 import com.embabel.coding.tools.git.RepositoryReferenceProvider;
 import com.embabel.coding.tools.jvm.ClassGraphApiReferenceExtractor;
+import com.google.common.collect.Iterables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
@@ -33,13 +36,15 @@ public class GuideData {
     private final Logger logger = LoggerFactory.getLogger(GuideData.class);
     private final GuideConfig guideConfig;
     private final List<LlmReference> references = new LinkedList<>();
-    private final WritableContentElementRepository store;
+    private final ChunkingContentElementRepository store;
     private final PlatformTransactionManager platformTransactionManager;
+    private final RagService ragService;
 
     public GuideData(
-            WritableContentElementRepository store,
+            ChunkingContentElementRepository store,
             GuideConfig guideConfig,
-            PlatformTransactionManager platformTransactionManager) {
+            PlatformTransactionManager platformTransactionManager,
+            RagService ragService) {
         this.store = store;
         this.guideConfig = guideConfig;
         this.platformTransactionManager = platformTransactionManager;
@@ -51,6 +56,7 @@ public class GuideData {
                         Set.of()),
                 100);
         references.add(embabelAgentApiReference);
+        this.ragService = ragService;
 
         // TODO this could be data driven
         addGithubReference("https://github.com/embabel/embabel-agent-examples.git", "Embabel examples repo");
@@ -99,18 +105,18 @@ public class GuideData {
         var ft = FileTools.readOnly(dir);
 
         return new TransactionTemplate(platformTransactionManager).execute(ts -> {
-            var directoryParsingResult = new HierarchicalContentReader()
-                    .parseFromDirectory(ft);
+            var directoryParsingResult = new TikaHierarchicalContentReader()
+                    .parseFromDirectory(ft, new DirectoryParsingConfig());
             for (var root : directoryParsingResult.getContentRoots()) {
-                logger.info("Parsed root: {} with {} descendants", root.getTitle(), root.descendants().size());
-                store.writeContent(root);
+                logger.info("Parsed root: {} with {} descendants", root.getTitle(), Iterables.size(root.descendants()));
+                store.writeAndChunkDocument(root);
             }
             return directoryParsingResult;
         });
     }
 
     public RagOptions ragOptions() {
-        return new RagOptions()
+        return new RagOptions(ragService)
                 .withSimilarityThreshold(guideConfig.similarityThreshold())
                 .withTopK(guideConfig.topK());
     }

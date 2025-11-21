@@ -10,18 +10,19 @@ import com.embabel.agent.core.AgentPlatform;
 import com.embabel.agent.core.CoreToolGroups;
 import com.embabel.agent.discord.DiscordUser;
 import com.embabel.agent.identity.User;
-import com.embabel.agent.rag.ContentElementSearch;
-import com.embabel.agent.rag.EntitySearch;
-import com.embabel.agent.rag.HyDE;
-import com.embabel.agent.rag.pipeline.event.RagPipelineEvent;
-import com.embabel.agent.rag.tools.DualShotConfig;
+import com.embabel.agent.rag.service.ContentElementSearch;
+import com.embabel.agent.rag.service.DesiredMaxLatency;
+import com.embabel.agent.rag.service.EntitySearch;
+import com.embabel.agent.rag.service.HyDE;
+import com.embabel.agent.rag.tools.RagReference;
 import com.embabel.chat.AssistantMessage;
 import com.embabel.chat.Chatbot;
 import com.embabel.chat.Conversation;
 import com.embabel.chat.UserMessage;
 import com.embabel.chat.agent.AgentProcessChatbot;
-import com.embabel.chat.agent.ChatbotReturn;
-import com.embabel.chat.agent.ConversationTermination;
+import com.embabel.chat.agent.ConversationContinues;
+import com.embabel.chat.agent.ConversationOver;
+import com.embabel.chat.agent.ConversationStatus;
 import com.embabel.guide.domain.drivine.DrivineGuideUserRepository;
 import com.embabel.guide.domain.drivine.GuideUserWithDiscordUserInfo;
 import com.embabel.guide.domain.drivine.HasGuideUserData;
@@ -74,8 +75,8 @@ public class GuideResponderAgent {
                         .orElseGet(() -> {
                             var composed = GuideUserWithDiscordUserInfo.fromDiscordUser(du);
                             var created = guideUserRepository.createWithDiscord(
-                                composed.getGuideUserData(),
-                                composed.getDiscordUserInfo()
+                                    composed.getGuideUserData(),
+                                    composed.getDiscordUserInfo()
                             );
                             logger.info("Created new Discord user: {}", created);
                             return created;
@@ -92,7 +93,7 @@ public class GuideResponderAgent {
 
     @Action(canRerun = true,
             pre = {LAST_EVENT_WAS_USER_MESSAGE})
-    ChatbotReturn respond(
+    ConversationStatus respond(
             Conversation conversation,
             ActionContext context) {
         logger.info("Incoming request from user {}", context.user());
@@ -101,41 +102,42 @@ public class GuideResponderAgent {
         var persona = guideUser.getPersona() != null ? guideUser.getPersona() : guideConfig.defaultPersona();
         var templateModel = new HashMap<String, Object>();
         if (guideUser != null) {
-          templateModel.put("guideUser", guideUser);
+            templateModel.put("guideUser", guideUser);
         }
         templateModel.put("persona", persona);
         var assistantMessage = context
                 .ai()
                 .withLlm(guideData.config().llm())
+                .withId("chat_response")
                 .withReferences(guideData.referencesForUser(context.user()))
                 .withTools(CoreToolGroups.WEB)
-                .withRag(
-                        guideData
-                                .ragOptions()
-                                .withHyDE(new HyDE(40))
-                                .withContentElementSearch(ContentElementSearch.CHUNKS_ONLY)
-                                .withEntitySearch(new EntitySearch(Set.of(
-                                        "Concept", "Example"
-                                ), false))
-                                .withDesiredMaxLatency(Duration.ofMinutes(10))
-                                .withDualShot(new DualShotConfig(100))
-                                .withListener(e -> {
-                                    if (e instanceof RagPipelineEvent rpe) {
-                                        context.updateProgress(rpe.getDescription());
-                                    }
-                                }))
+                .withReference(
+                        new RagReference("docs", "Embabel docs",
+                                guideData.ragOptions()
+                                        .withContentElementSearch(ContentElementSearch.CHUNKS_ONLY)
+                                        .withEntitySearch(new EntitySearch(Set.of(
+                                                "Concept", "Example"
+                                        ), false))
+                                        .withHint(new HyDE("The Embabel JVM agent framework", 40))
+                                        .withHint(DesiredMaxLatency.of(Duration.ofSeconds(45)))
+//                                        .withDualShot(new DualShotConfig(100)),
+                                , context.ai().withLlmByRole("summarizer")))//
+//                                .withListener(e -> {
+//                                    if (e instanceof RagPipelineEvent rpe) {
+//                                        context.updateProgress(rpe.getDescription());
+//                                    }
+//                                }))
                 .withTemplate("guide_system")
-                .respondWithSystemPrompt(conversation, templateModel,
-                        "chat response");
+                .respondWithSystemPrompt(conversation, templateModel);
         conversation.addMessage(assistantMessage);
         context.sendMessage(assistantMessage);
-        return new ChatbotReturn(assistantMessage, null);
+        return ConversationContinues.with(assistantMessage);
     }
 
     @AchievesGoal(description = "Conversation completed")
     @Action
-    ConversationTermination respondAndTerminate(
-            ConversationTermination conversationOver,
+    ConversationStatus respondAndTerminate(
+            ConversationOver conversationOver,
             Conversation conversation,
             ActionContext context) {
         context.sendMessage(new AssistantMessage("Conversation over: " + conversationOver.getReason()));
