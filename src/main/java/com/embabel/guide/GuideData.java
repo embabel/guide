@@ -1,7 +1,7 @@
 package com.embabel.guide;
 
 import com.embabel.agent.api.common.LlmReference;
-import com.embabel.agent.identity.User;
+import com.embabel.agent.api.identity.User;
 import com.embabel.agent.rag.ingestion.DirectoryParsingConfig;
 import com.embabel.agent.rag.ingestion.DirectoryParsingResult;
 import com.embabel.agent.rag.ingestion.TikaHierarchicalContentReader;

@@ -1,6 +1,6 @@
 package com.embabel.guide.chat.service
 
-import com.embabel.agent.channel.*
+import com.embabel.agent.api.channel.*
 import com.embabel.chat.AssistantMessage
 import com.embabel.chat.ChatSession
 import com.embabel.chat.Chatbot
@@ -140,6 +140,7 @@ class GuideRagServiceAdapter(
                 responseBuilder.append(msg.content)
                 onComplete()
             }
+
             else -> logger.debug("Received non-assistant message: {}", msg)
         }
     }

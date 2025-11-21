@@ -1,7 +1,7 @@
 package com.embabel.guide.domain.drivine;
 
+import com.embabel.agent.api.identity.User;
 import com.embabel.agent.discord.DiscordUser;
-import com.embabel.agent.identity.User;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -36,19 +36,19 @@ public class GuideUserWithDiscordUserInfo implements HasGuideUserData, HasDiscor
      */
     public static GuideUserWithDiscordUserInfo fromDiscordUser(DiscordUser discordUser) {
         GuideUserData guideUserData = new GuideUserData(
-            UUID.randomUUID().toString(),
-            null,
-            null
+                UUID.randomUUID().toString(),
+                null,
+                null
         );
 
         var du = discordUser.getDiscordUser();
         DiscordUserInfoData discordData = new DiscordUserInfoData(
-            du.getId(),
-            du.getUsername(),
-            du.getDiscriminator(),
-            du.getDisplayName(),
-            du.isBot(),
-            du.getAvatarUrl()
+                du.getId(),
+                du.getUsername(),
+                du.getDiscriminator(),
+                du.getDisplayName(),
+                du.isBot(),
+                du.getAvatarUrl()
         );
 
         return new GuideUserWithDiscordUserInfo(guideUserData, discordData);

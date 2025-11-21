@@ -1,6 +1,6 @@
 package com.embabel.guide.domain.drivine;
 
-import com.embabel.agent.identity.User;
+import com.embabel.agent.api.identity.User;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
@@ -52,9 +52,9 @@ public class GuideUserWithWebUser implements HasGuideUserData, HasWebUserData, U
     @Override
     public String toString() {
         return "GuideUserWithWebUser{" +
-            "guideUserData=" + guideUserData +
-            ", webUser=" + webUser +
-            '}';
+                "guideUserData=" + guideUserData +
+                ", webUser=" + webUser +
+                '}';
     }
 
     // User interface delegation to WebUser
