@@ -136,7 +136,7 @@ public class GuideResponderAgent {
 
     @AchievesGoal(description = "Conversation completed")
     @Action
-    ConversationStatus respondAndTerminate(
+    ConversationOver respondAndTerminate(
             ConversationOver conversationOver,
             Conversation conversation,
             ActionContext context) {
