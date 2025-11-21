@@ -3,6 +3,7 @@ package com.embabel.agent.rag.neo.drivine
 import com.embabel.agent.api.common.Embedding
 import com.embabel.agent.rag.ingestion.RetrievableEnhancer
 import com.embabel.agent.rag.model.*
+import com.embabel.agent.rag.service.EntitySearch
 import com.embabel.agent.rag.service.RagRequest
 import com.embabel.agent.rag.service.support.FunctionRagFacet
 import com.embabel.agent.rag.service.support.RagFacet
@@ -13,12 +14,17 @@ import com.embabel.agent.rag.store.ChunkingContentElementRepository
 import com.embabel.agent.rag.store.DocumentDeletionResult
 import com.embabel.common.ai.model.DefaultModelSelectionCriteria
 import com.embabel.common.ai.model.ModelProvider
+import com.embabel.common.core.types.SimilarityCutoff
 import com.embabel.common.core.types.SimilarityResult
+import com.embabel.common.core.types.SimpleSimilaritySearchResult
 import org.drivine.manager.PersistenceManager
 import org.drivine.query.QuerySpecification
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.support.TransactionTemplate
 import kotlin.collections.get
 
 @Service
@@ -28,6 +34,7 @@ class DrivineStore(
     val properties: NeoRagServiceProperties,
     private val cypherSearch: CypherSearch,
     modelProvider: ModelProvider,
+    platformTransactionManager: PlatformTransactionManager,
 ) : AbstractChunkingContentElementRepository(properties), ChunkingContentElementRepository, RagFacetProvider {
 
     private val logger = LoggerFactory.getLogger(DrivineStore::class.java)
@@ -193,26 +200,25 @@ class DrivineStore(
     }
 
     fun search(ragRequest: RagRequest): RagFacetResults<Retrievable> {
-//        val embedding = embeddingService.model.embed(ragRequest.query)
-//        val allResults = mutableListOf<SimilarityResult<out Retrievable>>()
-//        if (ragRequest.contentElementSearch.types.contains(Chunk::class.java)) {
-//            allResults += safelyExecuteInTransaction { chunkSearch(ragRequest, embedding) }
-//        } else {
-//            logger.info("No chunk search specified, skipping chunk search")
-//        }
-//
-//        if (ragRequest.entitySearch != null) {
-//            allResults += safelyExecuteInTransaction { entitySearch(ragRequest, embedding) }
-//        } else {
-//            logger.info("No entity search specified, skipping entity search")
-//        }
-//
-//        // TODO should reward multiple matches
-//        val mergedResults: List<SimilarityResult<out Retrievable>> = allResults
-//            .distinctBy { it.match.id }
-//            .sortedByDescending { it.score }
-//            .take(ragRequest.topK)
-        val mergedResults: List<SimilarityResult<out Retrievable>> = TODO()
+        val embedding = embeddingService.model.embed(ragRequest.query)
+        val allResults = mutableListOf<SimilarityResult<out Retrievable>>()
+        if (ragRequest.contentElementSearch.types.contains(Chunk::class.java)) {
+            allResults += safelyExecuteInTransaction { chunkSearch(ragRequest, embedding) }
+        } else {
+            logger.info("No chunk search specified, skipping chunk search")
+        }
+
+        if (ragRequest.entitySearch != null) {
+            allResults += safelyExecuteInTransaction { entitySearch(ragRequest, embedding) }
+        } else {
+            logger.info("No entity search specified, skipping entity search")
+        }
+
+        // TODO should reward multiple matches
+        val mergedResults: List<SimilarityResult<out Retrievable>> = allResults
+            .distinctBy { it.match.id }
+            .sortedByDescending { it.score }
+            .take(ragRequest.topK)
         return RagFacetResults(
             facetName = this.name,
             results = mergedResults,
@@ -275,5 +281,184 @@ class DrivineStore(
         }
         throw RuntimeException("Don't know how to map: $labels")
     }
+
+    private val readonlyTransactionTemplate = TransactionTemplate(platformTransactionManager).apply {
+        isReadOnly = true
+        propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRED
+    }
+
+    private fun safelyExecuteInTransaction(block: () -> List<SimilarityResult<out Retrievable>>): List<SimilarityResult<out Retrievable>> {
+        return try {
+            readonlyTransactionTemplate.execute { block() } as List<SimilarityResult<out Retrievable>>
+        } catch (e: Exception) {
+            logger.error("Error during RAG search transaction", e)
+            emptyList()
+        }
+    }
+
+    private fun chunkSearch(
+        ragRequest: RagRequest,
+        embedding: Embedding,
+    ): List<SimilarityResult<out Chunk>> {
+        val chunkSimilarityResults = cypherSearch.chunkSimilaritySearch(
+            "Chunk similarity search",
+            query = "chunk_vector_search",
+            params = commonParameters(ragRequest) + mapOf(
+                "vectorIndex" to properties.contentElementIndex,
+                "queryVector" to embedding,
+            ),
+            logger = logger,
+        )
+        logger.info("{} chunk similarity results for query '{}'", chunkSimilarityResults.size, ragRequest.query)
+
+        val chunkFullTextResults = cypherSearch.chunkFullTextSearch(
+            purpose = "Chunk full text search",
+            query = "chunk_fulltext_search",
+            params = commonParameters(ragRequest) + mapOf(
+                "fulltextIndex" to properties.contentElementFullTextIndex,
+                "searchText" to "\"${ragRequest.query}\"",
+            ),
+            logger = logger,
+        )
+        logger.info("{} chunk full-text results for query '{}'", chunkFullTextResults.size, ragRequest.query)
+        return chunkSimilarityResults + chunkFullTextResults
+    }
+
+    private fun entitySearch(
+        ragRequest: RagRequest,
+        embedding: FloatArray,
+    ): List<SimilarityResult<out Retrievable>> {
+        val allEntityResults = mutableListOf<SimilarityResult<out Retrievable>>()
+        val labels = ragRequest.entitySearch?.labels ?: error("No entity search specified")
+        val entityResults = entityVectorSearch(
+            ragRequest,
+            embedding,
+            labels,
+        )
+        allEntityResults += entityResults
+        logger.info("{} entity vector results for query '{}'", entityResults.size, ragRequest.query)
+        val entityFullTextResults = cypherSearch.entityFullTextSearch(
+            purpose = "Entity full text search",
+            query = "entity_fulltext_search",
+            params = commonParameters(ragRequest) + mapOf(
+                "fulltextIndex" to properties.entityFullTextIndex,
+                "searchText" to ragRequest.query,
+                "labels" to labels,
+            ),
+            logger = logger,
+        )
+        logger.info("{} entity full-text results for query '{}'", entityFullTextResults.size, ragRequest.query)
+        allEntityResults += entityFullTextResults
+
+        if (ragRequest.entitySearch?.generateQueries == true) {
+            val cypherResults =
+                generateAndExecuteCypher(ragRequest, ragRequest.entitySearch!!).also { cypherResults ->
+                    logger.info("{} Cypher results for query '{}'", cypherResults.size, ragRequest.query)
+                }
+            allEntityResults += cypherResults
+        } else {
+            logger.info("No query generation specified, skipping Cypher generation and execution")
+        }
+        logger.info("{} total entity results for query '{}'", entityFullTextResults.size, ragRequest.query)
+        return allEntityResults
+    }
+
+    fun entityVectorSearch(
+        request: SimilarityCutoff,
+        embedding: FloatArray,
+        labels: Set<String>,
+    ): List<SimilarityResult<out EntityData>> {
+        return cypherSearch.entityDataSimilaritySearch(
+            purpose = "Mapped entity search",
+            query = "entity_vector_search",
+            params = commonParameters(request) + mapOf(
+                "index" to properties.entityIndex,
+                "queryVector" to embedding,
+                "labels" to labels,
+            ),
+            logger,
+        )
+    }
+
+    private fun generateAndExecuteCypher(
+        request: RagRequest,
+        entitySearch: EntitySearch,
+    ): List<SimilarityResult<out Retrievable>> {
+        TODO("Not yet implemented")
+//        val schema = schemaResolver.getSchema(entitySearch)
+//        if (schema == null) {
+//            logger.info("No schema found for entity search {}, skipping Cypher execution", entitySearch)
+//            return emptyList()
+//        }
+//
+//        val cypherRagQueryGenerator = SchemaDrivenCypherRagQueryGenerator(
+//            modelProvider,
+//            schema,
+//        )
+//        val cypher = cypherRagQueryGenerator.generateQuery(request = request)
+//        logger.info("Generated Cypher query: $cypher")
+//
+//        val cypherResults = readonlyTransactionTemplate.execute {
+//            executeGeneratedCypher(cypher)
+//        } ?: Result.failure(
+//            IllegalStateException("Transaction failed or returned null while executing Cypher query: $cypher")
+//        )
+//        if (cypherResults.isSuccess) {
+//            val results = cypherResults.getOrThrow()
+//            if (results.isNotEmpty()) {
+//                logger.info("Cypher query executed successfully, results: {}", results)
+//                return results.map {
+//                    // Most similar as we found them by a query
+//                    SimpleSimilaritySearchResult(
+//                        it,
+//                        score = 1.0,
+//                    )
+//                }
+//            }
+//        }
+//        return emptyList()
+    }
+
+//    /**
+//     * Execute generate Cypher query, being sure to handle exceptions gracefully.
+//     */
+//    private fun executeGeneratedCypher(
+//        query: CypherQuery,
+//    ): Result<List<EntityData>> {
+//        TODO("Not yet implemented")
+//        try {
+//            return Result.success(
+//                ogmCypherSearch.queryForEntities(
+//                    purpose = "cypherGeneratedQuery",
+//                    query = query.query
+//                )
+//            )
+//        } catch (e: Exception) {
+//            logger.error("Error executing generated query: $query", e)
+//            return Result.failure(e)
+//        }
+//    }
+
+    private fun createVectorIndex(
+        name: String,
+        on: String,
+    ) {
+        val statement = """
+            CREATE VECTOR INDEX `$name` IF NOT EXISTS
+            FOR (n:$on) ON (n.embedding)
+            OPTIONS {indexConfig: {
+            `vector.dimensions`: ${embeddingService.model.dimensions()},
+            `vector.similarity_function`: 'cosine'
+            }}"""
+
+            persistenceManager.execute(QuerySpecification.withStatement(statement))
+
+    }
+
+    private fun commonParameters(request: SimilarityCutoff) = mapOf(
+        "topK" to request.topK,
+        "similarityThreshold" to request.similarityThreshold,
+    )
+
 
 }

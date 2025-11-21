@@ -7,8 +7,10 @@ UNWIND results AS result
 WITH result.node AS chunk,
      result.score / maxScore AS normalizedScore
   WHERE normalizedScore >= $similarityThreshold
-RETURN chunk.text AS text,
-       chunk.id AS id,
-       normalizedScore AS score
-  ORDER BY score DESC
+RETURN {
+         text: chunk.text,
+         id:   chunk.id,
+         score: normalizedScore
+       } AS result
+  ORDER BY result.score DESC
   LIMIT $topK
