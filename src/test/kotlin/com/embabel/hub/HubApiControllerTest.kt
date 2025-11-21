@@ -1,14 +1,13 @@
 package com.embabel.hub
 
+//import org.springframework.ai.mcp.client.autoconfigure.McpClientAutoConfiguration
 import com.embabel.guide.Neo4jPropertiesInitializer
 import com.embabel.guide.domain.drivine.DrivineGuideUserRepository
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.drivine.test.DrivineTest
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-//import org.springframework.ai.mcp.client.autoconfigure.McpClientAutoConfiguration
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.autoconfigure.ImportAutoConfiguration
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
