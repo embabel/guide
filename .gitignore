@@ -1,11 +1,34 @@
 
+# MCP resources
 embabel-agent-api/src/main/resources/mcp/**
 
+# Maven build directories
 /target/**
 */target/**
 */*/target/**
 */*/*/target/**
 
+# IDEs
 .idea/**
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
 
+# OS files
+**/.DS_Store
+.DS_Store
+
+# Logs
 **/*.log
+
+# Environment files
+.env
+.envrc
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
