@@ -1,6 +1,5 @@
 package com.embabel.guide;
 
-import com.embabel.agent.rag.neo.drivine.DrivineStore;
 import com.embabel.agent.rag.neo.drivine.UselessTemporaryTransactionManager;
 import com.embabel.agent.rag.pipeline.HyDEQueryGenerator;
 import com.embabel.agent.rag.pipeline.PipelinedRagServiceEnhancer;
@@ -9,7 +8,6 @@ import com.embabel.agent.rag.service.RagServiceEnhancer;
 import com.embabel.agent.rag.service.RagServiceEnhancerProperties;
 import com.embabel.agent.rag.service.support.FacetedRagService;
 import com.embabel.agent.rag.service.support.RagFacetProvider;
-import com.embabel.agent.rag.store.ChunkingContentElementRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -48,11 +46,5 @@ class RagConfig {
     RagService ragService(List<RagFacetProvider> facetProviders) {
         return new FacetedRagService("docs", "Embabel docs", List.of(), facetProviders);
     }
-
-    @Bean
-    ChunkingContentElementRepository chunkingContentElementRepository() {
-        return new DrivineStore();
-    }
-
 
 }
