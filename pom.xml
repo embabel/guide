@@ -37,21 +37,6 @@
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
 
-        <!-- Commented out: Shell prevents web server from starting -->
-        <!--
-        <dependency>
-            <groupId>com.embabel.agent</groupId>
-            <artifactId>embabel-agent-starter-shell</artifactId>
-            <version>${embabel-agent.version}</version>
-
-        </dependency>
-        -->
-
-        <!--        <dependency>-->
-        <!--            <groupId>com.embabel.agent</groupId>-->
-        <!--            <artifactId>embabel-agent-rag-lucene</artifactId>-->
-        <!--        </dependency>-->
-
         <dependency>
             <groupId>com.embabel.agent</groupId>
             <artifactId>embabel-agent-starter-openai</artifactId>
