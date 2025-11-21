@@ -7,15 +7,12 @@ import com.embabel.agent.rag.service.RagServiceEnhancer;
 import com.embabel.agent.rag.service.RagServiceEnhancerProperties;
 import com.embabel.agent.rag.service.support.FacetedRagService;
 import com.embabel.agent.rag.service.support.RagFacetProvider;
-import org.neo4j.ogm.session.SessionFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.neo4j.repository.config.EnableNeo4jRepositories;
 
 import java.util.List;
 
 @Configuration
-@EnableNeo4jRepositories(basePackages = "com.embabel.guide.domain")
 class RagConfig {
 
 //    @Bean
@@ -33,15 +30,6 @@ class RagConfig {
 //        );
 //    }
 
-    // TODO override because properties binding of packages list doesn't work
-    @Bean
-    SessionFactory sessionFactory(org.neo4j.ogm.config.Configuration ogmConfiguration) {
-        var sf = new SessionFactory(
-                ogmConfiguration,
-                "com.embabel.guide.domain"
-        );
-        return sf;
-    }
 
     @Bean
     RagServiceEnhancer ragServiceEnhancer(RagServiceEnhancerProperties config, HyDEQueryGenerator hyDEQueryGenerator) {

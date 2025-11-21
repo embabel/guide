@@ -61,16 +61,8 @@
 
         <dependency>
             <groupId>com.embabel.agent</groupId>
-            <artifactId>embabel-agent-rag-neo</artifactId>
-            <version>${embabel-agent.version}</version>
-
-        </dependency>
-
-        <dependency>
-            <groupId>com.embabel.agent</groupId>
             <artifactId>embabel-agent-rag-pipeline</artifactId>
             <version>${embabel-agent.version}</version>
-
         </dependency>
 
         <dependency>
@@ -136,6 +128,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!-- Transaction Management -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
         </dependency>
 
         <!-- JWT Support -->
