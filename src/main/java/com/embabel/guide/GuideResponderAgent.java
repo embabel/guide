@@ -100,20 +100,15 @@ public class GuideResponderAgent {
         templateModel.put("persona", persona);
         var assistantMessage = context
                 .ai()
-                .withLlm(guideData.config().chatLlm())
+                .withLlm(guideConfig.chatLlm())
                 .withId("chat_response")
                 .withReferences(guideData.referencesForUser(context.user()))
                 .withTools(CoreToolGroups.WEB)
                 .withReference(
-                        new RagReference("docs", "Embabel docs",
-                                guideConfig.ragOptions(guideData.embabelContentRagService())
-//                                        .withDualShot(new DualShotConfig(100)),
-                                , context.ai().withLlmByRole("summarizer")))//
-//                                .withListener(e -> {
-//                                    if (e instanceof RagPipelineEvent rpe) {
-//                                        context.updateProgress(rpe.getDescription());
-//                                    }
-//                                }))
+                        new RagReference("docs",
+                                "Embabel docs",
+                                guideConfig.ragOptions(guideData.embabelContentRagService()),
+                                context.ai().withLlmByRole("summarizer")))
                 .withTemplate("guide_system")
                 .respondWithSystemPrompt(conversation, templateModel);
         conversation.addMessage(assistantMessage);
