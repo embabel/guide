@@ -36,7 +36,8 @@ class SecurityConfig(
                     HttpMethod.POST,
                     "/api/messages/user",
                     "/api/hub/register",
-                    "/api/hub/login"
+                    "/api/hub/login",
+                    "/api/v1/data/load-references"
                 ).permitAll()
                 it.requestMatchers(
                     HttpMethod.GET,
