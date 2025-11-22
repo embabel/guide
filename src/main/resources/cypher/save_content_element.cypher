@@ -4,4 +4,4 @@ SET e += $properties,
 WITH e
 CALL apoc.create.addLabels(e, $labels)
 YIELD node
-RETURN 1
+RETURN properties(e)
