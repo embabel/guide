@@ -31,9 +31,7 @@ embabel:
     llms:
       cypher-query-generator: gpt-4.1
       summarizer: gpt-4.1-nano
-    # This is actually the default but it's good to show
-    # How to change it
-    #default-embedding-model: nomic-embed-text:latest
+
     default-embedding-model: text-embedding-3-small
 
   agent:
@@ -44,8 +42,7 @@ embabel:
         password: ${NEO4J_PASSWORD:brahmsian}
         max-chunk-size: 1500
         overlap-size: 200
-        # Packages that OGM should scan for entities
-        #packages:
+
 
       compression-llm:
         model: ${guide.rag-llm}
@@ -59,13 +56,35 @@ embabel:
     line-length: 140
 
 guide:
-  rag-llm: gpt-4.1-nano
+  projects-path: ./embabel-projects
   default-persona: adaptive
   top-k: 10
   similarity-threshold: 0.3
-  llm:
+
+  coding-llm:
+    #      model: claude-3-7-sonnet-latest
     model: gpt-4.1-mini
-    #model: qwen3:4b
+  chat-llm:
+    model: gpt-4.1-mini
+  hy-d-e:
+    word-count: 20
+    context: >
+      You provide answers about the Embabel JVM agent framework.
+      Embabel aims to enable developers to build strongly typed
+      applications exposing their domain models in Java or Kotlin.
+
+  include-section-title-in-chunk: false
+  max-chunk-size: 4000
+  overlap-size: 200
+  urls:
+    - https://docs.embabel.com/embabel-agent/guide/0.3.0-SNAPSHOT/
+    - https://medium.com/@springrod/build-better-agents-in-java-vs-python-embabel-vs-langgraph-f7951a0d855c
+    - https://medium.com/@springrod/context-engineering-needs-domain-understanding-b4387e8e4bf8
+    - https://github.com/embabel/embabel-agent/blob/main/README.md?plain=1
+
+  desired-max-latency:
+    duration: 45s
+
 
 logging:
   level:

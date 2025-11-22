@@ -10,10 +10,6 @@ import com.embabel.agent.api.identity.User;
 import com.embabel.agent.core.AgentPlatform;
 import com.embabel.agent.core.CoreToolGroups;
 import com.embabel.agent.discord.DiscordUser;
-import com.embabel.agent.rag.service.ContentElementSearch;
-import com.embabel.agent.rag.service.DesiredMaxLatency;
-import com.embabel.agent.rag.service.EntitySearch;
-import com.embabel.agent.rag.service.HyDE;
 import com.embabel.agent.rag.tools.RagReference;
 import com.embabel.chat.AssistantMessage;
 import com.embabel.chat.Chatbot;
@@ -32,9 +28,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.lang.Nullable;
 
-import java.time.Duration;
 import java.util.HashMap;
-import java.util.Set;
 
 /**
  * Core chatbot agent
@@ -97,29 +91,22 @@ public class GuideResponderAgent {
             Conversation conversation,
             ActionContext context) {
         logger.info("Incoming request from user {}", context.user());
+        // TODO null safety is a problem here
         var guideUser = getGuideUser(context.user()).guideUserData();
 
         var persona = guideUser.getPersona() != null ? guideUser.getPersona() : guideConfig.defaultPersona();
         var templateModel = new HashMap<String, Object>();
-        if (guideUser != null) {
-            templateModel.put("guideUser", guideUser);
-        }
+
         templateModel.put("persona", persona);
         var assistantMessage = context
                 .ai()
-                .withLlm(guideData.config().llm())
+                .withLlm(guideData.config().chatLlm())
                 .withId("chat_response")
                 .withReferences(guideData.referencesForUser(context.user()))
                 .withTools(CoreToolGroups.WEB)
                 .withReference(
                         new RagReference("docs", "Embabel docs",
-                                guideData.ragOptions()
-                                        .withContentElementSearch(ContentElementSearch.CHUNKS_ONLY)
-                                        .withEntitySearch(new EntitySearch(Set.of(
-                                                "Concept", "Example"
-                                        ), false))
-                                        .withHint(new HyDE("The Embabel JVM agent framework", 40))
-                                        .withHint(DesiredMaxLatency.of(Duration.ofSeconds(45)))
+                                guideConfig.ragOptions(guideData.embabelContentRagService())
 //                                        .withDualShot(new DualShotConfig(100)),
                                 , context.ai().withLlmByRole("summarizer")))//
 //                                .withListener(e -> {
