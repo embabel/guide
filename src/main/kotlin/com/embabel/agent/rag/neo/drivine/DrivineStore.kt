@@ -41,6 +41,10 @@ class DrivineStore(
 
     override val name get() = properties.name
 
+    override fun provision() {
+
+    }
+
     override fun commit() {
         // TODO may need to do this?
     }
@@ -59,7 +63,7 @@ class DrivineStore(
                 params = mapOf("uri" to uri)
             )
 
-            val deletedCount = result.items().firstOrNull()?.get("deletedCount") as? Int ?: 0
+            val deletedCount = result.numberOrZero<Int>("deletedCount")
 
             if (deletedCount == 0) {
                 logger.warn("No document found with URI: {}", uri)
@@ -116,7 +120,7 @@ class DrivineStore(
                 SET n.embedding = ${'$'}embedding,
                  n.embeddingModel = ${'$'}embeddingModel,
                  n.embeddedAt = timestamp()
-                RETURN COUNT(n) as nodesUpdated
+                RETURN {nodesUpdated: COUNT(n) }
                """.trimIndent()
         val params = mapOf(
             "id" to retrievable.id,
@@ -128,7 +132,7 @@ class DrivineStore(
             query = cypher,
             params = params,
         )
-        val nodesUpdated = result.items().firstOrNull()?.get("nodesUpdated") as? Int ?: 0
+        val nodesUpdated = result.numberOrZero<Int>("nodesUpdated")
         if (nodesUpdated == 0) {
             logger.warn(
                 "Expected to set embedding properties, but set 0. chunkId={}, cypher={}",
