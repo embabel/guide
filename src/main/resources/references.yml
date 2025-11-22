@@ -1,0 +1,27 @@
+# References shared for all users, in addition to RAG
+
+- fqn: com.embabel.coding.tools.git.GitHubRepository
+  url: https://github.com/embabel/embabel-agent-examples.git
+  description: >
+    Embabel examples Repository
+    This is the best source of examples of Embabel usage
+
+- fqn: com.embabel.coding.tools.git.GitHubRepository
+  url: https://github.com/embabel/java-agent-template.git
+  description: >
+    Java agent template Repository: Simplest Java example with Maven
+    Can be used as a GitHub template
+
+- fqn: com.embabel.coding.tools.git.GitHubRepository
+  url: https://github.com/embabel/embabel-agent.git
+  description: >
+    Embabel agent framework implementation repo
+    Look to check code under embabel-agent-api
+    This is for questions related to framework internals, not usage examples
+
+- fqn: com.embabel.coding.tools.api.ApiReferenceProvider
+  name: embabel-agent
+  description: Embabel Agent API - use to check type signatures
+  acceptedPackages:
+    - com.embabel.agent
+    - com.embabel.common
