@@ -1,14 +1,16 @@
-package com.embabel.guide;
+package com.embabel.guide.rag;
 
 import com.embabel.agent.api.common.LlmReference;
 import com.embabel.agent.api.common.reference.LlmReferenceProviders;
 import com.embabel.agent.api.identity.User;
 import com.embabel.agent.rag.ingestion.DirectoryParsingConfig;
 import com.embabel.agent.rag.ingestion.DirectoryParsingResult;
+import com.embabel.agent.rag.ingestion.NeverRefreshExistingDocumentContentPolicy;
 import com.embabel.agent.rag.ingestion.TikaHierarchicalContentReader;
 import com.embabel.agent.rag.service.RagService;
 import com.embabel.agent.rag.store.ChunkingContentElementRepository;
 import com.embabel.agent.tools.file.FileTools;
+import com.embabel.guide.GuideProperties;
 import com.google.common.collect.Iterables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,33 +19,32 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Collections;
 import java.util.List;
 
 /**
- * Exposes the guide configuration and the loaded references
+ * Exposes references and RAG configuration
  */
 @Service
-public class GuideData {
+public class DataManager {
 
-    private final Logger logger = LoggerFactory.getLogger(GuideData.class);
-    private final GuideConfig guideConfig;
+    private final Logger logger = LoggerFactory.getLogger(DataManager.class);
+    private final GuideProperties guideProperties;
     private final List<LlmReference> references;
     private final ChunkingContentElementRepository store;
     private final PlatformTransactionManager platformTransactionManager;
     private final RagService embabelContentRagService;
 
-    public GuideData(
+    public DataManager(
             ChunkingContentElementRepository store,
-            GuideConfig guideConfig,
+            GuideProperties guideProperties,
             PlatformTransactionManager platformTransactionManager,
             RagService embabelContentRagService) {
         this.store = store;
-        this.guideConfig = guideConfig;
+        this.guideProperties = guideProperties;
         this.platformTransactionManager = platformTransactionManager;
-        this.references = LlmReferenceProviders.fromYmlFile(guideConfig.referencesFile());
+        this.references = LlmReferenceProviders.fromYmlFile(guideProperties.referencesFile());
         this.embabelContentRagService = embabelContentRagService;
     }
 
@@ -51,7 +52,7 @@ public class GuideData {
     public RagService embabelContentRagService() {
         return embabelContentRagService;
     }
-    
+
     @NonNull
     public List<LlmReference> referencesForUser(@Nullable User user) {
         return Collections.unmodifiableList(references);
@@ -67,7 +68,7 @@ public class GuideData {
     }
 
     /**
-     * Read all files under this directory
+     * Read all files under this directory on this local machine
      *
      * @param dir absolute path
      */
@@ -75,16 +76,34 @@ public class GuideData {
         store.provision();
 
         var ft = FileTools.readOnly(dir);
+        var directoryParsingResult = new TikaHierarchicalContentReader()
+                .parseFromDirectory(ft, new DirectoryParsingConfig());
+        for (var root : directoryParsingResult.getContentRoots()) {
+            logger.info("Parsed root: {} with {} descendants", root.getTitle(),
+                    Iterables.size(root.descendants()));
+            store.writeAndChunkDocument(root);
+        }
+        return directoryParsingResult;
+    }
 
-        return new TransactionTemplate(platformTransactionManager).execute(ts -> {
-            var directoryParsingResult = new TikaHierarchicalContentReader()
-                    .parseFromDirectory(ft, new DirectoryParsingConfig());
-            for (var root : directoryParsingResult.getContentRoots()) {
-                logger.info("Parsed root: {} with {} descendants", root.getTitle(), Iterables.size(root.descendants()));
-                store.writeAndChunkDocument(root);
-            }
-            return directoryParsingResult;
-        });
+    /**
+     * Ingest the page at the given URL
+     *
+     * @param url the URL to ingest
+     */
+    public void ingestPage(String url) {
+        store.provision();
+
+        var root = NeverRefreshExistingDocumentContentPolicy.INSTANCE
+                .ingestUriIfNeeded(store, new TikaHierarchicalContentReader(), url);
+        if (root != null) {
+            logger.info("Ingested page: {} with {} descendants",
+                    root.getTitle(),
+                    Iterables.size(root.descendants())
+            );
+        } else {
+            logger.info("Page at {} was already ingested, skipping", url);
+        }
     }
 
 }

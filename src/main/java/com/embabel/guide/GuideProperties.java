@@ -17,7 +17,7 @@ import java.util.Set;
 
 @Validated
 @ConfigurationProperties(prefix = "guide")
-public record GuideConfig(
+public record GuideProperties(
         @NotBlank(message = "defaultPersona must not be blank")
         String defaultPersona,
         @DefaultValue("10")
@@ -51,7 +51,7 @@ public record GuideConfig(
     /**
      * Compact constructor for additional validation
      */
-    public GuideConfig {
+    public GuideProperties {
         if (maxChunkSize <= overlapSize) {
             throw new IllegalArgumentException(
                     "maxChunkSize (" + maxChunkSize + ") must be greater than overlapSize (" + overlapSize + ")"
