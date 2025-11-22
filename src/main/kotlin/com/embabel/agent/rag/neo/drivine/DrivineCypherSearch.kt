@@ -10,6 +10,7 @@ import com.embabel.common.core.types.SimilarityResult
 import com.embabel.common.core.types.SimpleSimilaritySearchResult
 import org.drivine.manager.PersistenceManager
 import org.drivine.query.QuerySpecification
+import org.drivine.utils.ObjectUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -189,13 +190,11 @@ class DrivineCypherSearch(
         val cypher = if (query.contains(" ")) query else queryResolver.resolve(query)!!
         loggerToUse.info("[{}] query\n\tparams: {}\n{}", purpose, params, cypher)
 
-        val myParams = params as Map<String, Any>
-
         @Suppress("UNCHECKED_SCAST")
         val rows = persistenceManager.query(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(myParams)
+                .bind(ObjectUtils.primitiveProps(params))
                 .transform(Map::class.java)
         ) as List<Map<String, Any>>
 
