@@ -22,6 +22,7 @@ import com.embabel.chat.agent.ConversationStatus;
 import com.embabel.guide.domain.drivine.DrivineGuideUserRepository;
 import com.embabel.guide.domain.drivine.GuideUserWithDiscordUserInfo;
 import com.embabel.guide.domain.drivine.HasGuideUserData;
+import com.embabel.guide.rag.DataManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -37,16 +38,16 @@ import java.util.HashMap;
         name = GuideResponderAgent.NAME)
 public class GuideResponderAgent {
 
-    private final GuideData guideData;
+    private final DataManager dataManager;
     private final DrivineGuideUserRepository guideUserRepository;
 
     private final Logger logger = LoggerFactory.getLogger(GuideResponderAgent.class);
-    private final GuideConfig guideConfig;
+    private final GuideProperties guideProperties;
 
-    public GuideResponderAgent(GuideData guideData, DrivineGuideUserRepository guideUserRepository, GuideConfig guideConfig) {
-        this.guideData = guideData;
+    public GuideResponderAgent(DataManager dataManager, DrivineGuideUserRepository guideUserRepository, GuideProperties guideProperties) {
+        this.dataManager = dataManager;
         this.guideUserRepository = guideUserRepository;
-        this.guideConfig = guideConfig;
+        this.guideProperties = guideProperties;
     }
 
     static final String NAME = "GuideAgent";
@@ -94,20 +95,20 @@ public class GuideResponderAgent {
         // TODO null safety is a problem here
         var guideUser = getGuideUser(context.user()).guideUserData();
 
-        var persona = guideUser.getPersona() != null ? guideUser.getPersona() : guideConfig.defaultPersona();
+        var persona = guideUser.getPersona() != null ? guideUser.getPersona() : guideProperties.defaultPersona();
         var templateModel = new HashMap<String, Object>();
 
         templateModel.put("persona", persona);
         var assistantMessage = context
                 .ai()
-                .withLlm(guideConfig.chatLlm())
+                .withLlm(guideProperties.chatLlm())
                 .withId("chat_response")
-                .withReferences(guideData.referencesForUser(context.user()))
+                .withReferences(dataManager.referencesForUser(context.user()))
                 .withTools(CoreToolGroups.WEB)
                 .withReference(
                         new RagReference("docs",
                                 "Embabel docs",
-                                guideConfig.ragOptions(guideData.embabelContentRagService()),
+                                guideProperties.ragOptions(dataManager.embabelContentRagService()),
                                 context.ai().withLlmByRole("summarizer")))
                 .withTemplate("guide_system")
                 .respondWithSystemPrompt(conversation, templateModel);
