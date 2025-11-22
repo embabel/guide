@@ -42,7 +42,13 @@ class DrivineStore(
     override val name get() = properties.name
 
     override fun provision() {
-
+        logger.info("Provisioning with properties {}", properties)
+        // TODO do we want this on ContentElement?
+        createVectorIndex(properties.contentElementIndex, "Chunk")
+        createVectorIndex(properties.entityIndex, properties.entityNodeName)
+        createFullTextIndex(properties.contentElementFullTextIndex, "Chunk", listOf("text"))
+        createFullTextIndex(properties.entityFullTextIndex, properties.entityNodeName, listOf("name", "description"))
+        logger.info("Provisioning complete")
     }
 
     override fun commit() {
@@ -458,6 +464,26 @@ class DrivineStore(
         persistenceManager.execute(QuerySpecification.withStatement(statement))
 
     }
+
+    private fun createFullTextIndex(
+        name: String,
+        on: String,
+        properties: List<String>,
+    ) {
+        val propertiesString = properties.joinToString(", ") { "n.$it" }
+        val statement = """|
+                |CREATE FULLTEXT INDEX `$name` IF NOT EXISTS
+                |FOR (n:$on) ON EACH [$propertiesString]
+                |OPTIONS {
+                |indexConfig: {
+                |
+                |   }
+                |}
+                """.trimMargin()
+        persistenceManager.execute(QuerySpecification.withStatement(statement))
+        logger.info("Created full-text index {} for {} on properties {}", name, on, properties)
+    }
+
 
     private fun commonParameters(request: SimilarityCutoff) = mapOf(
         "topK" to request.topK,
