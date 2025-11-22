@@ -111,17 +111,23 @@ public class DataManager {
      * Load all referenced URLs from configuration
      */
     public void loadReferences() {
+        int successCount = 0;
+        int failureCount = 0;
+
         for (var url : guideProperties.urls()) {
             try {
                 logger.info("⏳Loading URL: {}...", url);
                 ingestPage(url);
                 logger.info("✅ Loaded URL: {}", url);
+                successCount++;
 
             } catch (Throwable t) {
-                System.err.printf("Failure loading URL %s: %s%n", url, t.getMessage());
+                logger.error("❌ Failure loading URL {}: {}", url, t.getMessage(), t);
+                failureCount++;
             }
         }
-        logger.info("Loaded {} URLs", guideProperties.urls().size());
+        logger.info("Loaded {}/{} URLs successfully ({} failed)",
+                successCount, guideProperties.urls().size(), failureCount);
     }
 
 }
