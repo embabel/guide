@@ -1,11 +1,6 @@
 package com.embabel.agent.rag.neo.drivine
 
-import com.embabel.agent.rag.model.Chunk
-import com.embabel.agent.rag.model.EntityData
-import com.embabel.agent.rag.model.NamedEntityData
-import com.embabel.agent.rag.model.Retrievable
-import com.embabel.agent.rag.model.SimpleEntityData
-import com.embabel.agent.rag.model.SimpleNamedEntityData
+import com.embabel.agent.rag.model.*
 import com.embabel.common.core.types.SimilarityResult
 import com.embabel.common.core.types.SimpleSimilaritySearchResult
 import org.drivine.manager.PersistenceManager
@@ -190,7 +185,7 @@ class DrivineCypherSearch(
         val cypher = if (query.contains(" ")) query else queryResolver.resolve(query)!!
         loggerToUse.info("[{}] query\n\tparams: {}\n{}", purpose, params, cypher)
 
-        @Suppress("UNCHECKED_SCAST")
+        @Suppress("UNCHECKED_CAST")
         val rows = persistenceManager.query(
             QuerySpecification
                 .withStatement(cypher)
@@ -206,6 +201,7 @@ class DrivineCypherSearch(
         params: Map<String, *>,
     ): Int {
         val cypher = if (query.contains(" ")) query else queryResolver.resolve(query)!!
+
         @Suppress("UNCHECKED_CAST")
         val results = persistenceManager.query(
             QuerySpecification
