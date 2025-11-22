@@ -253,7 +253,7 @@ class DrivineStore(
     private fun rowToContentElement(row: Map<*, *>): ContentElement {
         val metadata = mutableMapOf<String, Any>()
         metadata["source"] = row["metadata_source"] ?: "unknown"
-        val labels = row["labels"] as? Array<String> ?: error("Must have labels")
+        val labels = row["labels"] as? List<String> ?: error("Must have labels")
         if (labels.contains("Chunk"))
             return Chunk(
                 id = row["id"] as String,
