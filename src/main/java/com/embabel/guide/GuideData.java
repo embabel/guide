@@ -51,12 +51,7 @@ public class GuideData {
     public RagService embabelContentRagService() {
         return embabelContentRagService;
     }
-
-    @NonNull
-    public GuideConfig config() {
-        return guideConfig;
-    }
-
+    
     @NonNull
     public List<LlmReference> referencesForUser(@Nullable User user) {
         return Collections.unmodifiableList(references);
