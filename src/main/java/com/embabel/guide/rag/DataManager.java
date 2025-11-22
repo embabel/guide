@@ -3,10 +3,7 @@ package com.embabel.guide.rag;
 import com.embabel.agent.api.common.LlmReference;
 import com.embabel.agent.api.common.reference.LlmReferenceProviders;
 import com.embabel.agent.api.identity.User;
-import com.embabel.agent.rag.ingestion.DirectoryParsingConfig;
-import com.embabel.agent.rag.ingestion.DirectoryParsingResult;
-import com.embabel.agent.rag.ingestion.NeverRefreshExistingDocumentContentPolicy;
-import com.embabel.agent.rag.ingestion.TikaHierarchicalContentReader;
+import com.embabel.agent.rag.ingestion.*;
 import com.embabel.agent.rag.service.RagService;
 import com.embabel.agent.rag.store.ChunkingContentElementRepository;
 import com.embabel.agent.tools.file.FileTools;
@@ -35,6 +32,10 @@ public class DataManager {
     private final ChunkingContentElementRepository store;
     private final PlatformTransactionManager platformTransactionManager;
     private final RagService embabelContentRagService;
+
+    private final HierarchicalContentReader hierarchicalContentReader = new TikaHierarchicalContentReader();
+
+    private final ContentRefreshPolicy contentRefreshPolicy = NeverRefreshExistingDocumentContentPolicy.INSTANCE;
 
     public DataManager(
             ChunkingContentElementRepository store,
@@ -94,8 +95,8 @@ public class DataManager {
     public void ingestPage(String url) {
         store.provision();
 
-        var root = NeverRefreshExistingDocumentContentPolicy.INSTANCE
-                .ingestUriIfNeeded(store, new TikaHierarchicalContentReader(), url);
+        var root = contentRefreshPolicy
+                .ingestUriIfNeeded(store, hierarchicalContentReader, url);
         if (root != null) {
             logger.info("Ingested page: {} with {} descendants",
                     root.getTitle(),
@@ -104,6 +105,23 @@ public class DataManager {
         } else {
             logger.info("Page at {} was already ingested, skipping", url);
         }
+    }
+
+    /**
+     * Load all referenced URLs from configuration
+     */
+    public void loadReferences() {
+        for (String url : guideProperties.urls()) {
+            try {
+                logger.info("⏳Loading URL: {}...", url);
+                ingestPage(url);
+                logger.info("✅ Loaded URL: {}", url);
+
+            } catch (Throwable t) {
+                System.err.printf("Failure loading URL %s: %s%n", url, t.getMessage());
+            }
+        }
+        logger.info("Loaded {} URLs", guideProperties.urls().size());
     }
 
 }

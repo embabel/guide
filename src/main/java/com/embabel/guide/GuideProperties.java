@@ -15,6 +15,23 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Configuration properties for the Guide application.
+ *
+ * @param defaultPersona             name of the default persona to use
+ * @param topK                       RAG top K results to retrieve
+ * @param similarityThreshold        RAG similarity threshold
+ * @param hyDE                       Hypothetical Document Embeddings configuration for RAG
+ * @param codingLlm                  LLM options for coding tasks
+ * @param chatLlm                    LLM options for chat
+ * @param desiredMaxLatency          desired maximum latency for RAG operations. Not an absolute limit
+ * @param projectsPath               path under user's home directory where projects are created
+ * @param maxChunkSize               maximum size of content chunks for ingestion
+ * @param overlapSize                overlap size between content chunks for ingestion
+ * @param includeSectionTitleInChunk whether to include section titles in content chunks for ingestion
+ * @param referencesFile             YML files containing LLM references such as GitHub repositories and classpath info
+ * @param urls                       list of URLs to ingest--for example, documentation and blogs
+ */
 @Validated
 @ConfigurationProperties(prefix = "guide")
 public record GuideProperties(
