@@ -16,7 +16,6 @@ import com.embabel.common.ai.model.DefaultModelSelectionCriteria
 import com.embabel.common.ai.model.ModelProvider
 import com.embabel.common.core.types.SimilarityCutoff
 import com.embabel.common.core.types.SimilarityResult
-import com.embabel.common.core.types.SimpleSimilaritySearchResult
 import org.drivine.manager.PersistenceManager
 import org.drivine.query.QuerySpecification
 import org.slf4j.LoggerFactory
@@ -25,7 +24,6 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.support.TransactionTemplate
-import kotlin.collections.get
 
 @Service
 class DrivineStore(
@@ -82,14 +80,16 @@ class DrivineStore(
     override fun findContentRootByUri(uri: String): ContentRoot? {
         logger.debug("Finding root document with URI: {}", uri)
 
+        val statement = cypherContentElementQuery(
+            " WHERE c.uri = \$uri AND ('Document' IN labels(c) OR 'ContentRoot' IN labels(c)) "
+        )
+        val parameters = mapOf("uri" to uri)
         try {
-            val statement = cypherContentElementQuery(
-                " WHERE c.uri = \$uri AND ('Document' IN labels(c) OR 'ContentRoot' IN labels(c)) ")
             val spec = QuerySpecification
                 .withStatement(statement)
-                .bind(mapOf("uri" to uri))
+                .bind(parameters)
                 .transform(Map::class.java)
-                .map({rowToContentElement(it)})
+                .map { rowToContentElement(it) }
 
             val result = persistenceManager.maybeGetOne(spec)
             logger.debug("Root document with URI {} found: {}", uri, result != null)
@@ -148,7 +148,7 @@ class DrivineStore(
             .withStatement(statement)
             .bind(mapOf("ids" to chunkIds))
             .transform(Map::class.java)
-            .map({rowToContentElement(it)})
+            .map({ rowToContentElement(it) })
             .filter { it is Chunk }
             .map { it as Chunk }
 
@@ -161,7 +161,7 @@ class DrivineStore(
             .withStatement(statement)
             .bind(mapOf("id" to id))
             .transform(Map::class.java)
-            .map({rowToContentElement(it)})
+            .map({ rowToContentElement(it) })
         return persistenceManager.maybeGetOne(spec)
     }
 
@@ -451,7 +451,7 @@ class DrivineStore(
             `vector.similarity_function`: 'cosine'
             }}"""
 
-            persistenceManager.execute(QuerySpecification.withStatement(statement))
+        persistenceManager.execute(QuerySpecification.withStatement(statement))
 
     }
 

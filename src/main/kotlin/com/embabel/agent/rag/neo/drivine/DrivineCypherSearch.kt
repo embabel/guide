@@ -185,11 +185,13 @@ class DrivineCypherSearch(
         val cypher = if (query.contains(" ")) query else queryResolver.resolve(query)!!
         loggerToUse.info("[{}] query\n\tparams: {}\n{}", purpose, params, cypher)
 
+        val parameters = ObjectUtils.primitiveProps(params)
+
         @Suppress("UNCHECKED_CAST")
         val rows = persistenceManager.query(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(ObjectUtils.primitiveProps(params))
+                .bind(parameters)
                 .transform(Map::class.java)
         ) as List<Map<String, Any>>
 
