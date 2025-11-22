@@ -111,7 +111,7 @@ public class DataManager {
      * Load all referenced URLs from configuration
      */
     public void loadReferences() {
-        for (String url : guideProperties.urls()) {
+        for (var url : guideProperties.urls()) {
             try {
                 logger.info("⏳Loading URL: {}...", url);
                 ingestPage(url);
