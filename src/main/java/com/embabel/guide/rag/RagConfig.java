@@ -1,6 +1,5 @@
 package com.embabel.guide.rag;
 
-import com.embabel.agent.rag.neo.drivine.UselessTemporaryTransactionManager;
 import com.embabel.agent.rag.pipeline.HyDEQueryGenerator;
 import com.embabel.agent.rag.pipeline.PipelinedRagServiceEnhancer;
 import com.embabel.agent.rag.service.RagService;
@@ -10,17 +9,11 @@ import com.embabel.agent.rag.service.support.FacetedRagService;
 import com.embabel.agent.rag.service.support.RagFacetProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.transaction.PlatformTransactionManager;
 
 import java.util.List;
 
 @Configuration
 class RagConfig {
-
-    @Bean
-    PlatformTransactionManager transactionManager() {
-        return new UselessTemporaryTransactionManager();
-    }
 
     /**
      * Add enhancements to basic RAG
