@@ -16,13 +16,13 @@
 package com.embabel.guide.domain.drivine
 
 import com.embabel.guide.Neo4jPropertiesInitializer
-import org.drivine.test.DrivineTest
 import org.drivine.transaction.TransactionContextHolder
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ContextConfiguration
+import org.springframework.transaction.annotation.Transactional
 import java.util.*
 
 /**
@@ -34,7 +34,7 @@ import java.util.*
  */
 @SpringBootTest
 @ContextConfiguration(initializers = [Neo4jPropertiesInitializer::class])
-@DrivineTest
+@Transactional
 class DrivineGuideUserRepositoryTest {
 
     @Autowired

@@ -17,7 +17,6 @@ package com.embabel.guide.domain
 
 import com.embabel.guide.Neo4jPropertiesInitializer
 import com.embabel.guide.domain.drivine.DrivineGuideUserRepository
-import org.drivine.test.DrivineTest
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.springframework.ai.mcp.client.common.autoconfigure.McpClientAutoConfiguration
@@ -25,11 +24,12 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ContextConfiguration
+import org.springframework.transaction.annotation.Transactional
 
 @SpringBootTest
 @ContextConfiguration(initializers = [Neo4jPropertiesInitializer::class])
 @ImportAutoConfiguration(exclude = [McpClientAutoConfiguration::class])
-@DrivineTest
+@Transactional
 class GuideUserServiceTest {
 
     @Autowired

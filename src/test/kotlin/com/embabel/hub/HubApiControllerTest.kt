@@ -4,7 +4,6 @@ package com.embabel.hub
 import com.embabel.guide.Neo4jPropertiesInitializer
 import com.embabel.guide.domain.drivine.DrivineGuideUserRepository
 import com.fasterxml.jackson.databind.ObjectMapper
-import org.drivine.test.DrivineTest
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -17,12 +16,13 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.transaction.annotation.Transactional
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ContextConfiguration(initializers = [Neo4jPropertiesInitializer::class])
 //@ImportAutoConfiguration(exclude = [McpClientAutoConfiguration::class])
-@DrivineTest
+@Transactional
 class HubApiControllerTest {
 
     @Autowired
