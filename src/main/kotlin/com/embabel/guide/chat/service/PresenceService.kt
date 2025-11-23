@@ -27,8 +27,9 @@ class PresenceService(private val messaging: SimpMessagingTemplate) {
 
         if (isNewSession) {
             logger.info("New session started for user: {} session: {}", userId, sessionId)
+            logger.debug("Total active sessions: {} Total online users: {}", bySession.size, byUser.size)
         }
-        logger.debug("Total active sessions: {} Total online users: {}", bySession.size, byUser.size)
+
         // Optionally broadcast online users
         // messaging.convertAndSend("/topic/presence", onlineUsers())
     }
