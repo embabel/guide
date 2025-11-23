@@ -45,9 +45,9 @@ embabel:
 
 
       compression-llm:
-        model: ${guide.rag-llm}
+        model: gpt-4.1-nano
       reranking-llm:
-        model: ${guide.rag-llm}
+        model: gpt-4.1-nano
 
   discord:
     token: ${DISCORD_TOKEN}

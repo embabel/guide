@@ -108,7 +108,7 @@ public class GuideResponderAgent {
                 .withReference(
                         new RagReference("docs",
                                 "Embabel docs",
-                                guideProperties.ragOptions(dataManager.embabelContentRagService()),
+                                guideProperties.ragOptions(dataManager.embabelContentRagServiceFor(context)),
                                 context.ai().withLlmByRole("summarizer")))
                 .withTemplate("guide_system")
                 .respondWithSystemPrompt(conversation, templateModel);

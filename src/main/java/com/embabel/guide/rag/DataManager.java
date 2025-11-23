@@ -1,10 +1,13 @@
 package com.embabel.guide.rag;
 
 import com.embabel.agent.api.common.LlmReference;
+import com.embabel.agent.api.common.OperationContext;
 import com.embabel.agent.api.common.reference.LlmReferenceProviders;
 import com.embabel.agent.api.identity.User;
+import com.embabel.agent.event.RagEventListener;
 import com.embabel.agent.rag.ingestion.*;
 import com.embabel.agent.rag.service.RagService;
+import com.embabel.agent.rag.service.RagServiceEnhancer;
 import com.embabel.agent.rag.store.ChunkingContentElementRepository;
 import com.embabel.agent.tools.file.FileTools;
 import com.embabel.guide.GuideProperties;
@@ -32,6 +35,7 @@ public class DataManager {
     private final ChunkingContentElementRepository store;
     private final PlatformTransactionManager platformTransactionManager;
     private final RagService embabelContentRagService;
+    private final RagServiceEnhancer ragServiceEnhancer;
 
     private final HierarchicalContentReader hierarchicalContentReader = new TikaHierarchicalContentReader();
 
@@ -41,17 +45,22 @@ public class DataManager {
             ChunkingContentElementRepository store,
             GuideProperties guideProperties,
             PlatformTransactionManager platformTransactionManager,
-            RagService embabelContentRagService) {
+            RagService embabelContentRagService,
+            RagServiceEnhancer ragServiceEnhancer) {
         this.store = store;
         this.guideProperties = guideProperties;
         this.platformTransactionManager = platformTransactionManager;
         this.references = LlmReferenceProviders.fromYmlFile(guideProperties.referencesFile());
         this.embabelContentRagService = embabelContentRagService;
+        this.ragServiceEnhancer = ragServiceEnhancer;
     }
 
     @NonNull
-    public RagService embabelContentRagService() {
-        return embabelContentRagService;
+    public RagService embabelContentRagServiceFor(OperationContext context) {
+        return ragServiceEnhancer.create(
+                context,
+                embabelContentRagService,
+                RagEventListener.getNOOP());
     }
 
     @NonNull
