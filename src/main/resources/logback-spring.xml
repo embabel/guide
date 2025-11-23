@@ -17,7 +17,7 @@
     <logger name="com.embabel.agent.rag" level="INFO"/>
     <logger name="com.embabel.agent.rag.tools" level="DEBUG"/>
     <logger name="com.embabel.agent.rag.pipeline" level="DEBUG"/>
-    <logger name="com.embabel.guide.chat" level="DEBUG"/>
+    <logger name="com.embabel.guide.chat" level="INFO"/>
 
     <!-- Spring logging -->
     <logger name="org.springframework.web.socket" level="INFO"/>
