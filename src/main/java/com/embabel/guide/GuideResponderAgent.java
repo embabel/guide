@@ -6,6 +6,7 @@ import com.embabel.agent.api.annotation.Agent;
 import com.embabel.agent.api.annotation.Condition;
 import com.embabel.agent.api.common.ActionContext;
 import com.embabel.agent.api.common.OperationContext;
+import com.embabel.agent.api.common.PlannerType;
 import com.embabel.agent.api.identity.User;
 import com.embabel.agent.core.AgentPlatform;
 import com.embabel.agent.core.CoreToolGroups;
@@ -34,8 +35,9 @@ import java.util.HashMap;
 /**
  * Core chatbot agent
  */
-@Agent(description = "Embabel developer guide bot agent",
-        name = GuideResponderAgent.NAME)
+@Agent(
+        description = "Embabel developer guide bot agent",
+        planner = PlannerType.UTILITY)
 public class GuideResponderAgent {
 
     private final DataManager dataManager;
@@ -49,8 +51,6 @@ public class GuideResponderAgent {
         this.guideUserRepository = guideUserRepository;
         this.guideProperties = guideProperties;
     }
-
-    static final String NAME = "GuideAgent";
 
     static final String LAST_EVENT_WAS_USER_MESSAGE = "user_last";
 
@@ -117,8 +117,8 @@ public class GuideResponderAgent {
         return ConversationContinues.with(assistantMessage);
     }
 
-    @AchievesGoal(description = "Conversation completed")
     @Action
+    @AchievesGoal(description = "End the conversation politely")
     ConversationOver respondAndTerminate(
             ConversationOver conversationOver,
             Conversation conversation,
@@ -138,8 +138,7 @@ class GuideAgentBotConfig {
 
     @Bean
     Chatbot chatbot(AgentPlatform agentPlatform) {
-        return AgentProcessChatbot.withAgentByName(
-                agentPlatform,
-                GuideResponderAgent.NAME);
+        return AgentProcessChatbot.utilityFromPlatform(
+                agentPlatform);
     }
 }
