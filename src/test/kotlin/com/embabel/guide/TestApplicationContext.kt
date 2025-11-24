@@ -85,7 +85,7 @@ class Neo4jPropertiesInitializer : ApplicationContextInitializer<ConfigurableApp
 
 @Configuration
 @ComponentScan(basePackages = ["org.drivine", "com.embabel"])
-@PropertySource("classpath:application.yaml")
+@PropertySource("classpath:application.yml")
 @EnableAspectJAutoProxy(proxyTargetClass = true)
 @EnableConfigurationProperties(value = [PropertyProvidedDataSourceMap::class])
 class TestAppContext {
