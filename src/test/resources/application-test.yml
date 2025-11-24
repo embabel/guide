@@ -16,11 +16,3 @@ logging:
     org.drivine.transaction: TRACE
     sample: DEBUG
     org.neo4j.driver: DEBUG
-
-# Spring configuration
-
-spring:
-  ai:
-    mcp:
-      client:
-        enabled: false
