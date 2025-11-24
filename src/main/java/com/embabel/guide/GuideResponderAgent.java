@@ -22,6 +22,7 @@ import com.embabel.chat.agent.ConversationOver;
 import com.embabel.chat.agent.ConversationStatus;
 import com.embabel.guide.domain.drivine.DrivineGuideUserRepository;
 import com.embabel.guide.domain.drivine.GuideUserWithDiscordUserInfo;
+import com.embabel.guide.domain.drivine.GuideUserWithWebUser;
 import com.embabel.guide.domain.drivine.HasGuideUserData;
 import com.embabel.guide.rag.DataManager;
 import org.slf4j.Logger;
@@ -76,6 +77,10 @@ public class GuideResponderAgent {
                             logger.info("Created new Discord user: {}", created);
                             return created;
                         });
+            }
+            case GuideUserWithWebUser wu -> {
+                return guideUserRepository.findByWebUserId(wu.getWebUser().getId())
+                    .orElseThrow(() -> new RuntimeException("Missing user with id: " + wu.getWebUser().getId()));
             }
             case HasGuideUserData gu -> {
                 return gu;
