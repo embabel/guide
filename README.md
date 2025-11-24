@@ -16,6 +16,12 @@
 
 &nbsp;&nbsp;&nbsp;&nbsp;
 
-# Talk to the Docs
+# Embabel Hub Backend: Chat and MCP Server
 
-Go into shell and type `talk`.
+## Loading data
+
+```bash
+curl -X POST http://localhost:1337/api/v1/data/load-references
+```
+
+

@@ -1,0 +1,157 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Spring Chat Starter</title>
+</head>
+<body>
+  <h1>Spring Chat Starter</h1>
+  <p>Status: <span id="status">disconnected</span></p>
+  <p>User ID: <span id="userId">unknown</span></p>
+  <p>Jesse Status: <span id="jesseStatus">idle</span></p>
+
+  <div>
+    <label>Room: <input id="room" value="general"></label>
+    <button id="join">Join Room</button>
+  </div>
+
+  <div>
+    <label>Send to userId: <input id="toUserId" placeholder="e.g. anon:xxxx"></label>
+    <button id="sendToJesse">Send to Jesse</button>
+  </div>
+  <div>
+    <label>Message: <input id="body" value="hello"></label>
+    <button id="send">Send</button>
+  </div>
+
+  <pre id="log" style="border:1px solid #ccc; padding:10px; height:300px; overflow:auto;"></pre>
+
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+  <script>
+    const log = (m) => {
+      const el = document.getElementById('log');
+      el.textContent += m + "\n";
+      el.scrollTop = el.scrollHeight;
+    };
+
+    let statusTimeout;
+    const updateJesseStatus = (statusMsg) => {
+      const statusEl = document.getElementById('jesseStatus');
+
+      // Clear any existing timeout
+      if (statusTimeout) {
+        clearTimeout(statusTimeout);
+      }
+
+      // Update status display with appropriate styling
+      switch (statusMsg.type) {
+        case 'PROCESSING':
+          statusEl.textContent = statusMsg.status;
+          statusEl.style.color = 'orange';
+          break;
+        case 'TYPING':
+          statusEl.textContent = statusMsg.status;
+          statusEl.style.color = 'blue';
+          break;
+        case 'COMPLETED':
+          statusEl.textContent = statusMsg.status;
+          statusEl.style.color = 'green';
+          // Auto-clear after 2 seconds
+          statusTimeout = setTimeout(() => {
+            statusEl.textContent = 'idle';
+            statusEl.style.color = 'black';
+          }, 2000);
+          break;
+        case 'ERROR':
+          statusEl.textContent = statusMsg.status;
+          statusEl.style.color = 'red';
+          // Auto-clear after 3 seconds
+          statusTimeout = setTimeout(() => {
+            statusEl.textContent = 'idle';
+            statusEl.style.color = 'black';
+          }, 3000);
+          break;
+        default:
+          statusEl.textContent = statusMsg.status;
+          statusEl.style.color = 'black';
+      }
+    };
+
+    let client, roomSub, userSub, statusSub;
+
+    function connect() {
+      const sock = new SockJS('/ws');
+      client = Stomp.over(sock);
+      client.debug = () => {}; // silence
+      client.connect({}, () => {
+        document.getElementById('status').textContent = 'connected';
+
+        // Subscribe to personal queue
+        userSub = client.subscribe('/user/queue/messages', (frame) => {
+          log('[PERSONAL] ' + frame.body);
+        });
+
+        // Subscribe to status messages
+        statusSub = client.subscribe('/user/queue/status', (frame) => {
+          const statusMsg = JSON.parse(frame.body);
+          updateJesseStatus(statusMsg);
+          log('[STATUS] ' + statusMsg.status + ' (' + statusMsg.type + ')');
+        });
+
+        // Request user ID
+        client.send('/app/user.info', {}, '{}');
+
+        // Subscribe to user info response
+        client.subscribe('/user/queue/info', (frame) => {
+          const userInfo = JSON.parse(frame.body);
+          document.getElementById('userId').textContent = userInfo.userId || 'unknown';
+          log('User ID: ' + (userInfo.userId || 'unknown'));
+        });
+
+        // Ping presence every 30s
+        setInterval(() => {
+          client.send('/app/presence.ping', {}, JSON.stringify({status: 'active'}));
+        }, 30000);
+
+        log('Connected. Subscribed to /user/queue/messages');
+      }, (err) => {
+        document.getElementById('status').textContent = 'error';
+        log('Error: ' + err);
+      });
+    }
+
+    document.getElementById('join').onclick = () => {
+      const room = document.getElementById('room').value || 'general';
+      if (roomSub) roomSub.unsubscribe();
+      roomSub = client.subscribe('/topic/rooms/' + room, (frame) => {
+        log('[ROOM ' + room + '] ' + frame.body);
+      });
+      log('Joined room ' + room);
+    };
+
+    document.getElementById('send').onclick = () => {
+      const toUserId = document.getElementById('toUserId').value;
+      const room = document.getElementById('room').value;
+      const body = document.getElementById('body').value;
+      const payload = toUserId ? {toUserId, body} : {room, body};
+      client.send('/app/chat.send', {}, JSON.stringify(payload));
+      log('Sent: ' + JSON.stringify(payload));
+    };
+
+    document.getElementById('sendToJesse').onclick = () => {
+      const body = document.getElementById('body').value;
+      if (!body.trim()) {
+        log('Please enter a message to send to Jesse');
+        return;
+      }
+      const payload = {body};
+      client.send('/app/chat.sendToJesse', {}, JSON.stringify(payload));
+      log('Sent to Jesse: ' + body);
+    };
+
+    connect();
+  </script>
+</body>
+</html>

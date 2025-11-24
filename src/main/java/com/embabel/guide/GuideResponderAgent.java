@@ -6,14 +6,11 @@ import com.embabel.agent.api.annotation.Agent;
 import com.embabel.agent.api.annotation.Condition;
 import com.embabel.agent.api.common.ActionContext;
 import com.embabel.agent.api.common.OperationContext;
+import com.embabel.agent.api.common.PlannerType;
+import com.embabel.agent.api.identity.User;
 import com.embabel.agent.core.AgentPlatform;
 import com.embabel.agent.core.CoreToolGroups;
 import com.embabel.agent.discord.DiscordUser;
-import com.embabel.agent.identity.User;
-import com.embabel.agent.rag.ContentElementSearch;
-import com.embabel.agent.rag.EntitySearch;
-import com.embabel.agent.rag.HyDE;
-import com.embabel.agent.rag.tools.DualShotConfig;
 import com.embabel.agent.rag.tools.RagReference;
 import com.embabel.chat.AssistantMessage;
 import com.embabel.chat.Chatbot;
@@ -23,38 +20,38 @@ import com.embabel.chat.agent.AgentProcessChatbot;
 import com.embabel.chat.agent.ConversationContinues;
 import com.embabel.chat.agent.ConversationOver;
 import com.embabel.chat.agent.ConversationStatus;
-import com.embabel.guide.domain.GuideUser;
-import com.embabel.guide.domain.GuideUserRepository;
+import com.embabel.guide.domain.drivine.DrivineGuideUserRepository;
+import com.embabel.guide.domain.drivine.GuideUserWithDiscordUserInfo;
+import com.embabel.guide.domain.drivine.GuideUserWithWebUser;
+import com.embabel.guide.domain.drivine.HasGuideUserData;
+import com.embabel.guide.rag.DataManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.lang.Nullable;
 
-import java.time.Duration;
 import java.util.HashMap;
-import java.util.Set;
 
 /**
  * Core chatbot agent
  */
-@Agent(description = "Embabel developer guide bot agent",
-        name = GuideResponderAgent.NAME)
+@Agent(
+        description = "Embabel developer guide bot agent",
+        planner = PlannerType.UTILITY)
 public class GuideResponderAgent {
 
-    private static final String DEFAULT_PERSONA = "adaptive";
-
-    private final GuideData guideData;
-    private final GuideUserRepository guideUserRepository;
+    private final DataManager dataManager;
+    private final DrivineGuideUserRepository guideUserRepository;
 
     private final Logger logger = LoggerFactory.getLogger(GuideResponderAgent.class);
+    private final GuideProperties guideProperties;
 
-    public GuideResponderAgent(GuideData guideData, GuideUserRepository guideUserRepository) {
-        this.guideData = guideData;
+    public GuideResponderAgent(DataManager dataManager, DrivineGuideUserRepository guideUserRepository, GuideProperties guideProperties) {
+        this.dataManager = dataManager;
         this.guideUserRepository = guideUserRepository;
+        this.guideProperties = guideProperties;
     }
-
-    static final String NAME = "GuideAgent";
 
     static final String LAST_EVENT_WAS_USER_MESSAGE = "user_last";
 
@@ -63,7 +60,7 @@ public class GuideResponderAgent {
         return context.lastResult() instanceof UserMessage;
     }
 
-    private GuideUser getGuideUser(@Nullable User user) {
+    private HasGuideUserData getGuideUser(@Nullable User user) {
         switch (user) {
             case null -> {
                 logger.warn("user is null: Cannot create or fetch GuideUser");
@@ -72,15 +69,24 @@ public class GuideResponderAgent {
             case DiscordUser du -> {
                 return guideUserRepository.findByDiscordUserId(du.getId())
                         .orElseGet(() -> {
-                            var newUser = GuideUser.createFromDiscord(du);
-                            logger.info("Created new Discord user: {}", newUser);
-                            return guideUserRepository.save(newUser);
+                            var composed = GuideUserWithDiscordUserInfo.fromDiscordUser(du);
+                            var created = guideUserRepository.createWithDiscord(
+                                    composed.getGuideUserData(),
+                                    composed.getDiscordUserInfo()
+                            );
+                            logger.info("Created new Discord user: {}", created);
+                            return created;
                         });
             }
+            case GuideUserWithWebUser wu -> {
+                return guideUserRepository.findByWebUserId(wu.getWebUser().getId())
+                    .orElseThrow(() -> new RuntimeException("Missing user with id: " + wu.getWebUser().getId()));
+            }
+            case HasGuideUserData gu -> {
+                return gu;
+            }
             default -> {
-                var newUser = new GuideUser();
-                logger.info("Created new guide user: {}", newUser);
-                return guideUserRepository.save(newUser);
+                throw new RuntimeException("Unknown user type: " + user);
             }
         }
     }
@@ -91,35 +97,24 @@ public class GuideResponderAgent {
             Conversation conversation,
             ActionContext context) {
         logger.info("Incoming request from user {}", context.user());
-        var guideUser = getGuideUser(context.user());
-        var persona = guideUser != null && guideUser.persona() != null ? guideUser.persona() : DEFAULT_PERSONA;
+        // TODO null safety is a problem here
+        var guideUser = getGuideUser(context.user()).guideUserData();
+
+        var persona = guideUser.getPersona() != null ? guideUser.getPersona() : guideProperties.defaultPersona();
         var templateModel = new HashMap<String, Object>();
-        if (guideUser != null) {
-            templateModel.put("guideUser", guideUser);
-        }
+
         templateModel.put("persona", persona);
         var assistantMessage = context
                 .ai()
-                .withLlm(guideData.config().llm())
-                .withReferences(guideData.referencesForUser(context.user()))
-                .withTools(CoreToolGroups.WEB)
-                .withReference(new RagReference("", "",
-                        guideData
-                                .ragOptions()
-                                .withHyDE(new HyDE("The Embabel Agent Framework", 40))
-                                .withContentElementSearch(ContentElementSearch.CHUNKS_ONLY)
-                                .withEntitySearch(new EntitySearch(Set.of(
-                                        "Concept", "Example"
-                                ), false))
-                                .withDesiredMaxLatency(Duration.ofMinutes(10))
-                                .withDualShot(new DualShotConfig(100)),
-//                                .withListener(e -> {
-//                                    if (e instanceof RagPipelineEvent rpe) {
-//                                        context.updateProgress(rpe.getDescription());
-//                                    }
-//                                }),
-                        context.ai().withLlmByRole("summarizer")))
+                .withLlm(guideProperties.chatLlm())
                 .withId("chat_response")
+                .withReferences(dataManager.referencesForUser(context.user()))
+                .withTools(CoreToolGroups.WEB)
+                .withReference(
+                        new RagReference("docs",
+                                "Embabel docs",
+                                guideProperties.ragOptions(dataManager.embabelContentRagServiceFor(context)),
+                                context.ai().withLlmByRole("summarizer")))
                 .withTemplate("guide_system")
                 .respondWithSystemPrompt(conversation, templateModel);
         conversation.addMessage(assistantMessage);
@@ -127,8 +122,8 @@ public class GuideResponderAgent {
         return ConversationContinues.with(assistantMessage);
     }
 
-    @AchievesGoal(description = "Conversation completed")
     @Action
+    @AchievesGoal(description = "End the conversation politely")
     ConversationOver respondAndTerminate(
             ConversationOver conversationOver,
             Conversation conversation,
@@ -148,8 +143,7 @@ class GuideAgentBotConfig {
 
     @Bean
     Chatbot chatbot(AgentPlatform agentPlatform) {
-        return AgentProcessChatbot.withAgentByName(
-                agentPlatform,
-                GuideResponderAgent.NAME);
+        return AgentProcessChatbot.utilityFromPlatform(
+                agentPlatform);
     }
 }
