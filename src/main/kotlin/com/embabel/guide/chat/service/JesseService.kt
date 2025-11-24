@@ -49,7 +49,6 @@ class JesseService(
         )
         chatService.sendToUser(toUserId, deliveredMessage)
         chatService.sendStatusToUser(toUserId, status = StatusMessage(fromUserId = JESSE_USER_ID))
-        logger.info("Jesse sent message to user: {}", toUserId)
     }
 
     private fun sendStatusToUser(toUserId: String, status: String) {
