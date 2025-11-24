@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/base.xml"/>
+
+    <logger name="org.drivine" level="TRACE"/>
+    <logger name="org.drivine.manager" level="TRACE"/>
+    <logger name="org.drivine.transaction" level="TRACE"/>
+    <logger name="org.neo4j.driver" level="DEBUG"/>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>

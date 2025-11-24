@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+    <!-- Drivine logging -->
+    <logger name="org.drivine" level="TRACE"/>
+    <logger name="org.drivine.manager" level="TRACE"/>
+    <logger name="org.drivine.transaction" level="TRACE"/>
+    <logger name="org.drivine.query" level="TRACE"/>
+
+    <!-- Application logging -->
+    <logger name="com.embabel.agent.rag" level="INFO"/>
+    <logger name="com.embabel.agent.rag.tools" level="DEBUG"/>
+    <logger name="com.embabel.agent.rag.pipeline" level="DEBUG"/>
+    <logger name="com.embabel.guide.chat" level="INFO"/>
+
+    <!-- Spring logging -->
+    <logger name="org.springframework.web.socket" level="INFO"/>
+    <logger name="org.springframework.messaging" level="INFO"/>
+</configuration>
