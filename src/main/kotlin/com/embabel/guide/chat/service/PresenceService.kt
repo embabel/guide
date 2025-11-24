@@ -14,10 +14,9 @@ class PresenceService(private val messaging: SimpMessagingTemplate) {
     private val byUser = ConcurrentHashMap<String, MutableSet<String>>() // userId -> sessionIds
 
     fun touch(userId: String, sessionId: String, status: String?) {
-        logger.debug("Updating presence for user: {} session: {} status: {}", userId, sessionId, status)
         val now = Instant.now()
         val isNewSession = !bySession.containsKey(sessionId)
-        val updated = bySession.compute(sessionId) { _, existing ->
+        bySession.compute(sessionId) { _, existing ->
             existing?.apply {
                 lastSeen = now
                 status?.let { this.status = it }
