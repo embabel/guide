@@ -19,3 +19,8 @@ logging:
 
 # Spring configuration
 
+spring:
+  ai:
+    mcp:
+      client:
+        enabled: false
