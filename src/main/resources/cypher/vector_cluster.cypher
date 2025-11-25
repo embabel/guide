@@ -21,8 +21,8 @@ CALL apoc.cypher.parallel(
   WHERE size(value.similar) > 0
 
 RETURN {
-         anchor: properties(value.anchorNode),
-         similar: properties(value.similar),
+         anchor: properties(value.anchorNode) + { labels: labels(value.anchorNode) },
+         similar: properties(value.similar) + { labels: labels(value.similar) },
          similarCount: size(value.similar)
        } AS result
   ORDER BY result.count DESC
