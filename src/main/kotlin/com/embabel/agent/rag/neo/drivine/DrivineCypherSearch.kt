@@ -14,13 +14,15 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import kotlin.collections.emptyList
 import kotlin.text.get
 
 @Service
 class DrivineCypherSearch(
     private val persistenceManager: PersistenceManager,
     private val queryResolver: LogicalQueryResolver,
-) : CypherSearch {
+    private val contentElementMapper: ContentElementMapper,
+) : CypherSearch, ClusterFinder {
 
     private val logger = LoggerFactory.getLogger(DrivineCypherSearch::class.java)
 
@@ -227,44 +229,42 @@ class DrivineCypherSearch(
         }
     }
 
-//    @Transactional(readOnly = true)
-//    override fun <E> findClusters(opts: ClusterRetrievalRequest<E>): List<Cluster<E>> {
-//        val labels = opts.entitySearch?.labels?.toList() ?: error("Must specify labels in entity search for clustering")
-//        val desiredType = (opts.entitySearch as? TypedEntitySearch)?.entities?.first() ?: OgmMappedEntity::class.java
-//        val params = mapOf(
-//            "labels" to labels,
-//            "vectorIndex" to opts.vectorIndex,
-//            "similarityThreshold" to opts.similarityThreshold,
-//            "topK" to opts.topK,
-//        )
-//        val result = query(
-//            purpose = "cluster",
-//            query = "vector_cluster",
-//            params = params,
-//        )
-//        return result.map { row ->
-//            val anchor = row["anchor"] as E
-//            val similar = (row["similar"]) as Array<Map<String, Any>>
-//            val similarityResults = similar.mapNotNull { similarEntityMap ->
-//                val inode = similarEntityMap["match"] as InternalNode
-//                val matchId = (inode.get("id") as String)
-//                val score = similarEntityMap["score"] as Double
-//                val match = try {
-//                    currentSession().load(desiredType, matchId)
-//                } catch (e: Exception) {
-//                    logger.warn("Could not load entity of type $desiredType with id $matchId", e)
-//                    null
-//                }
-//                if (match == null) {
-//                    // Shouldn't happen...query is likely incorrect
-//                    logger.warn("Could not load match for $similarEntityMap, type=${desiredType}, id=$matchId")
-//                    null
-//                } else {
-//                    logger.debug("Found match: {} with score {}", match, "%.2f".format(score))
-//                    SimpleSimilaritySearchResult(match, score) as SimilarityResult<E>
-//                }
-//            }
-//            Cluster(anchor, similarityResults)
-//        }
-//    }
+    @Transactional(readOnly = true)
+    override fun <E> findClusters(opts: ClusterRetrievalRequest<E>): List<Cluster<E>> {
+        val labels = opts.entitySearch?.labels?.toList() ?: error("Must specify labels in entity search for clustering")
+        val params = mapOf(
+            "labels" to labels,
+            "vectorIndex" to opts.vectorIndex,
+            "similarityThreshold" to opts.similarityThreshold,
+            "topK" to opts.topK,
+        )
+        val result = query(
+            purpose = "cluster",
+            query = "vector_cluster",
+            params = params,
+        )
+        return result.map { row ->
+            val resultMap = row["result"] as? Map<*, *> ?: error("Expected result map from vector_cluster query")
+            val anchorMap = resultMap["anchor"] as? Map<*, *> ?: error("Expected anchor in result")
+            val anchor = contentElementMapper.rowToContentElement(anchorMap) as E
+
+            val similar = resultMap["similar"] as? List<*> ?: emptyList<E>()
+            val similarityResults = similar.mapNotNull { similarItem ->
+                try {
+                    val similarMap = similarItem as? Map<*, *> ?: return@mapNotNull null
+                    val matchMap = similarMap["match"] as? Map<*, *> ?: return@mapNotNull null
+                    val score = similarMap["score"] as? Double ?: return@mapNotNull null
+
+                    val matchElement = contentElementMapper.rowToContentElement(matchMap)
+                    val match = matchElement as E
+                    logger.debug("Found match: {} with score {}", matchElement.id, "%.2f".format(score))
+                    SimpleSimilaritySearchResult(match, score) as SimilarityResult<E>
+                } catch (e: Exception) {
+                    logger.warn("Could not map similar item: {}", similarItem, e)
+                    null
+                }
+            }
+            Cluster(anchor, similarityResults)
+        }
+    }
 }
