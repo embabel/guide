@@ -69,19 +69,10 @@ class Neo4jTestContainer : Neo4jContainer<Neo4jTestContainer> {
                 .withNeo4jConfig("dbms.logs.query.enabled", "INFO")
                 .withNeo4jConfig("dbms.logs.query.parameter_logging_enabled", "true")
                 .withAdminPassword("testpassword")
-
-            // Try to find and mount APOC if available (optional)
-            try {
-                val apocJar = findApocJar()
-                if (apocJar != null) {
-                    container
-                        .withFileSystemBind(apocJar, "/plugins/apoc-5.26.0.jar")
-                        .withNeo4jConfig("dbms.security.procedures.unrestricted", "apoc.*")
-                        .withEnv("NEO4J_PLUGINS", "[\"apoc\"]")
-                }
-            } catch (e: Exception) {
-                println("APOC not found, continuing without it: ${e.message}")
-            }
+                // Install APOC and APOC Extended automatically
+                .withEnv("NEO4J_PLUGINS", "[\"apoc\", \"apoc-extended\"]")
+                .withNeo4jConfig("dbms.security.procedures.unrestricted", "apoc.*")
+                .withNeo4jConfig("dbms.security.procedures.allowlist", "apoc.*")
 
             container.start()
             return container

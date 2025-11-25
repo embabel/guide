@@ -4,7 +4,6 @@ import com.embabel.agent.rag.model.*
 import com.embabel.agent.rag.service.Cluster
 import com.embabel.agent.rag.service.ClusterFinder
 import com.embabel.agent.rag.service.ClusterRetrievalRequest
-import com.embabel.agent.rag.service.TypedEntitySearch
 import com.embabel.common.core.types.SimilarityResult
 import com.embabel.common.core.types.SimpleSimilaritySearchResult
 import org.drivine.manager.PersistenceManager
@@ -14,8 +13,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import kotlin.collections.emptyList
-import kotlin.text.get
 
 @Service
 class DrivineCypherSearch(
@@ -244,11 +241,11 @@ class DrivineCypherSearch(
             params = params,
         )
         return result.map { row ->
-            val resultMap = row["result"] as? Map<*, *> ?: error("Expected result map from vector_cluster query")
-            val anchorMap = resultMap["anchor"] as? Map<*, *> ?: error("Expected anchor in result")
+            // Drivine returns the map structure directly, ignoring column names
+            val anchorMap = row["anchor"] as? Map<*, *> ?: error("Expected anchor in row")
             val anchor = contentElementMapper.rowToContentElement(anchorMap) as E
 
-            val similar = resultMap["similar"] as? List<*> ?: emptyList<E>()
+            val similar = row["similar"] as? List<*> ?: emptyList<E>()
             val similarityResults = similar.mapNotNull { similarItem ->
                 try {
                     val similarMap = similarItem as? Map<*, *> ?: return@mapNotNull null

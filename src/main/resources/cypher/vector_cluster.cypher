@@ -20,9 +20,29 @@ CALL apoc.cypher.parallel(
 ) YIELD value
   WHERE size(value.similar) > 0
 
+WITH value.anchorNode AS anchorNode, value.similar AS similarItems
 RETURN {
-         anchor: properties(value.anchorNode) + { labels: labels(value.anchorNode) },
-         similar: properties(value.similar) + { labels: labels(value.similar) },
-         similarCount: size(value.similar)
-       } AS result
-  ORDER BY result.count DESC
+         anchor: {
+           id: anchorNode.id,
+           uri: anchorNode.uri,
+           text: anchorNode.text,
+           parentId: anchorNode.parentId,
+           ingestionDate: anchorNode.ingestionTimestamp,
+           metadata_source: anchorNode.metadata.source,
+           labels: labels(anchorNode)
+         },
+         similar: [item IN similarItems | {
+           match: {
+             id: item.match.id,
+             uri: item.match.uri,
+             text: item.match.text,
+             parentId: item.match.parentId,
+             ingestionDate: item.match.ingestionTimestamp,
+             metadata_source: item.match.metadata.source,
+             labels: labels(item.match)
+           },
+           score: item.score
+         }],
+         similarCount: size(similarItems)
+       } as result
+  ORDER BY result.similarCount DESC
