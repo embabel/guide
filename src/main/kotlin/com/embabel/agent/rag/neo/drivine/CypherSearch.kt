@@ -54,17 +54,6 @@ interface CypherSearch {
         logger: Logger? = null,
     ): List<EntityData>
 
-//    /**
-//     * Query for mapped entities in the knowledge graph.
-//     * The query must return entities as n.
-//     */
-//    fun queryForMappedEntities(
-//        purpose: String,
-//        query: String,
-//        params: Map<String, Any> = emptyMap(),
-//        logger: Logger? = null,
-//    ): List<OgmMappedEntity>
-
     fun chunkSimilaritySearch(
         purpose: String,
         query: String,

@@ -67,16 +67,6 @@ class DrivineCypherSearch(
         return rowsToEntityData(result)
     }
 
-//    override fun queryForMappedEntities(
-//        purpose: String,
-//        query: String,
-//        params: Map<String, Any>,
-//        logger: Logger?,
-//    ): List<OgmMappedEntity> {
-//        // Drivine doesn't support OGM-style mapped entities
-//        throw UnsupportedOperationException("queryForMappedEntities is not supported in DrivineCypherSearch")
-//    }
-
     override fun entityDataSimilaritySearch(
         purpose: String,
         query: String,
@@ -208,22 +198,13 @@ class DrivineCypherSearch(
         params: Map<String, *>,
     ): Int {
         val cypher = if (query.contains(" ")) query else queryResolver.resolve(query)!!
-
-        @Suppress("UNCHECKED_CAST")
-        val results = persistenceManager.query(
+        val results = persistenceManager.getOne(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(params as Map<String, Any>)
-                .transform(Map::class.java)
+                .bind(params)
+                .transform(Int::class.java)
         )
-        val firstRow = results.firstOrNull() ?: return 0
-        val firstValue = firstRow.values.firstOrNull() ?: return 0
-        return when (firstValue) {
-            is Int -> firstValue
-            is Long -> firstValue.toInt()
-            is Double -> firstValue.toInt()
-            else -> 0
-        }
+        return results
     }
 
     @Transactional(readOnly = true)
@@ -241,7 +222,6 @@ class DrivineCypherSearch(
             params = params,
         )
         return result.map { row ->
-            // Drivine returns the map structure directly, ignoring column names
             val anchorMap = row["anchor"] as? Map<*, *> ?: error("Expected anchor in row")
             val anchor = contentElementMapper.rowToContentElement(anchorMap) as E
 

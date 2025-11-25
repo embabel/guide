@@ -7,10 +7,13 @@ import com.embabel.agent.rag.service.ContentElementSearch
 import com.embabel.agent.rag.service.EntitySearch
 import com.embabel.guide.Neo4jPropertiesInitializer
 import org.drivine.manager.PersistenceManager
+import org.drivine.query.QuerySpecification
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.ai.mcp.client.common.autoconfigure.McpClientAutoConfiguration
 import org.springframework.beans.factory.annotation.Autowired
@@ -31,8 +34,30 @@ class DrivineCypherSearchTest(
     @Autowired @Qualifier("neo") private val persistenceManager: PersistenceManager
 ) {
 
-    @BeforeEach
-    fun setupTestData() {
+    @Nested
+    inner class CrudTests {
+
+        @BeforeEach
+        fun setup() {
+            val spec = QuerySpecification.withStatement("""
+                CREATE (n:Foobar {foo: "foo"})
+            """.trimIndent())
+            persistenceManager.execute(spec)
+        }
+
+        @Test
+        fun `should query for int`() {
+            val result = search.queryForInt("MATCH (n:Foobar) return count(n)")
+            assertEquals(result, 1)
+        }
+
+    }
+
+    @Nested
+    inner class ClusteringTests {
+
+        @BeforeEach
+        fun setupTestData() {
         // Clean up any existing test data
         search.query(
             purpose = "Clean test data",
@@ -116,50 +141,51 @@ class DrivineCypherSearchTest(
         }
     }
 
-    @AfterEach
-    fun cleanupTestData() {
-        // Clean up test data
-        search.query(
-            purpose = "Clean test data",
-            query = "MATCH (n:Chunk) WHERE n.id STARTS WITH 'test-chunk-' DETACH DELETE n",
-            params = emptyMap<String, Any>()
-        )
-    }
+        @AfterEach
+        fun cleanupTestData() {
+            // Clean up test data
+            search.query(
+                purpose = "Clean test data",
+                query = "MATCH (n:Chunk) WHERE n.id STARTS WITH 'test-chunk-' DETACH DELETE n",
+                params = emptyMap<String, Any>()
+            )
+        }
 
-    @Test
-    fun shouldFindClusters() {
-        // Verify test data was created
-        val chunkCountQuery = "MATCH (c:Chunk) WHERE c.id STARTS WITH 'test-chunk-' RETURN {count: count(c)} AS result"
-        val countResult = search.query(
-            purpose = "Count test chunks",
-            query = chunkCountQuery,
-            params = emptyMap<String, Any>()
-        )
+        @Test
+        fun `should find clusters` () {
+            // Verify test data was created
+            val chunkCountQuery = "MATCH (c:Chunk) WHERE c.id STARTS WITH 'test-chunk-' RETURN {count: count(c)} AS result"
+            val countResult = search.query(
+                purpose = "Count test chunks",
+                query = chunkCountQuery,
+                params = emptyMap<String, Any>()
+            )
 
-        val chunkCount = countResult.firstOrNull()?.get("count") as? Long ?: 0L
-        println("Number of test Chunk nodes: $chunkCount")
-        assertTrue(chunkCount == 10L, "Expected 10 test chunks, found $chunkCount")
+            val chunkCount = countResult.firstOrNull()?.get("count") as? Long ?: 0L
+            println("Number of test Chunk nodes: $chunkCount")
+            assertTrue(chunkCount == 10L, "Expected 10 test chunks, found $chunkCount")
 
-        // Create a cluster retrieval request for Chunks
-        val request = ClusterRetrievalRequest<Chunk>(
-            vectorIndex = properties.contentElementIndex,
-            topK = 5,
-            similarityThreshold = 0.7,
-            entitySearch = EntitySearch(labels = setOf("Chunk")),
-            contentElementSearch = ContentElementSearch(types = listOf(Chunk::class.java))
-        )
+            // Create a cluster retrieval request for Chunks
+            val request = ClusterRetrievalRequest<Chunk>(
+                vectorIndex = properties.contentElementIndex,
+                topK = 5,
+                similarityThreshold = 0.7,
+                entitySearch = EntitySearch(labels = setOf("Chunk")),
+                contentElementSearch = ContentElementSearch(types = listOf(Chunk::class.java))
+            )
 
-        val clusters = search.findClusters(request)
+            val clusters = search.findClusters(request)
 
-        assertNotNull(clusters)
-        println("Found ${clusters.size} clusters")
-        assertTrue(clusters.isNotEmpty(), "Expected to find at least one cluster")
+            assertNotNull(clusters)
+            println("Found ${clusters.size} clusters")
+            assertTrue(clusters.isNotEmpty(), "Expected to find at least one cluster")
 
-        clusters.forEach { cluster ->
-            println("Cluster anchor: ${(cluster.anchor as ContentElement).id}")
-            println("  Similar items: ${cluster.similar.size}")
-            cluster.similar.forEach { similar ->
-                println("    - ${(similar.match as ContentElement).id} (score: ${similar.score})")
+            clusters.forEach { cluster ->
+                println("Cluster anchor: ${(cluster.anchor as ContentElement).id}")
+                println("  Similar items: ${cluster.similar.size}")
+                cluster.similar.forEach { similar ->
+                    println("    - ${(similar.match as ContentElement).id} (score: ${similar.score})")
+                }
             }
         }
     }
