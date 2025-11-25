@@ -1,6 +1,10 @@
 package com.embabel.agent.rag.neo.drivine
 
 import com.embabel.agent.rag.model.*
+import com.embabel.agent.rag.service.Cluster
+import com.embabel.agent.rag.service.ClusterFinder
+import com.embabel.agent.rag.service.ClusterRetrievalRequest
+import com.embabel.agent.rag.service.TypedEntitySearch
 import com.embabel.common.core.types.SimilarityResult
 import com.embabel.common.core.types.SimpleSimilaritySearchResult
 import org.drivine.manager.PersistenceManager
@@ -9,6 +13,8 @@ import org.drivine.utils.ObjectUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import kotlin.text.get
 
 @Service
 class DrivineCypherSearch(
@@ -220,4 +226,45 @@ class DrivineCypherSearch(
             else -> 0
         }
     }
+
+//    @Transactional(readOnly = true)
+//    override fun <E> findClusters(opts: ClusterRetrievalRequest<E>): List<Cluster<E>> {
+//        val labels = opts.entitySearch?.labels?.toList() ?: error("Must specify labels in entity search for clustering")
+//        val desiredType = (opts.entitySearch as? TypedEntitySearch)?.entities?.first() ?: OgmMappedEntity::class.java
+//        val params = mapOf(
+//            "labels" to labels,
+//            "vectorIndex" to opts.vectorIndex,
+//            "similarityThreshold" to opts.similarityThreshold,
+//            "topK" to opts.topK,
+//        )
+//        val result = query(
+//            purpose = "cluster",
+//            query = "vector_cluster",
+//            params = params,
+//        )
+//        return result.map { row ->
+//            val anchor = row["anchor"] as E
+//            val similar = (row["similar"]) as Array<Map<String, Any>>
+//            val similarityResults = similar.mapNotNull { similarEntityMap ->
+//                val inode = similarEntityMap["match"] as InternalNode
+//                val matchId = (inode.get("id") as String)
+//                val score = similarEntityMap["score"] as Double
+//                val match = try {
+//                    currentSession().load(desiredType, matchId)
+//                } catch (e: Exception) {
+//                    logger.warn("Could not load entity of type $desiredType with id $matchId", e)
+//                    null
+//                }
+//                if (match == null) {
+//                    // Shouldn't happen...query is likely incorrect
+//                    logger.warn("Could not load match for $similarEntityMap, type=${desiredType}, id=$matchId")
+//                    null
+//                } else {
+//                    logger.debug("Found match: {} with score {}", match, "%.2f".format(score))
+//                    SimpleSimilaritySearchResult(match, score) as SimilarityResult<E>
+//                }
+//            }
+//            Cluster(anchor, similarityResults)
+//        }
+//    }
 }

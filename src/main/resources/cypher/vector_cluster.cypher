@@ -19,7 +19,10 @@ CALL apoc.cypher.parallel(
 "item"
 ) YIELD value
   WHERE size(value.similar) > 0
-RETURN value.anchorNode as anchor,
-       value.similar as similar,
-       size(value.similar) as similarCount
-  ORDER BY similarCount DESC
+
+RETURN {
+         anchor: properties(value.anchorNode),
+         similar: properties(value.similar),
+         similarCount: size(value.similar)
+       } AS result
+  ORDER BY result.count DESC

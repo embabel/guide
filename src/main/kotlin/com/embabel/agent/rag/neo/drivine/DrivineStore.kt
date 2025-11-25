@@ -31,6 +31,7 @@ class DrivineStore(
     override val enhancers: List<RetrievableEnhancer> = emptyList(),
     val properties: NeoRagServiceProperties,
     private val cypherSearch: CypherSearch,
+    private val contentElementMapper: ContentElementMapper,
     modelProvider: ModelProvider,
     platformTransactionManager: PlatformTransactionManager,
 ) : AbstractChunkingContentElementRepository(properties), ChunkingContentElementRepository, RagFacetProvider {
@@ -99,7 +100,7 @@ class DrivineStore(
                 .withStatement(statement)
                 .bind(parameters)
                 .transform(Map::class.java)
-                .map { rowToContentElement(it) }
+                .map { contentElementMapper.rowToContentElement(it) }
 
             val result = persistenceManager.maybeGetOne(spec)
             logger.debug("Root document with URI {} found: {}", uri, result != null)
@@ -158,7 +159,7 @@ class DrivineStore(
             .withStatement(statement)
             .bind(mapOf("ids" to chunkIds))
             .transform(Map::class.java)
-            .map({ rowToContentElement(it) })
+            .map({ contentElementMapper.rowToContentElement(it) })
             .filter { it is Chunk }
             .map { it as Chunk }
 
@@ -171,7 +172,7 @@ class DrivineStore(
             .withStatement(statement)
             .bind(mapOf("id" to id))
             .transform(Map::class.java)
-            .map({ rowToContentElement(it) })
+            .map({ contentElementMapper.rowToContentElement(it) })
         return persistenceManager.maybeGetOne(spec)
     }
 
@@ -259,38 +260,6 @@ class DrivineStore(
                 labels: labels(c)
               } AS result
             """.trimIndent()
-
-    private fun rowToContentElement(row: Map<*, *>): ContentElement {
-        val metadata = mutableMapOf<String, Any>()
-        metadata["source"] = row["metadata_source"] ?: "unknown"
-        val labels = row["labels"] as? List<String> ?: error("Must have labels")
-        if (labels.contains("Chunk"))
-            return Chunk(
-                id = row["id"] as String,
-                text = row["text"] as String,
-                parentId = row["parentId"] as String,
-                metadata = metadata,
-            )
-        if (labels.contains("Document")) {
-            val ingestionDate = when (val rawDate = row["ingestionDate"]) {
-                is java.time.Instant -> rawDate
-                is java.time.ZonedDateTime -> rawDate.toInstant()
-                is Long -> java.time.Instant.ofEpochMilli(rawDate)
-                is String -> java.time.Instant.parse(rawDate)
-                null -> java.time.Instant.now()
-                else -> java.time.Instant.now()
-            }
-            return MaterializedDocument(
-                id = row["id"] as String,
-                title = row["id"] as String,
-                children = emptyList(),
-                metadata = metadata,
-                uri = row["uri"] as String,
-                ingestionTimestamp = ingestionDate,
-            )
-        }
-        throw RuntimeException("Don't know how to map: $labels")
-    }
 
     private val readonlyTransactionTemplate = TransactionTemplate(platformTransactionManager).apply {
         isReadOnly = true
