@@ -1,6 +1,7 @@
 package com.embabel.agent.rag.neo.drivine
 
 import com.embabel.agent.rag.model.*
+import com.embabel.agent.rag.neo.drivine.mappers.ContentElementMapper
 import com.embabel.agent.rag.service.Cluster
 import com.embabel.agent.rag.service.ClusterFinder
 import com.embabel.agent.rag.service.ClusterRetrievalRequest
@@ -222,17 +223,17 @@ class DrivineCypherSearch(
             params = params,
         )
         return result.map { row ->
-            val anchorMap = row["anchor"] as? Map<*, *> ?: error("Expected anchor in row")
-            val anchor = contentElementMapper.rowToContentElement(anchorMap) as E
+            val anchorMap = row["anchor"] as? Map<String, *> ?: error("Expected anchor in row")
+            val anchor = contentElementMapper.map(anchorMap) as E
 
             val similar = row["similar"] as? List<*> ?: emptyList<E>()
             val similarityResults = similar.mapNotNull { similarItem ->
                 try {
                     val similarMap = similarItem as? Map<*, *> ?: return@mapNotNull null
-                    val matchMap = similarMap["match"] as? Map<*, *> ?: return@mapNotNull null
+                    val matchMap = similarMap["match"] as? Map<String, *> ?: return@mapNotNull null
                     val score = similarMap["score"] as? Double ?: return@mapNotNull null
 
-                    val matchElement = contentElementMapper.rowToContentElement(matchMap)
+                    val matchElement = contentElementMapper.map(matchMap)
                     val match = matchElement as E
                     logger.debug("Found match: {} with score {}", matchElement.id, "%.2f".format(score))
                     SimpleSimilaritySearchResult(match, score) as SimilarityResult<E>

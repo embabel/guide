@@ -3,6 +3,7 @@ package com.embabel.agent.rag.neo.drivine
 import com.embabel.agent.api.common.Embedding
 import com.embabel.agent.rag.ingestion.RetrievableEnhancer
 import com.embabel.agent.rag.model.*
+import com.embabel.agent.rag.neo.drivine.mappers.ContentElementMapper
 import com.embabel.agent.rag.service.EntitySearch
 import com.embabel.agent.rag.service.RagRequest
 import com.embabel.agent.rag.service.support.FunctionRagFacet
@@ -99,8 +100,7 @@ class DrivineStore(
             val spec = QuerySpecification
                 .withStatement(statement)
                 .bind(parameters)
-                .transform(Map::class.java)
-                .map { contentElementMapper.rowToContentElement(it) }
+                .mapWith(contentElementMapper)
 
             val result = persistenceManager.maybeGetOne(spec)
             logger.debug("Root document with URI {} found: {}", uri, result != null)
@@ -158,11 +158,8 @@ class DrivineStore(
         val spec = QuerySpecification
             .withStatement(statement)
             .bind(mapOf("ids" to chunkIds))
-            .transform(Map::class.java)
-            .map({ contentElementMapper.rowToContentElement(it) })
-            .filter { it is Chunk }
-            .map { it as Chunk }
-
+            .mapWith(contentElementMapper)
+            .filterIsInstance<Chunk>()
         return persistenceManager.query(spec)
     }
 
@@ -171,8 +168,7 @@ class DrivineStore(
         val spec = QuerySpecification
             .withStatement(statement)
             .bind(mapOf("id" to id))
-            .transform(Map::class.java)
-            .map({ contentElementMapper.rowToContentElement(it) })
+            .mapWith(contentElementMapper)
         return persistenceManager.maybeGetOne(spec)
     }
 
