@@ -1,7 +1,10 @@
 package com.embabel.agent.rag.neo.drivine
 
 import com.embabel.agent.rag.model.*
+import com.embabel.agent.rag.neo.drivine.mappers.ChunkSimilarityMapper
 import com.embabel.agent.rag.neo.drivine.mappers.ContentElementMapper
+import com.embabel.agent.rag.neo.drivine.mappers.EntityDataMapper
+import com.embabel.agent.rag.neo.drivine.mappers.EntityDataSimilarityMapper
 import com.embabel.agent.rag.service.Cluster
 import com.embabel.agent.rag.service.ClusterFinder
 import com.embabel.agent.rag.service.ClusterRetrievalRequest
@@ -20,6 +23,9 @@ class DrivineCypherSearch(
     private val persistenceManager: PersistenceManager,
     private val queryResolver: LogicalQueryResolver,
     private val contentElementMapper: ContentElementMapper,
+    private val entityDataMapper: EntityDataMapper,
+    private val entityDataSimilarityMapper: EntityDataSimilarityMapper,
+    private val chunkSimilarityMapper: ChunkSimilarityMapper,
 ) : CypherSearch, ClusterFinder {
 
     private val logger = LoggerFactory.getLogger(DrivineCypherSearch::class.java)
@@ -64,8 +70,18 @@ class DrivineCypherSearch(
         params: Map<String, *>,
         logger: Logger?,
     ): List<EntityData> {
-        val result = query(purpose = purpose, query = query, params = params, logger = logger)
-        return rowsToEntityData(result)
+        val loggerToUse = logger ?: this.logger
+        val cypher = if (query.contains(" ")) query else queryResolver.resolve(query)!!
+        loggerToUse.info("[{}] query\n\tparams: {}\n{}", purpose, params, cypher)
+
+        val parameters = ObjectUtils.primitiveProps(params)
+
+        return persistenceManager.query(
+            QuerySpecification
+                .withStatement(cypher)
+                .bind(parameters)
+                .mapWith(entityDataMapper)
+        )
     }
 
     override fun entityDataSimilaritySearch(
@@ -74,8 +90,18 @@ class DrivineCypherSearch(
         params: Map<String, *>,
         logger: Logger?,
     ): List<SimilarityResult<EntityData>> {
-        val result = query(purpose = purpose, query = query, params = params, logger = logger)
-        return rowsToSimilarityResult(result)
+        val loggerToUse = logger ?: this.logger
+        val cypher = if (query.contains(" ")) query else queryResolver.resolve(query)!!
+        loggerToUse.info("[{}] query\n\tparams: {}\n{}", purpose, params, cypher)
+
+        val parameters = ObjectUtils.primitiveProps(params)
+
+        return persistenceManager.query(
+            QuerySpecification
+                .withStatement(cypher)
+                .bind(parameters)
+                .mapWith(entityDataSimilarityMapper)
+        )
     }
 
     override fun chunkSimilaritySearch(
@@ -84,18 +110,18 @@ class DrivineCypherSearch(
         params: Map<String, *>,
         logger: Logger?,
     ): List<SimilarityResult<Chunk>> {
-        val result = query(purpose = purpose, query = query, params = params, logger = logger)
-        return result.map { row ->
-            SimpleSimilaritySearchResult(
-                match = Chunk(
-                    id = row["id"] as String,
-                    text = row["text"] as String,
-                    parentId = "unknown",
-                    metadata = emptyMap(),
-                ),
-                score = row["score"] as Double,
-            )
-        }
+        val loggerToUse = logger ?: this.logger
+        val cypher = if (query.contains(" ")) query else queryResolver.resolve(query)!!
+        loggerToUse.info("[{}] query\n\tparams: {}\n{}", purpose, params, cypher)
+
+        val parameters = ObjectUtils.primitiveProps(params)
+
+        return persistenceManager.query(
+            QuerySpecification
+                .withStatement(cypher)
+                .bind(parameters)
+                .mapWith(chunkSimilarityMapper)
+        )
     }
 
     override fun chunkFullTextSearch(
@@ -104,18 +130,18 @@ class DrivineCypherSearch(
         params: Map<String, *>,
         logger: Logger?,
     ): List<SimilarityResult<Chunk>> {
-        val result = query(purpose = purpose, query = query, params = params, logger = logger)
-        return result.map { row ->
-            SimpleSimilaritySearchResult(
-                match = Chunk(
-                    id = row["id"] as String,
-                    text = row["text"] as String,
-                    parentId = "unknown",
-                    metadata = mapOf("source" to "unknown"),
-                ),
-                score = row["score"] as Double,
-            )
-        }
+        val loggerToUse = logger ?: this.logger
+        val cypher = if (query.contains(" ")) query else queryResolver.resolve(query)!!
+        loggerToUse.info("[{}] query\n\tparams: {}\n{}", purpose, params, cypher)
+
+        val parameters = ObjectUtils.primitiveProps(params)
+
+        return persistenceManager.query(
+            QuerySpecification
+                .withStatement(cypher)
+                .bind(parameters)
+                .mapWith(chunkSimilarityMapper)
+        )
     }
 
     override fun entityFullTextSearch(
@@ -124,47 +150,17 @@ class DrivineCypherSearch(
         params: Map<String, *>,
         logger: Logger?,
     ): List<SimilarityResult<EntityData>> {
-        val result = query(purpose = purpose, query = query, params = params, logger = logger)
-        return rowsToSimilarityResult(result)
-    }
+        val loggerToUse = logger ?: this.logger
+        val cypher = if (query.contains(" ")) query else queryResolver.resolve(query)!!
+        loggerToUse.info("[{}] query\n\tparams: {}\n{}", purpose, params, cypher)
 
-    private fun rowsToEntityData(
-        result: QueryResult,
-    ): List<EntityData> = result.map { row ->
-        SimpleNamedEntityData(
-            id = row["id"] as String,
-            name = row["name"] as String,
-            description = row["description"] as String? ?: "",
-            labels = (row["labels"] as? List<*>)?.map { it.toString() }?.toSet() ?: emptySet(),
-            properties = emptyMap(),
-        )
-    }
+        val parameters = ObjectUtils.primitiveProps(params)
 
-    private fun rowsToSimilarityResult(
-        result: QueryResult,
-    ): List<SimilarityResult<EntityData>> = result.map { row ->
-        val name = row["name"] as? String
-        val description = row["description"] as? String
-        val labels = (row["labels"] as? List<*>)?.map { it.toString() }?.toSet() ?: emptySet()
-        val properties = row["properties"] as? Map<String, Any> ?: emptyMap()
-        val match = if (name != null && description != null) {
-            SimpleNamedEntityData(
-                id = row["id"] as String,
-                name = name,
-                description = description,
-                labels = labels,
-                properties = properties,
-            )
-        } else {
-            SimpleEntityData(
-                id = row["id"] as String,
-                labels = labels,
-                properties = properties,
-            )
-        }
-        SimpleSimilaritySearchResult(
-            match = match,
-            score = row["score"] as Double,
+        return persistenceManager.query(
+            QuerySpecification
+                .withStatement(cypher)
+                .bind(parameters)
+                .mapWith(entityDataSimilarityMapper)
         )
     }
 
