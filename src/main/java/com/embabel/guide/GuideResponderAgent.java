@@ -11,7 +11,9 @@ import com.embabel.agent.api.identity.User;
 import com.embabel.agent.core.AgentPlatform;
 import com.embabel.agent.core.CoreToolGroups;
 import com.embabel.agent.discord.DiscordUser;
-import com.embabel.agent.rag.tools.RagReference;
+import com.embabel.agent.rag.neo.drivine.DrivineStore;
+import com.embabel.agent.rag.tools.RagServiceReference;
+import com.embabel.agent.rag.tools.ToolishRag;
 import com.embabel.chat.AssistantMessage;
 import com.embabel.chat.Chatbot;
 import com.embabel.chat.Conversation;
@@ -46,11 +48,17 @@ public class GuideResponderAgent {
 
     private final Logger logger = LoggerFactory.getLogger(GuideResponderAgent.class);
     private final GuideProperties guideProperties;
+    private final DrivineStore drivineStore;
 
-    public GuideResponderAgent(DataManager dataManager, DrivineGuideUserRepository guideUserRepository, GuideProperties guideProperties) {
+
+    public GuideResponderAgent(DataManager dataManager,
+                               DrivineGuideUserRepository guideUserRepository,
+                               DrivineStore drivineStore,
+                               GuideProperties guideProperties) {
         this.dataManager = dataManager;
         this.guideUserRepository = guideUserRepository;
         this.guideProperties = guideProperties;
+        this.drivineStore = drivineStore;
     }
 
     static final String LAST_EVENT_WAS_USER_MESSAGE = "user_last";
@@ -80,7 +88,7 @@ public class GuideResponderAgent {
             }
             case GuideUserWithWebUser wu -> {
                 return guideUserRepository.findByWebUserId(wu.getWebUser().getId())
-                    .orElseThrow(() -> new RuntimeException("Missing user with id: " + wu.getWebUser().getId()));
+                        .orElseThrow(() -> new RuntimeException("Missing user with id: " + wu.getWebUser().getId()));
             }
             case HasGuideUserData gu -> {
                 return gu;
@@ -104,17 +112,25 @@ public class GuideResponderAgent {
         var templateModel = new HashMap<String, Object>();
 
         templateModel.put("persona", persona);
+        var ragReference = new RagServiceReference("docs",
+                "Embabel docs",
+                guideProperties.ragOptions(dataManager.embabelContentRagServiceFor(context)),
+                context.ai().withLlmByRole("summarizer"));
+
+        var toolishRag = new ToolishRag(
+                "granular_docs",
+                "Embabel docs with granular retrieval",
+                drivineStore
+        );
+
         var assistantMessage = context
                 .ai()
                 .withLlm(guideProperties.chatLlm())
                 .withId("chat_response")
                 .withReferences(dataManager.referencesForUser(context.user()))
                 .withTools(CoreToolGroups.WEB)
-                .withReference(
-                        new RagReference("docs",
-                                "Embabel docs",
-                                guideProperties.ragOptions(dataManager.embabelContentRagServiceFor(context)),
-                                context.ai().withLlmByRole("summarizer")))
+//                .withReference(ragReference)
+                .withReferences(toolishRag)
                 .withTemplate("guide_system")
                 .respondWithSystemPrompt(conversation, templateModel);
         conversation.addMessage(assistantMessage);
