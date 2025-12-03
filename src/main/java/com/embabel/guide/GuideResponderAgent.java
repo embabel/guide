@@ -12,8 +12,8 @@ import com.embabel.agent.core.AgentPlatform;
 import com.embabel.agent.core.CoreToolGroups;
 import com.embabel.agent.discord.DiscordUser;
 import com.embabel.agent.rag.neo.drivine.DrivineStore;
-import com.embabel.agent.rag.neo.drivine.GranularRagReference;
-import com.embabel.agent.rag.tools.RagReference;
+import com.embabel.agent.rag.tools.RagServiceReference;
+import com.embabel.agent.rag.tools.ToolishRag;
 import com.embabel.chat.AssistantMessage;
 import com.embabel.chat.Chatbot;
 import com.embabel.chat.Conversation;
@@ -112,12 +112,12 @@ public class GuideResponderAgent {
         var templateModel = new HashMap<String, Object>();
 
         templateModel.put("persona", persona);
-        var ragReference = new RagReference("docs",
+        var ragReference = new RagServiceReference("docs",
                 "Embabel docs",
                 guideProperties.ragOptions(dataManager.embabelContentRagServiceFor(context)),
                 context.ai().withLlmByRole("summarizer"));
 
-        var granularRagReference = new GranularRagReference(
+        var toolishRag = new ToolishRag(
                 "granular_docs",
                 "Embabel docs with granular retrieval",
                 drivineStore
@@ -130,7 +130,7 @@ public class GuideResponderAgent {
                 .withReferences(dataManager.referencesForUser(context.user()))
                 .withTools(CoreToolGroups.WEB)
 //                .withReference(ragReference)
-                .withReferences(granularRagReference)
+                .withReferences(toolishRag)
                 .withTemplate("guide_system")
                 .respondWithSystemPrompt(conversation, templateModel);
         conversation.addMessage(assistantMessage);
