@@ -12,7 +12,6 @@ import com.embabel.agent.core.AgentPlatform;
 import com.embabel.agent.core.CoreToolGroups;
 import com.embabel.agent.discord.DiscordUser;
 import com.embabel.agent.rag.neo.drivine.DrivineStore;
-import com.embabel.agent.rag.tools.RagServiceReference;
 import com.embabel.agent.rag.tools.ToolishRag;
 import com.embabel.chat.AssistantMessage;
 import com.embabel.chat.Chatbot;
@@ -112,14 +111,10 @@ public class GuideResponderAgent {
         var templateModel = new HashMap<String, Object>();
 
         templateModel.put("persona", persona);
-        var ragReference = new RagServiceReference("docs",
-                "Embabel docs",
-                guideProperties.ragOptions(dataManager.embabelContentRagServiceFor(context)),
-                context.ai().withLlmByRole("summarizer"));
 
         var toolishRag = new ToolishRag(
-                "granular_docs",
-                "Embabel docs with granular retrieval",
+                "docs",
+                "Embabel docs",
                 drivineStore
         );
 
