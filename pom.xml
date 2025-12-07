@@ -46,15 +46,8 @@
 
         <dependency>
             <groupId>com.embabel.agent</groupId>
-            <artifactId>embabel-agent-rag-pipeline</artifactId>
-            <version>${embabel-agent.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.embabel.agent</groupId>
             <artifactId>embabel-agent-rag-tika</artifactId>
             <version>${embabel-agent.version}</version>
-
         </dependency>
 
         <dependency>

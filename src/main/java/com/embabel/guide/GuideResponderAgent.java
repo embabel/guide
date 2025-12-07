@@ -49,11 +49,11 @@ public class GuideResponderAgent {
     private final GuideProperties guideProperties;
     private final DrivineStore drivineStore;
 
-
-    public GuideResponderAgent(DataManager dataManager,
-                               DrivineGuideUserRepository guideUserRepository,
-                               DrivineStore drivineStore,
-                               GuideProperties guideProperties) {
+    public GuideResponderAgent(
+            DataManager dataManager,
+            DrivineGuideUserRepository guideUserRepository,
+            DrivineStore drivineStore,
+            GuideProperties guideProperties) {
         this.dataManager = dataManager;
         this.guideUserRepository = guideUserRepository;
         this.guideProperties = guideProperties;
@@ -111,21 +111,17 @@ public class GuideResponderAgent {
         var templateModel = new HashMap<String, Object>();
 
         templateModel.put("persona", persona);
-
-        var toolishRag = new ToolishRag(
-                "docs",
-                "Embabel docs",
-                drivineStore
-        );
-
         var assistantMessage = context
                 .ai()
                 .withLlm(guideProperties.chatLlm())
                 .withId("chat_response")
                 .withReferences(dataManager.referencesForUser(context.user()))
                 .withTools(CoreToolGroups.WEB)
-//                .withReference(ragReference)
-                .withReferences(toolishRag)
+                .withReference(new ToolishRag(
+                        "docs",
+                        "Embabel docs",
+                        drivineStore
+                ))
                 .withTemplate("guide_system")
                 .respondWithSystemPrompt(conversation, templateModel);
         conversation.addMessage(assistantMessage);

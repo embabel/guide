@@ -4,6 +4,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Web endpoints for ingestion
+ */
 @RestController
 @RequestMapping("/api/v1/data")
 public class DataManagerController {
