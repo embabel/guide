@@ -52,4 +52,12 @@ Running the MCP inspector:
 npx @modelcontextprotocol/inspector
 ```
 
+## Miscellaneous
+
+To kill the server:
+
+```aiignore
+lsof -ti:1337 | xargs kill -9
+```
+
 

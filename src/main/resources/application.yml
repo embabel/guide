@@ -8,6 +8,13 @@ server:
 # Spring configuration
 # Force web application type (needed because Spring Shell is present)
 spring:
+
+  ai:
+    mcp:
+      server:
+        annotation-scanner:
+          enabled: true
+
   main:
     banner-mode: off
     web-application-type: servlet
