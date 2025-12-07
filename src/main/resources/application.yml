@@ -44,11 +44,6 @@ embabel:
         overlap-size: 200
 
 
-      compression-llm:
-        model: gpt-4.1-nano
-      reranking-llm:
-        model: gpt-4.1-nano
-
   discord:
     token: ${DISCORD_TOKEN}
 
@@ -66,12 +61,6 @@ guide:
     model: gpt-4.1-mini
   chat-llm:
     model: gpt-4.1-mini
-  hy-d-e:
-    word-count: 20
-    context: >
-      You provide answers about the Embabel JVM agent framework.
-      Embabel aims to enable developers to build strongly typed
-      applications exposing their domain models in Java or Kotlin.
 
   include-section-title-in-chunk: false
   max-chunk-size: 4000

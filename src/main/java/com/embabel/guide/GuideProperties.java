@@ -1,19 +1,15 @@
 package com.embabel.guide;
 
 import com.embabel.agent.rag.ingestion.ContentChunker;
-import com.embabel.agent.rag.service.*;
-import com.embabel.agent.rag.tools.RagOptions;
 import com.embabel.common.ai.model.LlmOptions;
 import jakarta.validation.constraints.*;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
-import org.springframework.lang.NonNull;
 import org.springframework.validation.annotation.Validated;
 
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Configuration properties for the Guide application.
@@ -21,10 +17,8 @@ import java.util.Set;
  * @param defaultPersona             name of the default persona to use
  * @param topK                       RAG top K results to retrieve
  * @param similarityThreshold        RAG similarity threshold
- * @param hyDE                       Hypothetical Document Embeddings configuration for RAG
  * @param codingLlm                  LLM options for coding tasks
  * @param chatLlm                    LLM options for chat
- * @param desiredMaxLatency          desired maximum latency for RAG operations. Not an absolute limit
  * @param projectsPath               path under user's home directory where projects are created
  * @param maxChunkSize               maximum size of content chunks for ingestion
  * @param overlapSize                overlap size between content chunks for ingestion
@@ -44,10 +38,8 @@ public record GuideProperties(
         @DecimalMin(value = "0.0", message = "similarityThreshold must be between 0.0 and 1.0")
         @DecimalMax(value = "1.0", message = "similarityThreshold must be between 0.0 and 1.0")
         double similarityThreshold,
-        HyDE hyDE,
         LlmOptions codingLlm,
         LlmOptions chatLlm,
-        DesiredMaxLatency desiredMaxLatency,
         @NotNull
         @NotBlank(message = "projectsPath must not be blank")
         String projectsPath,
@@ -99,18 +91,4 @@ public record GuideProperties(
     public String projectRootPath() {
         return Path.of(System.getProperty("user.home"), projectsPath).toString();
     }
-
-    @NonNull
-    public RagOptions ragOptions(RagService ragService) {
-        return new RagOptions(ragService)
-                .withSimilarityThreshold(similarityThreshold())
-                .withTopK(topK())
-                .withContentElementSearch(ContentElementSearch.CHUNKS_ONLY)
-                .withEntitySearch(new EntitySearch(Set.of(
-                        "Concept", "Example"
-                ), false))
-                .withHint(hyDE())
-                .withHint(desiredMaxLatency);
-    }
-
 }
