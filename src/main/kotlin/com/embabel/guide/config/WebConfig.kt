@@ -15,6 +15,8 @@ class WebConfig : WebMvcConfigurer {
             .allowedOrigins(
                 "http://localhost:3000",      // Next.js dev server
                 "http://localhost:3001",      // Alternative dev port
+                "http://localhost:5173",      // MCP Inspector (Vite)
+                "http://localhost:6274",      // MCP Inspector (npx)
                 "https://embabel.com",        // Production domain
                 "https://www.embabel.com",    // Production domain with www
                 "app://-"                     // Electron/Tauri app
@@ -30,6 +32,8 @@ class WebConfig : WebMvcConfigurer {
         configuration.allowedOrigins = listOf(
             "http://localhost:3000",      // Next.js dev server
             "http://localhost:3001",      // Alternative dev port
+            "http://localhost:5173",      // MCP Inspector (Vite)
+            "http://localhost:6274",      // MCP Inspector (npx)
             "https://embabel.com",        // Production domain
             "https://www.embabel.com",    // Production domain with www
             "app://-"                     // Electron/Tauri app

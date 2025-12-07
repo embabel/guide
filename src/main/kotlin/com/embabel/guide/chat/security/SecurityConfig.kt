@@ -15,15 +15,20 @@ class SecurityConfig(
     private val jwtAuthenticationFilter: JwtAuthenticationFilter
 ) {
 
-    val patterns = arrayOf(
+    val mcpPatterns = arrayOf(
+        "/sse",
+        "/mcp/message",
+    )
+
+    val permittedPatterns = arrayOf(
         "/ws/**",
         "/app/**",
         "/topic/**",
         "/user/**",
         "/",
         "/index.html",
-        "/static/**"
-    )
+        "/static/**",
+    ) + mcpPatterns
 
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
@@ -31,7 +36,7 @@ class SecurityConfig(
             .cors { }  // Enable CORS with default configuration from WebConfig
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
             .authorizeHttpRequests {
-                it.requestMatchers(*patterns).permitAll()
+                it.requestMatchers(*permittedPatterns).permitAll()
                 it.requestMatchers(
                     HttpMethod.POST,
                     "/api/messages/user",

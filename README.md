@@ -24,4 +24,32 @@
 curl -X POST http://localhost:1337/api/v1/data/load-references
 ```
 
+## Setting up with Claude Desktop
+
+Add this to `claude_desktop_config.json`:
+
+```yml
+{
+  "mcpServers": {
+
+    "embabel-dev": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "http://localhost:1337/sse",
+        "--transport",
+        "sse-only"
+      ]
+    },
+                  ...
+  }
+```
+
+Running the MCP inspector:
+
+```bash
+npx @modelcontextprotocol/inspector
+```
+
 

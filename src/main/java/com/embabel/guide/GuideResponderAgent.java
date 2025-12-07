@@ -28,6 +28,7 @@ import com.embabel.guide.domain.drivine.HasGuideUserData;
 import com.embabel.guide.rag.DataManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springaicommunity.mcp.annotation.McpTool;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.lang.Nullable;
@@ -152,5 +153,14 @@ class GuideAgentBotConfig {
     Chatbot chatbot(AgentPlatform agentPlatform) {
         return AgentProcessChatbot.utilityFromPlatform(
                 agentPlatform);
+    }
+}
+
+@Configuration
+class McpTools {
+
+    @McpTool
+    public String reverse(String thing) {
+        return new StringBuilder(thing).reverse().toString();
     }
 }
