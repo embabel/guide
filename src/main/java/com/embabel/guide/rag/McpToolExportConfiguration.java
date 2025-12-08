@@ -7,15 +7,22 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class RagMcpTools {
+public class McpToolExportConfiguration {
 
     @Bean
-    McpToolExport tools(DrivineStore drivineStore) {
+    McpToolExport documentationRagTools(DrivineStore drivineStore) {
         var toolishRag = new ToolishRag(
                 "docs",
                 "Embabel docs",
                 drivineStore
         );
         return McpToolExport.fromLlmReference(toolishRag);
+    }
+
+    @Bean
+    McpToolExport codeReferenceTools(DataManager dataManager) {
+        return McpToolExport.fromLlmReferences(
+                dataManager.referencesForAllUsers()
+        );
     }
 }

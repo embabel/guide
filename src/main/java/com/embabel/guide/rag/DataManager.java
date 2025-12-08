@@ -46,8 +46,14 @@ public class DataManager {
     }
 
     @NonNull
-    public List<LlmReference> referencesForUser(@Nullable User user) {
+    public List<LlmReference> referencesForAllUsers() {
         return Collections.unmodifiableList(references);
+    }
+
+    @NonNull
+    public List<LlmReference> referencesForUser(@Nullable User user) {
+        // Presently we have no user-specific references
+        return referencesForAllUsers();
     }
 
     public void provisionDatabase() {
