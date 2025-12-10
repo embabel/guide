@@ -1,12 +1,12 @@
 package com.embabel.guide.domain.drivine;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import org.drivine.annotation.NodeFragment;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Simple data representation of WebUser properties for Drivine composition.
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
+@NodeFragment(labels = {"WebUser"})
 public class WebUserData {
 
     private String id;

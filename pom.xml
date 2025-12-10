@@ -19,7 +19,8 @@
     <properties>
         <java.version>21</java.version>
         <embabel-agent.version>0.3.1-SNAPSHOT</embabel-agent.version>
-        <kotlin.version>2.0.20</kotlin.version>
+        <kotlin.version>2.2.0</kotlin.version>
+        <ksp.version>2.2.20-2.0.4</ksp.version>
     </properties>
 
     <dependencies>
@@ -35,6 +36,30 @@
             <groupId>com.embabel.agent</groupId>
             <artifactId>embabel-agent-rag-neo-drivine</artifactId>
             <version>0.1.1-SNAPSHOT</version>
+            <exclusions>
+                <!-- Exclude old Drivine version - using 0.0.3-SNAPSHOT instead -->
+                <exclusion>
+                    <groupId>org.drivine</groupId>
+                    <artifactId>drivine4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.drivine</groupId>
+                    <artifactId>drivine4j-spring-boot-starter</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- Drivine4j -->
+        <dependency>
+            <groupId>org.drivine</groupId>
+            <artifactId>drivine4j-spring-boot-starter</artifactId>
+            <version>0.0.3-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.drivine</groupId>
+            <artifactId>drivine4j</artifactId>
+            <version>0.0.3-SNAPSHOT</version>
         </dependency>
 
         <dependency>
@@ -171,6 +196,54 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+            <!-- TODO: TEMPORARY - Gradle KSP code generation via Maven -->
+            <!-- Remove this when kotlin-maven-symbol-processing supports Kotlin 2.2.0 -->
+            <!-- See codegen-gradle/README.md for details -->
+
+            <!-- Step 1: Run Gradle to generate KSP code -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>gradle-ksp-codegen</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>${project.basedir}/codegen-gradle/gradlew</executable>
+                            <workingDirectory>${project.basedir}/codegen-gradle</workingDirectory>
+                            <arguments>
+                                <argument>kspKotlin</argument>
+                                <argument>--quiet</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Step 2: Include Gradle-generated sources in Maven build -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>add-ksp-generated-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.basedir}/codegen-gradle/build/generated/ksp/main/kotlin</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-maven-plugin</artifactId>
@@ -207,6 +280,8 @@
                     <args>
                         <arg>-Xjsr305=strict</arg>
                         <arg>-Xskip-metadata-version-check</arg>
+                        <!-- Required for Drivine DSL with context parameters -->
+                        <arg>-Xcontext-parameters</arg>
                     </args>
                     <compilerPlugins>
                         <plugin>spring</plugin>
@@ -269,6 +344,17 @@
                 <enabled>true</enabled>
             </snapshots>
         </repository>
+        <repository>
+            <id>google</id>
+            <url>https://maven.google.com/</url>
+        </repository>
     </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>google</id>
+            <url>https://maven.google.com/</url>
+        </pluginRepository>
+    </pluginRepositories>
 
 </project>

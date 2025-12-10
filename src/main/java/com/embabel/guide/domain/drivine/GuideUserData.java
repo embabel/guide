@@ -1,6 +1,6 @@
 package com.embabel.guide.domain.drivine;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import org.drivine.annotation.NodeFragment;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -8,7 +8,7 @@ import org.jetbrains.annotations.Nullable;
  * Simple data representation of GuideUser properties for Drivine composition.
  * Maps directly to node properties without OGM relationships.
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
+@NodeFragment(labels = {"GuideUser"})
 public class GuideUserData implements HasGuideUserData {
 
     private String id;

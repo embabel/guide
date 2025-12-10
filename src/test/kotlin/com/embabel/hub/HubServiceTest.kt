@@ -1,6 +1,5 @@
 package com.embabel.hub
 
-import com.embabel.guide.Neo4jPropertiesInitializer
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.springframework.ai.mcp.client.common.autoconfigure.McpClientAutoConfiguration
@@ -8,10 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
-import org.springframework.test.context.ContextConfiguration
 
 @SpringBootTest
-@ContextConfiguration(initializers = [Neo4jPropertiesInitializer::class])
 @ImportAutoConfiguration(exclude = [McpClientAutoConfiguration::class])
 class HubServiceTest {
 

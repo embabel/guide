@@ -11,7 +11,6 @@ import org.jetbrains.annotations.Nullable;
  * Following Drivine's composition philosophy rather than ORM relationships.
  * Implements User interface by delegating to the WebUser data.
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class GuideUserWithWebUser implements HasGuideUserData, HasWebUserData, User {
 
     @JsonProperty

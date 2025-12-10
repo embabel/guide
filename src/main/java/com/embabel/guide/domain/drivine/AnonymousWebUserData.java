@@ -1,13 +1,14 @@
 package com.embabel.guide.domain.drivine;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import org.drivine.annotation.NodeFragment;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Data representation for anonymous web users.
  * Extends WebUserData to add the Anonymous label distinction.
+ * Has both WebUser and Anonymous labels in Neo4j.
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
+@NodeFragment(labels = {"WebUser", "Anonymous"})
 public class AnonymousWebUserData extends WebUserData {
 
     // No-arg constructor for Jackson

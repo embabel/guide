@@ -2,7 +2,6 @@ package com.embabel.guide.domain.drivine;
 
 import org.drivine.manager.PersistenceManager;
 import org.drivine.query.QuerySpecification;
-import org.drivine.utils.ObjectUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
@@ -140,10 +139,8 @@ public class DrivineGuideUserRepository {
         return manager.getOne(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(Map.of(
-                    "guideUserProps", ObjectUtils.primitiveProps(guideUserData),
-                    "discordProps", ObjectUtils.primitiveProps(discordUserInfo)
-                ))
+                .bindObject("guideUserProps", guideUserData)
+                .bindObject("discordProps", discordUserInfo)
                 .transform(GuideUserWithDiscordUserInfo.class)
         );
     }
@@ -174,10 +171,8 @@ public class DrivineGuideUserRepository {
         return manager.getOne(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(Map.of(
-                    "guideUserProps", ObjectUtils.primitiveProps(guideUserData),
-                    "webUserProps", ObjectUtils.primitiveProps(webUserData)
-                ))
+                .bindObject("guideUserProps", guideUserData)
+                .bindObject("webUserProps", webUserData)
                 .transform(GuideUserWithWebUser.class)
         );
     }
@@ -261,14 +256,11 @@ public class DrivineGuideUserRepository {
             SET u += props
             """;
 
-        Map<String, Object> props = ObjectUtils.primitiveProps(guideUser);
-
         manager.execute(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(Map.of(
-                    "propsid", props
-                ))
+                .bindObject("props", guideUser)
+                .bind(Map.of("id", guideUser.getId()))
         );
 
         // Return the updated user

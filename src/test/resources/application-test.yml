@@ -1,9 +1,23 @@
 # Test configuration
 #
 # To toggle between local Neo4j and TestContainers:
-# Edit Neo4jTestContainer.USE_LOCAL_NEO4J constant in Neo4jTestContainer.kt
+# Set environment variable: USE_LOCAL_NEO4J=true for local, unset or false for TestContainers
 # - true: Use local Neo4j (faster, requires Neo4j running on localhost:7687)
-# - false: Use TestContainers (slower startup, but fully isolated)
+# - false: Use TestContainers (slower startup, but fully isolated) - DEFAULT
+
+# Drivine datasource configuration
+# This is used by @EnableDrivineTestConfig
+# - In local mode (USE_LOCAL_NEO4J=true): Uses these settings as-is
+# - In CI mode (default): Testcontainer overrides host/port/password automatically
+database:
+  datasources:
+    neo:
+      host: localhost
+      port: 7687
+      username: neo4j
+      password: brahmsian
+      type: NEO4J
+      database-name: neo4j
 
 # Logging configuration for tests
 logging:
