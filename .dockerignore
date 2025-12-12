@@ -1,0 +1,13 @@
+# Don't exclude target/ - we need the pre-built JAR
+.git/
+.gitignore
+*.md
+.mvn/
+mvnw
+mvnw.cmd
+.DS_Store
+*.iml
+.idea/
+.vscode/
+src/
+pom.xml

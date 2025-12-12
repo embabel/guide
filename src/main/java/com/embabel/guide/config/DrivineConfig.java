@@ -19,16 +19,16 @@ import org.springframework.context.annotation.Profile;
 @ComponentScan("org.drivine")
 public class DrivineConfig {
 
-    @Value("${spring.neo4j.uri:bolt://localhost:7687}")
+    @Value("${NEO4J_URI:bolt://localhost:7687}")
     private String neo4jUri;
 
-    @Value("${spring.neo4j.authentication.username:neo4j}")
+    @Value("${NEO4J_USERNAME:neo4j}")
     private String username;
 
-    @Value("${spring.neo4j.authentication.password:brahmsian}")
+    @Value("${NEO4J_PASSWORD:brahmsian}")
     private String password;
 
-    @Value("${spring.data.neo4j.database:neo4j}")
+    @Value("${NEO4J_DATABASE:neo4j}")
     private String database;
 
     @Bean
