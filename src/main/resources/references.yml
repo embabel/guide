@@ -17,7 +17,12 @@
   description: >
     Embabel agent framework implementation repo
     Look to check code under embabel-agent-api
-    This is for questions related to framework internals, not usage examples
+    For questions related to framework internals, not usage examples
+
+- fqn: com.embabel.coding.tools.git.GitHubRepository
+  url: https://github.com/embabel/rag-demo.git
+  description: >
+    Example of a RAG chatbot. Use for RAG and chat reference
 
 - fqn: com.embabel.coding.tools.git.GitHubRepository
   url: https://github.com/embabel/shepherd.git
