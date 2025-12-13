@@ -69,9 +69,11 @@ guide:
   chat-llm:
     model: gpt-4.1-mini
 
-  include-section-title-in-chunk: false
-  max-chunk-size: 4000
-  overlap-size: 200
+  content-chunker:
+    include-section-title-in-chunk: false
+    max-chunk-size: 4000
+    overlap-size: 200
+
   urls:
     - https://docs.embabel.com/embabel-agent/guide/0.3.0/
     - https://medium.com/@springrod/build-better-agents-in-java-vs-python-embabel-vs-langgraph-f7951a0d855c

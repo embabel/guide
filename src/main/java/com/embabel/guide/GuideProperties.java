@@ -2,9 +2,13 @@ package com.embabel.guide;
 
 import com.embabel.agent.rag.ingestion.ContentChunker;
 import com.embabel.common.ai.model.LlmOptions;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
@@ -14,17 +18,15 @@ import java.util.List;
 /**
  * Configuration properties for the Guide application.
  *
- * @param defaultPersona             name of the default persona to use
- * @param topK                       RAG top K results to retrieve
- * @param similarityThreshold        RAG similarity threshold
- * @param codingLlm                  LLM options for coding tasks
- * @param chatLlm                    LLM options for chat
- * @param projectsPath               path under user's home directory where projects are created
- * @param maxChunkSize               maximum size of content chunks for ingestion
- * @param overlapSize                overlap size between content chunks for ingestion
- * @param includeSectionTitleInChunk whether to include section titles in content chunks for ingestion
- * @param referencesFile             YML files containing LLM references such as GitHub repositories and classpath info
- * @param urls                       list of URLs to ingest--for example, documentation and blogs
+ * @param defaultPersona      name of the default persona to use
+ * @param topK                RAG top K results to retrieve
+ * @param similarityThreshold RAG similarity threshold
+ * @param codingLlm           LLM options for coding tasks
+ * @param chatLlm             LLM options for chat
+ * @param projectsPath        path under user's home directory where projects are created
+ * @param chunkerConfig       chunker configuration for RAG ingestion
+ * @param referencesFile      YML files containing LLM references such as GitHub repositories and classpath info
+ * @param urls                list of URLs to ingest--for example, documentation and blogs
  */
 @Validated
 @ConfigurationProperties(prefix = "guide")
@@ -43,45 +45,12 @@ public record GuideProperties(
         @NotNull
         @NotBlank(message = "projectsPath must not be blank")
         String projectsPath,
-        @DefaultValue("8000")
-        @Positive(message = "maxChunkSize must be greater than 0")
-        int maxChunkSize,
-        @DefaultValue("200")
-        @PositiveOrZero(message = "overlapSize must be non-negative")
-        int overlapSize,
-        @DefaultValue("false")
-        boolean includeSectionTitleInChunk,
+        @NestedConfigurationProperty ContentChunker.DefaultConfig chunkerConfig,
         @DefaultValue("references.yml")
         @NotBlank(message = "referencesFile must not be blank")
         String referencesFile,
         List<String> urls
-) implements ContentChunker.Config {
-
-    /**
-     * Compact constructor for additional validation
-     */
-    public GuideProperties {
-        if (maxChunkSize <= overlapSize) {
-            throw new IllegalArgumentException(
-                    "maxChunkSize (" + maxChunkSize + ") must be greater than overlapSize (" + overlapSize + ")"
-            );
-        }
-    }
-
-    @Override
-    public int getMaxChunkSize() {
-        return maxChunkSize;
-    }
-
-    @Override
-    public int getOverlapSize() {
-        return overlapSize;
-    }
-
-    @Override
-    public boolean getIncludeSectionTitleInChunk() {
-        return includeSectionTitleInChunk;
-    }
+) {
 
     /**
      * Returns the root path for projects, combining the user's home directory with the specified projects path.
