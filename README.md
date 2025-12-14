@@ -90,6 +90,16 @@ Start via `claude --debug` to see more logging.
 
 See [Claude Code MCP documentation](https://code.claude.com/docs/en/mcp) for further information.
 
+#### Auto-Approving Embabel MCP Tools
+
+By default, Claude Code asks for confirmation before running MCP tools. When you accept a tool with "Yes, don't ask again", Claude Code saves that permission to your local `.claude/settings.local.json` file (which is auto-ignored by git).
+
+**Note:** Wildcards do not work for MCP tool permissions. Each tool must be approved individually or listed explicitly in your settings.
+
+**Tool naming:** By default, `guide.toolPrefix` is empty, so MCP tools are exposed with their original names (e.g., `mcp__embabel__docs_vectorSearch`). You can set a custom prefix in your application configuration to namespace your tools.
+
+See [Claude Code Permission Modes](https://code.claude.com/docs/en/iam#permission-modes) for detailed documentation on how permissions work.
+
 ## Miscellaneous
 
 Sometimes (for example if your IDE crashes) you will be left with an orphaned server process and won't be able to

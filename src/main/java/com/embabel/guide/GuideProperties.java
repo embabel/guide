@@ -2,6 +2,7 @@ package com.embabel.guide;
 
 import com.embabel.agent.rag.ingestion.ContentChunker;
 import com.embabel.common.ai.model.LlmOptions;
+import com.embabel.common.util.StringTransformer;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
@@ -49,8 +50,14 @@ public record GuideProperties(
         @DefaultValue("references.yml")
         @NotBlank(message = "referencesFile must not be blank")
         String referencesFile,
-        List<String> urls
+        List<String> urls,
+        @DefaultValue("")
+        String toolPrefix
 ) {
+
+    public StringTransformer toolNamingStrategy() {
+        return name -> toolPrefix + name;
+    }
 
     /**
      * Returns the root path for projects, combining the user's home directory with the specified projects path.

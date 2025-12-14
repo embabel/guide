@@ -8,7 +8,8 @@ embabel-agent-api/src/main/resources/mcp/**
 */*/target/**
 */*/*/target/**
 
-.claude
+# Claude Code - ignore local settings but keep shared settings
+.claude/settings.local.json
 
 # IDEs
 .idea/**
