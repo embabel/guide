@@ -33,17 +33,37 @@ This is exposed in two ways:
 curl -X POST http://localhost:1337/api/v1/data/load-references
 ```
 
+## Viewing and Deleting Data
+
+Go to the Neo Browser at http://localhost:7474/browser/
+
+Log in with username `neo4j` and password `brahmsian` (or your custom password if you set one).
+
+To delete all data run the following query:
+
+```cypher
+
+MATCH (n:ContentElement)
+DETACH DELETE n
+```
+
 ## Exposing MCP Tools
 
-Starting the server will expose MCP tools on `http://localhost:1337/sse`.
+Starting the server will expose MCP tools ON `http://localhost:1337/sse`.
 
-### Verifying With MCP Inspector (Optional)
+### Verifying
+
+WITH MCP
+Inspector (OPTIONAL)
 
 An easy way to verify the tools
-are exposed and experiment with calling them is by running the MCP inspector:
+are exposed AND experiment
+
+WITH calling
+them IS BY running the MCP inspector:
 
 ```bash
-npx @modelcontextprotocol/inspector
+npx @modelcontextprotocol / inspector
 ```
 
 Within the inspector UI, connect to `http://localhost:1337/sse`.
@@ -92,13 +112,19 @@ See [Claude Code MCP documentation](https://code.claude.com/docs/en/mcp) for fur
 
 #### Auto-Approving Embabel MCP Tools
 
-By default, Claude Code asks for confirmation before running MCP tools. When you accept a tool with "Yes, don't ask again", Claude Code saves that permission to your local `.claude/settings.local.json` file (which is auto-ignored by git).
+By default, Claude Code asks for confirmation before running MCP tools. When you accept a tool with "Yes, don't ask
+again", Claude Code saves that permission to your local `.claude/settings.local.json` file (which is auto-ignored by
+git).
 
-**Note:** Wildcards do not work for MCP tool permissions. Each tool must be approved individually or listed explicitly in your settings.
+**Note:** Wildcards do not work for MCP tool permissions. Each tool must be approved individually or listed explicitly
+in your settings.
 
-**Tool naming:** By default, `guide.toolPrefix` is empty, so MCP tools are exposed with their original names (e.g., `mcp__embabel__docs_vectorSearch`). You can set a custom prefix in your application configuration to namespace your tools.
+**Tool naming:** By default, `guide.toolPrefix` is empty, so MCP tools are exposed with their original names (e.g.,
+`mcp__embabel__docs_vectorSearch`). You can set a custom prefix in your application configuration to namespace your
+tools.
 
-See [Claude Code Permission Modes](https://code.claude.com/docs/en/iam#permission-modes) for detailed documentation on how permissions work.
+See [Claude Code Permission Modes](https://code.claude.com/docs/en/iam#permission-modes) for detailed documentation on
+how permissions work.
 
 ## Docker
 
@@ -110,13 +136,13 @@ docker compose up
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `NEO4J_VERSION` | `2025.10.1-community-bullseye` | Neo4j Docker image tag |
-| `NEO4J_USERNAME` | `neo4j` | Neo4j username |
-| `NEO4J_PASSWORD` | `brahmsian` | Neo4j password |
-| `OPENAI_API_KEY` | (required) | OpenAI API key |
-| `DISCORD_TOKEN` | (optional) | Discord bot token |
+| Variable         | Default                        | Description            |
+|------------------|--------------------------------|------------------------|
+| `NEO4J_VERSION`  | `2025.10.1-community-bullseye` | Neo4j Docker image tag |
+| `NEO4J_USERNAME` | `neo4j`                        | Neo4j username         |
+| `NEO4J_PASSWORD` | `brahmsian`                    | Neo4j password         |
+| `OPENAI_API_KEY` | (required)                     | OpenAI API key         |
+| `DISCORD_TOKEN`  | (optional)                     | Discord bot token      |
 
 Example:
 

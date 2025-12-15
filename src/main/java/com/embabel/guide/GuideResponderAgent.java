@@ -9,6 +9,7 @@ import com.embabel.agent.core.CoreToolGroups;
 import com.embabel.agent.discord.DiscordUser;
 import com.embabel.agent.rag.neo.drivine.DrivineStore;
 import com.embabel.agent.rag.tools.ToolishRag;
+import com.embabel.agent.rag.tools.TryHyDE;
 import com.embabel.chat.Chatbot;
 import com.embabel.chat.Conversation;
 import com.embabel.chat.UserMessage;
@@ -100,10 +101,11 @@ public class GuideResponderAgent {
                 .withReferences(dataManager.referencesForUser(context.user()))
                 .withTools(CoreToolGroups.WEB)
                 .withReference(new ToolishRag(
-                        "docs",
-                        "Embabel docs",
-                        drivineStore
-                ))
+                                "docs",
+                                "Embabel docs",
+                                drivineStore
+                        ).withHint(TryHyDE.usingConversationContext())
+                )
                 .withTemplate("guide_system")
                 .respondWithSystemPrompt(conversation, templateModel);
         conversation.addMessage(assistantMessage);
