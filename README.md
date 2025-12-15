@@ -10,13 +10,9 @@
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 ![IntelliJ IDEA](https://img.shields.io/badge/IntelliJIDEA-000000.svg?style=for-the-badge&logo=intellij-idea&logoColor=white)
 
-<img align="left" src="https://github.com/embabel/embabel-agent/blob/main/embabel-agent-api/images/315px-Meister_der_Weltenchronik_001.jpg?raw=true" width="180">
-
-&nbsp;&nbsp;&nbsp;&nbsp;
-
-&nbsp;&nbsp;&nbsp;&nbsp;
-
 # Embabel Hub Backend: Chat and MCP Server
+
+<img src="https://github.com/embabel/embabel-agent/blob/main/embabel-agent-api/images/315px-Meister_der_Weltenchronik_001.jpg?raw=true" width="180">
 
 Embabel Hub exposes resources relating to the Embabel Agent Framework, such
 as documentation, relevant blogs and other content, and up-to-the-minute API information.
@@ -49,21 +45,14 @@ DETACH DELETE n
 
 ## Exposing MCP Tools
 
-Starting the server will expose MCP tools ON `http://localhost:1337/sse`.
+Starting the server will expose MCP tools on `http://localhost:1337/sse`.
 
-### Verifying
+### Verifying With MCP Inspector (Optional)
 
-WITH MCP
-Inspector (OPTIONAL)
-
-An easy way to verify the tools
-are exposed AND experiment
-
-WITH calling
-them IS BY running the MCP inspector:
+An easy way to verify the tools are exposed and experiment with calling them is by running the MCP inspector:
 
 ```bash
-npx @modelcontextprotocol / inspector
+npx @modelcontextprotocol/inspector
 ```
 
 Within the inspector UI, connect to `http://localhost:1337/sse`.
@@ -125,6 +114,122 @@ tools.
 
 See [Claude Code Permission Modes](https://code.claude.com/docs/en/iam#permission-modes) for detailed documentation on
 how permissions work.
+
+## Writing a Client
+
+The backend supports any client via WebSocket (for real-time chat) and REST (for authentication).
+
+### WebSocket Chat API
+
+**Endpoint:** `ws://localhost:1337/ws`
+
+Uses STOMP protocol over WebSocket with SockJS fallback. Any STOMP client library works (e.g., `@stomp/stompjs` for JavaScript, `stomp.py` for Python).
+
+**Authentication:** Pass an optional JWT token as a query parameter:
+```
+ws://localhost:1337/ws?token=<JWT>
+```
+If no token is provided, an anonymous user is created automatically.
+
+#### STOMP Channels
+
+| Direction | Destination | Purpose |
+|-----------|-------------|---------|
+| Subscribe | `/user/queue/messages` | Receive chat responses |
+| Subscribe | `/user/queue/status` | Receive typing/status updates |
+| Publish | `/app/chat.sendToJesse` | Send message to AI bot |
+| Publish | `/app/presence.ping` | Keep-alive (send every 30s) |
+
+#### Message Formats
+
+**Sending a message:**
+```json
+{ "body": "your message here" }
+```
+
+**Receiving a message:**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "content": "response text",
+  "userId": "bot:jesse",
+  "userName": "Jesse",
+  "timestamp": "2025-12-16T10:30:00Z"
+}
+```
+
+**Receiving a status update:**
+```json
+{
+  "fromUserId": "bot:jesse",
+  "status": "typing"
+}
+```
+
+### REST API
+
+CORS is open (`*`), no special headers required beyond `Content-Type: application/json`.
+
+#### Authentication Endpoints
+
+**Register:**
+```
+POST /api/hub/register
+{
+  "userDisplayName": "Jane Doe",
+  "username": "jane",
+  "userEmail": "jane@example.com",
+  "password": "secret",
+  "passwordConfirmation": "secret"
+}
+```
+
+**Login:**
+```
+POST /api/hub/login
+{ "username": "jane", "password": "secret" }
+
+Response:
+{ "token": "eyJhbG...", "userId": "...", "username": "jane", ... }
+```
+
+**List Personas:**
+```
+GET /api/hub/personas
+```
+
+**Update Persona** (requires auth):
+```
+PUT /api/hub/persona/mine
+Authorization: Bearer <JWT>
+{ "persona": "persona_name" }
+```
+
+### Example: Minimal JavaScript Client
+
+```javascript
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
+
+const client = new Client({
+  webSocketFactory: () => new SockJS('http://localhost:1337/ws'),
+  onConnect: () => {
+    // Subscribe to responses
+    client.subscribe('/user/queue/messages', (frame) => {
+      const message = JSON.parse(frame.body);
+      console.log('Received:', message.content);
+    });
+
+    // Send a message
+    client.publish({
+      destination: '/app/chat.sendToJesse',
+      body: JSON.stringify({ body: 'Hello!' })
+    });
+  }
+});
+
+client.activate();
+```
 
 ## Docker
 
