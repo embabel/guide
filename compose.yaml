@@ -1,6 +1,6 @@
 services:
   neo4j:
-    image: neo4j:5.26-community
+    image: neo4j:${NEO4J_VERSION:-2025.10.1-community-bullseye}
     container_name: embabel-neo4j
     ports:
       - "7474:7474"  # HTTP
@@ -18,7 +18,7 @@ services:
       - neo4j_import:/var/lib/neo4j/import
       - neo4j_plugins:/plugins
     healthcheck:
-      test: ["CMD-SHELL", "cypher-shell -u neo4j -p brahmsian 'RETURN 1' || exit 1"]
+      test: ["CMD-SHELL", "cypher-shell -u ${NEO4J_USERNAME:-neo4j} -p ${NEO4J_PASSWORD:-brahmsian} 'RETURN 1' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,7 +26,7 @@ services:
       - embabel-network
 
   neo4j-init:
-    image: neo4j:5.26-community
+    image: neo4j:${NEO4J_VERSION:-2025.10.1-community-bullseye}
     container_name: embabel-neo4j-init
     depends_on:
       neo4j:

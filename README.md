@@ -100,6 +100,30 @@ By default, Claude Code asks for confirmation before running MCP tools. When you
 
 See [Claude Code Permission Modes](https://code.claude.com/docs/en/iam#permission-modes) for detailed documentation on how permissions work.
 
+## Docker
+
+Run with Docker Compose:
+
+```bash
+docker compose up
+```
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NEO4J_VERSION` | `2025.10.1-community-bullseye` | Neo4j Docker image tag |
+| `NEO4J_USERNAME` | `neo4j` | Neo4j username |
+| `NEO4J_PASSWORD` | `brahmsian` | Neo4j password |
+| `OPENAI_API_KEY` | (required) | OpenAI API key |
+| `DISCORD_TOKEN` | (optional) | Discord bot token |
+
+Example:
+
+```bash
+NEO4J_PASSWORD=mysecretpassword OPENAI_API_KEY=sk-... docker compose up
+```
+
 ## Miscellaneous
 
 Sometimes (for example if your IDE crashes) you will be left with an orphaned server process and won't be able to
