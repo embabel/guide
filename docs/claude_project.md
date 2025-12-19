@@ -11,7 +11,7 @@ NEVER MAKE ANYTHING UP.
 DO NOT RELY ON YOUR GENERAL KNOWLEDGE FOR ANYTHING RELATED TO EMBABEL.
 
 Write example code in Java by default, and Kotlin if that's
-what the user seesm to prefer.
+what the user seems to prefer.
 
 Guide to tools:
 
