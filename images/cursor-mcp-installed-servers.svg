@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="260" viewBox="0 0 1100 260">
+  <defs>
+    <style>
+      .bg { fill: #0f1115; }
+      .panel { fill: #141823; stroke: #2a2f3a; stroke-width: 1; }
+      .text { fill: #e6e6e6; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial; }
+      .muted { fill: #a8b0bf; }
+      .title { font-size: 22px; font-weight: 650; }
+      .label { font-size: 18px; font-weight: 600; }
+      .small { font-size: 16px; }
+      .pill { fill: #1b2230; stroke: #2a2f3a; stroke-width: 1; }
+      .toggleTrack { fill: #1d6f42; }
+      .toggleKnob { fill: #e6fff2; }
+    </style>
+  </defs>
+
+  <!-- background -->
+  <rect class="bg" x="0" y="0" width="1100" height="260" rx="16" />
+
+  <!-- panel -->
+  <rect class="panel" x="40" y="40" width="1020" height="180" rx="14" />
+
+  <!-- title -->
+  <text class="text title" x="70" y="82">Installed MCP Servers</text>
+
+  <!-- server row -->
+  <rect class="pill" x="70" y="105" width="960" height="78" rx="12" />
+
+  <!-- icon -->
+  <circle cx="108" cy="144" r="18" fill="#22283a" stroke="#2a2f3a" stroke-width="1"/>
+  <text class="text label" x="102" y="150">E</text>
+
+  <!-- server name -->
+  <text class="text label" x="155" y="140">embabel-dev</text>
+  <text class="text muted small" x="155" y="165">38 tools enabled</text>
+
+  <!-- toggle -->
+  <rect class="toggleTrack" x="950" y="126" width="64" height="30" rx="15" />
+  <circle class="toggleKnob" cx="1000" cy="141" r="12" />
+</svg>
+

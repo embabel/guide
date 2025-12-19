@@ -1,13 +1,13 @@
-# Don't exclude target/ - we need the pre-built JAR
 .git/
 .gitignore
-*.md
-.mvn/
-mvnw
-mvnw.cmd
 .DS_Store
-*.iml
 .idea/
 .vscode/
-src/
-pom.xml
+*.iml
+
+# Keep build context lean
+target/
+
+# Docs/images aren't needed to build the backend image
+*.md
+images/

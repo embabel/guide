@@ -35,3 +35,6 @@ embabel-agent-api/src/main/resources/mcp/**
 *.bak
 *.swp
 *~
+
+# Runtime artifacts
+*.pid

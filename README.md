@@ -103,6 +103,48 @@ Start via `claude --debug` to see more logging.
 
 See [Claude Code MCP documentation](https://code.claude.com/docs/en/mcp) for further information.
 
+### Consuming MCP Tools With Cursor
+
+#### 1) Ensure the MCP server is running
+
+Before troubleshooting Cursor, confirm the server is up and returning SSE headers:
+
+```bash
+curl -i --max-time 3 http://localhost:1337/sse
+```
+
+If you're running the server on a different port (for example `1338`), update the URL accordingly.
+
+#### 2) Configure Cursor MCP
+
+Cursor MCP config (Linux):
+
+- `~/.cursor/mcp.json`
+
+Example (recommended: use `mcp-remote` as a stdio bridge for SSE):
+
+```json
+{
+  "mcpServers": {
+    "embabel-dev": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://localhost:1337/sse", "--transport", "sse-only"]
+    }
+  }
+}
+```
+
+#### 3) Reload Cursor to reconnect
+
+If you start the server after Cursor is already running, or if the server was temporarily down, Cursor may not
+automatically respawn the MCP process. In Cursor:
+
+- **Command Palette** → **Developer: Reload Window**
+
+You should then see the MCP server listed with tools enabled:
+
+![Cursor Installed MCP Servers](images/cursor-mcp-installed-servers.svg)
+
 #### Auto-Approving Embabel MCP Tools
 
 By default, Claude Code asks for confirmation before running MCP tools. When you accept a tool with "Yes, don't ask
@@ -249,16 +291,79 @@ client.activate();
 
 ## Docker
 
-Run with Docker Compose:
+### Start (Docker Compose)
+
+This will start `neo4j` + `guide`.
 
 ```bash
-docker compose up
+docker compose up --build -d
+```
+
+#### Port conflicts
+
+If port `1337` is already in use (for example, the `chatbot` app is running), override the exposed port:
+
+```bash
+GUIDE_PORT=1338 docker compose up --build -d
+```
+
+This maps container port `1337` → host port `1338`, so MCP SSE becomes:
+
+- `http://localhost:1338/sse`
+
+#### Compose config overrides
+
+Docker Compose supports environment variable overrides. You can set them inline (shown below) or put them in a local
+`.env` file next to `compose.yaml` (Docker Compose auto-loads it).
+
+- **`GUIDE_PORT`**: override host port mapping (default `1337`)
+- **`OPENAI_API_KEY`**: required for LLM calls
+- **`NEO4J_VERSION` / `NEO4J_USERNAME` / `NEO4J_PASSWORD`**: Neo4j settings (optional)
+- **`DISCORD_TOKEN`**: optional, to enable the Discord bot
+
+#### OpenAI API key
+
+The `guide` container needs `OPENAI_API_KEY`. You can:
+
+1. **Create a `.env` file** next to `compose.yaml`:
+
+```bash
+OPENAI_API_KEY=sk-your-key-here
+```
+
+2. **Or pass it inline**:
+
+```bash
+OPENAI_API_KEY=sk-... docker compose up --build -d
+```
+
+#### Verify MCP
+
+```bash
+PORT=${GUIDE_PORT:-1337}
+curl -i --max-time 3 "http://localhost:${PORT}/sse"
+```
+
+You should see `Content-Type: text/event-stream` and an `event:endpoint` line.
+
+#### Optional: run the frontend
+
+The `frontend` service is behind a Compose profile (it requires the `../embabel-hub` repo checkout):
+
+```bash
+COMPOSE_PROFILES=frontend docker compose up --build -d
+```
+
+#### Stop
+
+```bash
+docker compose down --remove-orphans
 ```
 
 ### Environment Variables
 
 | Variable         | Default                        | Description            |
-|------------------|--------------------------------|------------------------|
+| ---------------- | ------------------------------ | ---------------------- |
 | `NEO4J_VERSION`  | `2025.10.1-community-bullseye` | Neo4j Docker image tag |
 | `NEO4J_USERNAME` | `neo4j`                        | Neo4j username         |
 | `NEO4J_PASSWORD` | `brahmsian`                    | Neo4j password         |
@@ -268,8 +373,71 @@ docker compose up
 Example:
 
 ```bash
-NEO4J_PASSWORD=mysecretpassword OPENAI_API_KEY=sk-... docker compose up
+NEO4J_PASSWORD=mysecretpassword OPENAI_API_KEY=sk-... GUIDE_PORT=1338 docker compose up --build -d
 ```
+
+## Testing
+
+### Prerequisites
+
+Tests require the following:
+
+1. **OpenAI API Key**: Set `OPENAI_API_KEY` in your environment before running tests:
+
+```bash
+export OPENAI_API_KEY=sk-your-key-here
+```
+
+2. **Neo4j**: See the [Local vs CI Testing](#local-vs-ci-testing) section below.
+
+### Local vs CI Testing
+
+The test suite uses Neo4j, which can be provided in two ways:
+
+| Mode                  | `USE_LOCAL_NEO4J` | How Neo4j is provided                       | Best for                           |
+| --------------------- | ----------------- | ------------------------------------------- | ---------------------------------- |
+| **CI (default)**      | unset/`false`     | Testcontainers spins up Neo4j automatically | GitHub Actions, fresh environments |
+| **Local development** | `true`            | You run Neo4j via Docker Compose            | Faster iteration                   |
+
+#### For Local Development
+
+For faster test runs during development, use a local Neo4j instance:
+
+1. **Start Neo4j**:
+
+```bash
+docker compose up neo4j -d
+```
+
+2. **Run tests with `USE_LOCAL_NEO4J=true`**:
+
+```bash
+export OPENAI_API_KEY=sk-your-key-here
+USE_LOCAL_NEO4J=true ./mvnw test
+```
+
+Or add to your shell profile for persistence:
+
+```bash
+export USE_LOCAL_NEO4J=true
+```
+
+#### For CI
+
+Leave `USE_LOCAL_NEO4J` unset (the default). GitHub Actions uses Testcontainers to automatically spin up Neo4j.
+
+### Running Tests
+
+```bash
+./mvnw test
+```
+
+All 38 tests should pass, including:
+
+- Hub API controller tests
+- User service tests
+- Neo4j repository tests
+- **MCP Security regression tests** (verifies `/sse` and `/mcp` endpoints are not blocked by Spring Security)
 
 ## Miscellaneous
 
@@ -280,5 +448,3 @@ To kill the server:
 ```aiignore
 lsof -ti:1337 | xargs kill -9
 ```
-
-

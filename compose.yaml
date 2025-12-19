@@ -26,6 +26,8 @@ services:
       - embabel-network
 
   neo4j-init:
+    profiles:
+      - init
     image: neo4j:${NEO4J_VERSION:-2025.10.1-community-bullseye}
     container_name: embabel-neo4j-init
     depends_on:
@@ -44,7 +46,7 @@ services:
       dockerfile: Dockerfile
     container_name: embabel-guide
     ports:
-      - "1337:1337"
+      - "${GUIDE_PORT:-1337}:1337"
     environment:
       - NEO4J_URI=bolt://neo4j:7687
       - NEO4J_HOST=neo4j
@@ -62,6 +64,8 @@ services:
     restart: unless-stopped
 
   frontend:
+    profiles:
+      - frontend
     build:
       context: ../embabel-hub
       dockerfile: Dockerfile

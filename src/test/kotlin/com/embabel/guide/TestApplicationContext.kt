@@ -46,12 +46,12 @@ class Neo4jPropertiesInitializer : ApplicationContextInitializer<ConfigurableApp
     }
 
     override fun initialize(applicationContext: ConfigurableApplicationContext) {
-        // Check Neo4jTestContainer.USE_LOCAL_NEO4J constant to determine whether to use local Neo4j
-        val useLocalNeo4j = Neo4jTestContainer.USE_LOCAL_NEO4J
+        // Check USE_LOCAL_NEO4J environment variable to determine whether to use local Neo4j
+        val useLocalNeo4j = Neo4jTestContainer.useLocalNeo4j()
 
         val activeProfiles = applicationContext.environment.activeProfiles
 
-        println("@@@ Neo4jPropertiesInitializer.initialize() CALLED! useLocalNeo4j=$useLocalNeo4j (from Neo4jTestContainer.USE_LOCAL_NEO4J), activeProfiles=${activeProfiles.joinToString(",")} @@@")
+        println("@@@ Neo4jPropertiesInitializer.initialize() CALLED! useLocalNeo4j=$useLocalNeo4j (from USE_LOCAL_NEO4J env var), activeProfiles=${activeProfiles.joinToString(",")} @@@")
 
         val properties = if (useLocalNeo4j) {
             println("@@@ Using local Neo4j at $LOCAL_NEO4J_URI @@@")

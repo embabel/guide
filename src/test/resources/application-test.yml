@@ -1,9 +1,9 @@
 # Test configuration
 #
 # To toggle between local Neo4j and TestContainers:
-# Edit Neo4jTestContainer.USE_LOCAL_NEO4J constant in Neo4jTestContainer.kt
+# Set environment variable USE_LOCAL_NEO4J=true before running tests
 # - true: Use local Neo4j (faster, requires Neo4j running on localhost:7687)
-# - false: Use TestContainers (slower startup, but fully isolated)
+# - false (default): Use TestContainers (slower startup, but fully isolated)
 
 # Logging configuration for tests
 logging:
