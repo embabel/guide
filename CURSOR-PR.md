@@ -274,10 +274,10 @@ Step-by-step instructions for connecting Cursor to the MCP server:
 
 Documents how to run tests locally vs in CI:
 
-| Mode | `USE_LOCAL_NEO4J` | How Neo4j is provided |
-|------|-------------------|----------------------|
-| **CI (default)** | unset/`false` | Testcontainers |
-| **Local development** | `true` | Docker Compose |
+| Mode                  | `USE_LOCAL_NEO4J` | How Neo4j is provided |
+| --------------------- | ----------------- | --------------------- |
+| **CI (default)**      | unset/`false`     | Testcontainers        |
+| **Local development** | `true`            | Docker Compose        |
 
 Local developers can run:
 
@@ -473,13 +473,7 @@ Tests use Testcontainers to automatically spin up Neo4j. Just needs `OPENAI_API_
 
 #### For Local Development
 
-Some Docker environments have Testcontainers compatibility issues due to Docker API version mismatches. The error looks like:
-
-```
-client version 1.32 is too old. Minimum supported API version is 1.44
-```
-
-**Option 1: Use local Neo4j (recommended)**
+For faster test runs during development, use a local Neo4j instance:
 
 ```bash
 # 1. Start Neo4j
@@ -491,17 +485,6 @@ export OPENAI_API_KEY=sk-your-key-here
 # 3. Run tests with local Neo4j
 USE_LOCAL_NEO4J=true ./mvnw test
 ```
-
-**Option 2: Fix Testcontainers Docker API version**
-
-Add to `~/.testcontainers.properties`:
-
-```properties
-docker.host=unix:///var/run/docker.sock
-docker.api.version=1.44
-```
-
-This may fix the issue for some tests, but due to static class initialization order, it doesn't reliably fix all tests. Option 1 is more reliable.
 
 ---
 
@@ -565,16 +548,16 @@ No code changes required. Just be aware:
 
 ## Files Changed Summary
 
-| File                               | Change         | Impact                                        |
-| ---------------------------------- | -------------- | --------------------------------------------- |
-| `SecurityConfig.kt`                | +37 lines      | Fixes Cursor 403 errors                       |
-| `Dockerfile`                       | Rewrite        | Enables fresh-clone Docker builds             |
-| `.dockerignore`                    | Rewrite        | Supports multi-stage build                    |
-| `compose.yaml`                     | +6 lines       | Adds port flexibility, optional services      |
-| `README.md`                        | +170 lines     | Documents Cursor setup, Local vs CI testing   |
-| `McpSecurityTest.kt`               | New (69 lines) | Prevents security regressions                 |
-| `cursor-mcp-installed-servers.svg` | New (41 lines) | Visual documentation                          |
-| `Neo4jTestContainer.kt`            | +5 / -2 lines  | `USE_LOCAL_NEO4J` now env var (not constant)  |
-| `TestApplicationContext.kt`        | +2 / -2 lines  | Uses `useLocalNeo4j()` function               |
-| `application-test.yml`             | +2 / -2 lines  | Updated comment for env var approach          |
-| `.gitignore`                       | +3 lines       | Ignores `*.pid` files                         |
+| File                               | Change         | Impact                                       |
+| ---------------------------------- | -------------- | -------------------------------------------- |
+| `SecurityConfig.kt`                | +37 lines      | Fixes Cursor 403 errors                      |
+| `Dockerfile`                       | Rewrite        | Enables fresh-clone Docker builds            |
+| `.dockerignore`                    | Rewrite        | Supports multi-stage build                   |
+| `compose.yaml`                     | +6 lines       | Adds port flexibility, optional services     |
+| `README.md`                        | +170 lines     | Documents Cursor setup, Local vs CI testing  |
+| `McpSecurityTest.kt`               | New (69 lines) | Prevents security regressions                |
+| `cursor-mcp-installed-servers.svg` | New (41 lines) | Visual documentation                         |
+| `Neo4jTestContainer.kt`            | +5 / -2 lines  | `USE_LOCAL_NEO4J` now env var (not constant) |
+| `TestApplicationContext.kt`        | +2 / -2 lines  | Uses `useLocalNeo4j()` function              |
+| `application-test.yml`             | +2 / -2 lines  | Updated comment for env var approach         |
+| `.gitignore`                       | +3 lines       | Ignores `*.pid` files                        |

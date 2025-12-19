@@ -387,14 +387,14 @@ export OPENAI_API_KEY=sk-your-key-here
 
 The test suite uses Neo4j, which can be provided in two ways:
 
-| Mode                  | `USE_LOCAL_NEO4J` | How Neo4j is provided                       | Best for                                       |
-| --------------------- | ----------------- | ------------------------------------------- | ---------------------------------------------- |
-| **CI (default)**      | `false`           | Testcontainers spins up Neo4j automatically | GitHub Actions, fresh environments             |
-| **Local development** | `true`            | You run Neo4j via Docker Compose            | Faster iteration, avoids Testcontainers issues |
+| Mode                  | `USE_LOCAL_NEO4J` | How Neo4j is provided                       | Best for                           |
+| --------------------- | ----------------- | ------------------------------------------- | ---------------------------------- |
+| **CI (default)**      | unset/`false`     | Testcontainers spins up Neo4j automatically | GitHub Actions, fresh environments |
+| **Local development** | `true`            | You run Neo4j via Docker Compose            | Faster iteration                   |
 
 #### For Local Development
 
-Some Docker environments have version mismatches that cause Testcontainers to fail. To run tests locally:
+For faster test runs during development, use a local Neo4j instance:
 
 1. **Start Neo4j**:
 
@@ -417,7 +417,7 @@ export USE_LOCAL_NEO4J=true
 
 #### For CI
 
-Leave `USE_LOCAL_NEO4J = false` (the default). GitHub Actions has a compatible Docker environment where Testcontainers works correctly.
+Leave `USE_LOCAL_NEO4J` unset (the default). GitHub Actions uses Testcontainers to automatically spin up Neo4j.
 
 ### Running Tests
 
