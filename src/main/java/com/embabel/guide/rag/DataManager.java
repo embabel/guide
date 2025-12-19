@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
@@ -25,24 +24,34 @@ import java.util.List;
 @Service
 public class DataManager {
 
+    // TODO will be replaced with standard from ContentElementRepository
+    public record Stats(
+            int chunks) {
+    }
+
     private final Logger logger = LoggerFactory.getLogger(DataManager.class);
     private final GuideProperties guideProperties;
     private final List<LlmReference> references;
     private final ChunkingContentElementRepository store;
-    private final PlatformTransactionManager platformTransactionManager;
 
     private final HierarchicalContentReader hierarchicalContentReader = new TikaHierarchicalContentReader();
 
-    private final ContentRefreshPolicy contentRefreshPolicy = NeverRefreshExistingDocumentContentPolicy.INSTANCE;
+    private final ContentRefreshPolicy contentRefreshPolicy = UrlSpecificContentRefreshPolicy.containingAny(
+            "-SNAPSHOT"
+    );
 
     public DataManager(
             ChunkingContentElementRepository store,
-            GuideProperties guideProperties,
-            PlatformTransactionManager platformTransactionManager) {
+            GuideProperties guideProperties
+    ) {
         this.store = store;
         this.guideProperties = guideProperties;
-        this.platformTransactionManager = platformTransactionManager;
         this.references = LlmReferenceProviders.fromYmlFile(guideProperties.referencesFile());
+    }
+
+    public Stats getStats() {
+        int chunkCount = store.count();
+        return new Stats(chunkCount);
     }
 
     @NonNull

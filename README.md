@@ -29,6 +29,8 @@ This is exposed in two ways:
 curl -X POST http://localhost:1337/api/v1/data/load-references
 ```
 
+To see stats on data, make a GET request or browse to http://localhost:1337/api/v1/data/stats
+
 ## Viewing and Deleting Data
 
 Go to the Neo Browser at http://localhost:7474/browser/
@@ -123,31 +125,38 @@ The backend supports any client via WebSocket (for real-time chat) and REST (for
 
 **Endpoint:** `ws://localhost:1337/ws`
 
-Uses STOMP protocol over WebSocket with SockJS fallback. Any STOMP client library works (e.g., `@stomp/stompjs` for JavaScript, `stomp.py` for Python).
+Uses STOMP protocol over WebSocket with SockJS fallback. Any STOMP client library works (e.g., `@stomp/stompjs` for
+JavaScript, `stomp.py` for Python).
 
 **Authentication:** Pass an optional JWT token as a query parameter:
+
 ```
 ws://localhost:1337/ws?token=<JWT>
 ```
+
 If no token is provided, an anonymous user is created automatically.
 
 #### STOMP Channels
 
-| Direction | Destination | Purpose |
-|-----------|-------------|---------|
-| Subscribe | `/user/queue/messages` | Receive chat responses |
-| Subscribe | `/user/queue/status` | Receive typing/status updates |
-| Publish | `/app/chat.sendToJesse` | Send message to AI bot |
-| Publish | `/app/presence.ping` | Keep-alive (send every 30s) |
+| Direction | Destination             | Purpose                       |
+|-----------|-------------------------|-------------------------------|
+| Subscribe | `/user/queue/messages`  | Receive chat responses        |
+| Subscribe | `/user/queue/status`    | Receive typing/status updates |
+| Publish   | `/app/chat.sendToJesse` | Send message to AI bot        |
+| Publish   | `/app/presence.ping`    | Keep-alive (send every 30s)   |
 
 #### Message Formats
 
 **Sending a message:**
+
 ```json
-{ "body": "your message here" }
+{
+  "body": "your message here"
+}
 ```
 
 **Receiving a message:**
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -159,6 +168,7 @@ If no token is provided, an anonymous user is created automatically.
 ```
 
 **Receiving a status update:**
+
 ```json
 {
   "fromUserId": "bot:jesse",
@@ -173,6 +183,7 @@ CORS is open (`*`), no special headers required beyond `Content-Type: applicatio
 #### Authentication Endpoints
 
 **Register:**
+
 ```
 POST /api/hub/register
 {
@@ -185,6 +196,7 @@ POST /api/hub/register
 ```
 
 **Login:**
+
 ```
 POST /api/hub/login
 { "username": "jane", "password": "secret" }
@@ -194,11 +206,13 @@ Response:
 ```
 
 **List Personas:**
+
 ```
 GET /api/hub/personas
 ```
 
 **Update Persona** (requires auth):
+
 ```
 PUT /api/hub/persona/mine
 Authorization: Bearer <JWT>
@@ -208,24 +222,24 @@ Authorization: Bearer <JWT>
 ### Example: Minimal JavaScript Client
 
 ```javascript
-import { Client } from '@stomp/stompjs';
+import {Client} from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
 const client = new Client({
-  webSocketFactory: () => new SockJS('http://localhost:1337/ws'),
-  onConnect: () => {
-    // Subscribe to responses
-    client.subscribe('/user/queue/messages', (frame) => {
-      const message = JSON.parse(frame.body);
-      console.log('Received:', message.content);
-    });
+    webSocketFactory: () => new SockJS('http://localhost:1337/ws'),
+    onConnect: () => {
+        // Subscribe to responses
+        client.subscribe('/user/queue/messages', (frame) => {
+            const message = JSON.parse(frame.body);
+            console.log('Received:', message.content);
+        });
 
-    // Send a message
-    client.publish({
-      destination: '/app/chat.sendToJesse',
-      body: JSON.stringify({ body: 'Hello!' })
-    });
-  }
+        // Send a message
+        client.publish({
+            destination: '/app/chat.sendToJesse',
+            body: JSON.stringify({body: 'Hello!'})
+        });
+    }
 });
 
 client.activate();

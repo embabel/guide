@@ -1,5 +1,6 @@
 package com.embabel.guide.rag;
 
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,6 +16,11 @@ public class DataManagerController {
 
     public DataManagerController(DataManager dataManager) {
         this.dataManager = dataManager;
+    }
+
+    @GetMapping("/stats")
+    public DataManager.Stats getStats() {
+        return dataManager.getStats();
     }
 
     @PostMapping("/load-references")
