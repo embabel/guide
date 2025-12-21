@@ -59,7 +59,27 @@ npx @modelcontextprotocol/inspector
 
 Within the inspector UI, connect to `http://localhost:1337/sse`.
 
-### Consuming MCP Tools With Claude Desktop
+## Consuming Embabel MCP Server Tools
+
+### Appendix
+
+- [Health check](#ensure-the-mcp-server-is-running)
+- [Claude Desktop](#claude-desktop)
+- [Claude Code](#claude-code)
+- [Cursor](#cursor)
+- [Antigravity](#antigravity)
+
+### Ensure the MCP server is running
+
+Before troubleshooting Cursor, confirm the server is up and returning SSE headers:
+
+```bash
+curl -i --max-time 3 http://localhost:1337/sse
+```
+
+If you're running the server on a different port (for example `1338`), update the URL accordingly.
+
+#### Claude Desktop
 
 Add this stanza to `claude_desktop_config.json`:
 
@@ -86,7 +106,7 @@ documentation.
 
 You may also want to create a Project. See [claude_project.md](docs/claude_project.md) for suggested content.
 
-### Consuming MCP Tools With Claude Code
+#### Claude Code
 
 If you're using Claude Code, adding the Embabel MCP server will
 powerfully augment its capabilities for working on Embabel applications
@@ -103,17 +123,23 @@ Start via `claude --debug` to see more logging.
 
 See [Claude Code MCP documentation](https://code.claude.com/docs/en/mcp) for further information.
 
-### Consuming MCP Tools With Cursor
+#### Auto-Approving Embabel MCP Tools
 
-#### 1) Ensure the MCP server is running
+By default, Claude Code asks for confirmation before running MCP tools. When you accept a tool with "Yes, don't ask
+again", Claude Code saves that permission to your local `.claude/settings.local.json` file (which is auto-ignored by
+git).
 
-Before troubleshooting Cursor, confirm the server is up and returning SSE headers:
+**Note:** Wildcards do not work for MCP tool permissions. Each tool must be approved individually or listed explicitly
+in your settings.
 
-```bash
-curl -i --max-time 3 http://localhost:1337/sse
-```
+**Tool naming:** By default, `guide.toolPrefix` is empty, so MCP tools are exposed with their original names (e.g.,
+`mcp__embabel__docs_vectorSearch`). You can set a custom prefix in your application configuration to namespace your
+tools.
 
-If you're running the server on a different port (for example `1338`), update the URL accordingly.
+See [Claude Code Permission Modes](https://code.claude.com/docs/en/iam#permission-modes) for detailed documentation on
+how permissions work.
+
+### Cursor
 
 #### 2) Configure Cursor MCP
 
@@ -145,21 +171,28 @@ You should then see the MCP server listed with tools enabled:
 
 ![Cursor Installed MCP Servers](images/cursor-mcp-installed-servers.svg)
 
-#### Auto-Approving Embabel MCP Tools
+### Antigravity
 
-By default, Claude Code asks for confirmation before running MCP tools. When you accept a tool with "Yes, don't ask
-again", Claude Code saves that permission to your local `.claude/settings.local.json` file (which is auto-ignored by
-git).
+#### Configure Antigravity MCP
 
-**Note:** Wildcards do not work for MCP tool permissions. Each tool must be approved individually or listed explicitly
-in your settings.
+- Open the MCP store via the "..." dropdown at the top of the editor's agent panel.
+- Click on "Manage MCP Servers"
+- Click on "View raw config"
+- Modify the mcp_config.json with Embabel MCP server configuration.
 
-**Tool naming:** By default, `guide.toolPrefix` is empty, so MCP tools are exposed with their original names (e.g.,
-`mcp__embabel__docs_vectorSearch`). You can set a custom prefix in your application configuration to namespace your
-tools.
+```json
+{
+  "mcpServers": {
+    "embabel-dev": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://localhost:1337/sse", "--transport", "sse-only"]
+    }
+  }
+}
+```
 
-See [Claude Code Permission Modes](https://code.claude.com/docs/en/iam#permission-modes) for detailed documentation on
-how permissions work.
+Follow the official instructions for the troubleshooting. 
+https://antigravity.google/docs/mcp#connecting-custom-mcp-servers
 
 ## Writing a Client
 
