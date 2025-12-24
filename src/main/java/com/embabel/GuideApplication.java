@@ -15,9 +15,6 @@
  */
 package com.embabel;
 
-import com.embabel.agent.config.annotation.EnableAgents;
-import com.embabel.agent.config.annotation.LoggingThemes;
-import com.embabel.agent.config.annotation.McpServers;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -28,9 +25,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @ConfigurationPropertiesScan
 @EnableScheduling
-@EnableAgents(
-        loggingTheme = "starwars"
-)
 public class GuideApplication {
     public static void main(String[] args) {
         SpringApplication app = new SpringApplication(GuideApplication.class);

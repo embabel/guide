@@ -64,6 +64,8 @@ embabel:
     default-llm: gpt-4.1-mini
 
   agent:
+
+
     rag:
       neo:
         uri: ${NEO4J_URI:bolt://localhost:7687}
@@ -71,6 +73,9 @@ embabel:
         password: ${NEO4J_PASSWORD:brahmsian}
         max-chunk-size: 1500
         overlap-size: 200
+
+    logging:
+      personality: starwars
 
 
   discord:

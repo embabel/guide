@@ -24,7 +24,8 @@ This is exposed in two ways:
 - Via an MCP server for integration with Claude Desktop, Claude Code and
   other MCP clients
 
-> **Note:** The chat server and Spring Shell conflict with each other. By default, the chat server is enabled. To use Spring Shell instead, uncomment the relevant lines in `pom.xml`.
+> **Note:** The chat server and Spring Shell conflict with each other. By default, the chat server is enabled. To use
+> Spring Shell instead, uncomment the relevant lines in `pom.xml`.
 
 ## Loading data
 
@@ -105,7 +106,9 @@ Add this stanza to `claude_desktop_config.json`:
 See [Connect Local Servers](https://modelcontextprotocol.io/docs/develop/connect-local-servers) for detailed
 documentation.
 
-You may also want to create a Project. See [claude_project.md](docs/claude_project.md) for suggested content.
+You should create a [Project](https://www.anthropic.com/news/projects) to ensure that Claude knows its purpose and how
+to use tools.
+See [claude_project.md](docs/claude_project.md) for suggested content.
 
 ### Claude Code
 
@@ -155,7 +158,13 @@ Example (recommended: use `mcp-remote` as a stdio bridge for SSE):
   "mcpServers": {
     "embabel-dev": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "http://localhost:1337/sse", "--transport", "sse-only"]
+      "args": [
+        "-y",
+        "mcp-remote",
+        "http://localhost:1337/sse",
+        "--transport",
+        "sse-only"
+      ]
     }
   }
 }
@@ -186,7 +195,13 @@ You should then see the MCP server listed with tools enabled:
   "mcpServers": {
     "embabel-dev": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "http://localhost:1337/sse", "--transport", "sse-only"]
+      "args": [
+        "-y",
+        "mcp-remote",
+        "http://localhost:1337/sse",
+        "--transport",
+        "sse-only"
+      ]
     }
   }
 }
@@ -207,7 +222,9 @@ https://antigravity.google/docs/mcp#connecting-custom-mcp-servers
     "embabel-dev": {
       "type": "sse",
       "url": "http://localhost:1337/sse",
-      "tools": ["*"]
+      "tools": [
+        "*"
+      ]
     }
   }
 }
@@ -423,7 +440,7 @@ docker compose down --remove-orphans
 ### Environment Variables
 
 | Variable           | Default                        | Description                                      |
-| ------------------ | ------------------------------ | ------------------------------------------------ |
+|--------------------|--------------------------------|--------------------------------------------------|
 | `COMPOSE_PROFILES` | `java`                         | Set to empty to run Neo4j only (no Java service) |
 | `NEO4J_VERSION`    | `2025.10.1-community-bullseye` | Neo4j Docker image tag                           |
 | `NEO4J_USERNAME`   | `neo4j`                        | Neo4j username                                   |
@@ -456,7 +473,7 @@ export OPENAI_API_KEY=sk-your-key-here
 The test suite uses Neo4j, which can be provided in two ways:
 
 | Mode                  | `USE_LOCAL_NEO4J` | How Neo4j is provided                       | Best for                           |
-| --------------------- | ----------------- | ------------------------------------------- | ---------------------------------- |
+|-----------------------|-------------------|---------------------------------------------|------------------------------------|
 | **CI (default)**      | unset/`false`     | Testcontainers spins up Neo4j automatically | GitHub Actions, fresh environments |
 | **Local development** | `true`            | You run Neo4j via Docker Compose            | Faster iteration                   |
 
