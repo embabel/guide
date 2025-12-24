@@ -192,6 +192,9 @@ You should then see the MCP server listed with tools enabled:
 }
 ```
 
+Follow the official instructions for the troubleshooting.
+https://antigravity.google/docs/mcp#connecting-custom-mcp-servers
+
 ### Copilot CLI
 
 #### Configuration
@@ -209,9 +212,6 @@ You should then see the MCP server listed with tools enabled:
   }
 }
 ```
-
-Follow the official instructions for the troubleshooting. 
-https://antigravity.google/docs/mcp#connecting-custom-mcp-servers
 
 ## Writing a Client
 
