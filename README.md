@@ -68,6 +68,7 @@ Within the inspector UI, connect to `http://localhost:1337/sse`.
 - [Claude Code](#claude-code)
 - [Cursor](#cursor)
 - [Antigravity](#antigravity)
+- [Copilot CLI](#copilot-cli)
 
 ### Verifying the Server is Running
 
@@ -186,6 +187,24 @@ You should then see the MCP server listed with tools enabled:
     "embabel-dev": {
       "command": "npx",
       "args": ["-y", "mcp-remote", "http://localhost:1337/sse", "--transport", "sse-only"]
+    }
+  }
+}
+```
+
+### Copilot CLI
+
+#### Configuration
+
+- Modify the $HOME/.copilot/mcp-config.json with Embabel MCP server configuration
+
+```json
+{
+  "mcpServers": {
+    "embabel-dev": {
+      "type": "sse",
+      "url": "http://localhost:1337/sse",
+      "tools": ["*"]
     }
   }
 }
