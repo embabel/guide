@@ -38,6 +38,13 @@
         </dependency>
 
         <dependency>
+            <groupId>org.drivine</groupId>
+            <artifactId>drivine4j-spring-boot-starter</artifactId>
+            <version>0.0.5</version>
+        </dependency>
+
+
+        <dependency>
             <groupId>com.embabel.agent</groupId>
             <artifactId>embabel-agent-starter-openai</artifactId>
             <version>${embabel-agent.version}</version>
@@ -150,17 +157,7 @@
             <scope>test</scope>
         </dependency>
 
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>neo4j</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <scope>test</scope>
-        </dependency>
+        <!-- Testcontainers are now provided by drivine4j-spring-boot-starter via @EnableDrivineTestConfig -->
 
     </dependencies>
 
