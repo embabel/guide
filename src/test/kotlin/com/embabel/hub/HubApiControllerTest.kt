@@ -5,6 +5,7 @@ import com.embabel.guide.Neo4jPropertiesInitializer
 import com.embabel.guide.domain.drivine.DrivineGuideUserRepository
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.ai.mcp.client.common.autoconfigure.McpClientAutoConfiguration
 import org.springframework.beans.factory.annotation.Autowired
@@ -42,6 +43,12 @@ class HubApiControllerTest {
     lateinit var jwtTokenService: JwtTokenService
 
     private val passwordEncoder = BCryptPasswordEncoder()
+
+    @BeforeEach
+    fun cleanup() {
+        // Clean up any test users from previous runs
+        drivineGuideUserRepository.deleteByUsernameStartingWith("test_")
+    }
 
     @Test
     fun `POST register should successfully create a new user`() {
@@ -103,7 +110,7 @@ class HubApiControllerTest {
                 .content(objectMapper.writeValueAsString(request))
         )
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.error").value("Password and password confirmation do not match"))
+            .andExpect(jsonPath("$.message").value("Password and password confirmation do not match"))
     }
 
     @Test
@@ -124,7 +131,7 @@ class HubApiControllerTest {
                 .content(objectMapper.writeValueAsString(request))
         )
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.error").value("Password must be at least 8 characters long"))
+            .andExpect(jsonPath("$.message").value("Password must be at least 8 characters long"))
     }
 
     @Test
@@ -145,7 +152,7 @@ class HubApiControllerTest {
                 .content(objectMapper.writeValueAsString(request))
         )
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.error").value("Username is required"))
+            .andExpect(jsonPath("$.message").value("Username is required"))
     }
 
     @Test
@@ -166,7 +173,7 @@ class HubApiControllerTest {
                 .content(objectMapper.writeValueAsString(request))
         )
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.error").value("Email is required"))
+            .andExpect(jsonPath("$.message").value("Email is required"))
     }
 
     @Test
@@ -187,7 +194,7 @@ class HubApiControllerTest {
                 .content(objectMapper.writeValueAsString(request))
         )
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.error").value("Display name is required"))
+            .andExpect(jsonPath("$.message").value("Display name is required"))
     }
 
     @Test
@@ -265,8 +272,8 @@ class HubApiControllerTest {
         // Given - First register a user
         val registerRequest = UserRegistrationRequest(
             userDisplayName = "Test User",
-            username = "testuser",
-            userEmail = "test@example.com",
+            username = "test_user",
+            userEmail = "test_user@example.com",
             password = "SecurePassword123!",
             passwordConfirmation = "SecurePassword123!"
         )
@@ -278,7 +285,7 @@ class HubApiControllerTest {
 
         // When - Login with valid credentials
         val loginRequest = UserLoginRequest(
-            username = "testuser",
+            username = "test_user",
             password = "SecurePassword123!"
         )
 
@@ -290,9 +297,9 @@ class HubApiControllerTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.token").exists())
             .andExpect(jsonPath("$.userId").exists())
-            .andExpect(jsonPath("$.username").value("testuser"))
+            .andExpect(jsonPath("$.username").value("test_user"))
             .andExpect(jsonPath("$.displayName").value("Test User"))
-            .andExpect(jsonPath("$.email").value("test@example.com"))
+            .andExpect(jsonPath("$.email").value("test_user@example.com"))
             .andReturn()
 
         // Verify the token is valid
@@ -318,7 +325,7 @@ class HubApiControllerTest {
                 .content(objectMapper.writeValueAsString(loginRequest))
         )
             .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.error").value("Invalid username or password"))
+            .andExpect(jsonPath("$.message").value("Invalid username or password"))
     }
 
     @Test
@@ -326,8 +333,8 @@ class HubApiControllerTest {
         // Given - Register a user first
         val registerRequest = UserRegistrationRequest(
             userDisplayName = "Password Test User",
-            username = "passwordtest",
-            userEmail = "passwordtest@example.com",
+            username = "test_passwordtest",
+            userEmail = "test_passwordtest@example.com",
             password = "CorrectPassword123!",
             passwordConfirmation = "CorrectPassword123!"
         )
@@ -339,7 +346,7 @@ class HubApiControllerTest {
 
         // When - Try to login with wrong password
         val loginRequest = UserLoginRequest(
-            username = "passwordtest",
+            username = "test_passwordtest",
             password = "WrongPassword123!"
         )
 
@@ -350,7 +357,7 @@ class HubApiControllerTest {
                 .content(objectMapper.writeValueAsString(loginRequest))
         )
             .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.error").value("Invalid username or password"))
+            .andExpect(jsonPath("$.message").value("Invalid username or password"))
     }
 
     @Test
@@ -368,7 +375,7 @@ class HubApiControllerTest {
                 .content(objectMapper.writeValueAsString(loginRequest))
         )
             .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.error").value("Username is required"))
+            .andExpect(jsonPath("$.message").value("Username is required"))
     }
 
     @Test
@@ -386,7 +393,7 @@ class HubApiControllerTest {
                 .content(objectMapper.writeValueAsString(loginRequest))
         )
             .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.error").value("Password is required"))
+            .andExpect(jsonPath("$.message").value("Password is required"))
     }
 
     @Test
@@ -408,8 +415,8 @@ class HubApiControllerTest {
         // Given - Register a user
         val registerRequest = UserRegistrationRequest(
             userDisplayName = "Multi Login User",
-            username = "multilogin",
-            userEmail = "multilogin@example.com",
+            username = "test_multilogin",
+            userEmail = "test_multilogin@example.com",
             password = "SecurePassword123!",
             passwordConfirmation = "SecurePassword123!"
         )
@@ -420,7 +427,7 @@ class HubApiControllerTest {
         )
 
         val loginRequest = UserLoginRequest(
-            username = "multilogin",
+            username = "test_multilogin",
             password = "SecurePassword123!"
         )
 
@@ -454,8 +461,8 @@ class HubApiControllerTest {
         // Given - Register a user with lowercase username
         val registerRequest = UserRegistrationRequest(
             userDisplayName = "Case Test User",
-            username = "casetest",
-            userEmail = "casetest@example.com",
+            username = "test_casetest",
+            userEmail = "test_casetest@example.com",
             password = "SecurePassword123!",
             passwordConfirmation = "SecurePassword123!"
         )
@@ -467,7 +474,7 @@ class HubApiControllerTest {
 
         // When - Try to login with uppercase username
         val loginRequest = UserLoginRequest(
-            username = "CASETEST",
+            username = "TEST_CASETEST",
             password = "SecurePassword123!"
         )
 
@@ -478,7 +485,7 @@ class HubApiControllerTest {
                 .content(objectMapper.writeValueAsString(loginRequest))
         )
             .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.error").value("Invalid username or password"))
+            .andExpect(jsonPath("$.message").value("Invalid username or password"))
     }
 
     @Test
@@ -486,8 +493,8 @@ class HubApiControllerTest {
         // Given - Register a user with special characters in password
         val registerRequest = UserRegistrationRequest(
             userDisplayName = "Special Char User",
-            username = "specialchar",
-            userEmail = "specialchar@example.com",
+            username = "test_specialchar",
+            userEmail = "test_specialchar@example.com",
             password = "P@ssw0rd!#$%^&*()",
             passwordConfirmation = "P@ssw0rd!#$%^&*()"
         )
@@ -499,7 +506,7 @@ class HubApiControllerTest {
 
         // When - Login with same special character password
         val loginRequest = UserLoginRequest(
-            username = "specialchar",
+            username = "test_specialchar",
             password = "P@ssw0rd!#$%^&*()"
         )
 
@@ -511,6 +518,6 @@ class HubApiControllerTest {
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.token").exists())
-            .andExpect(jsonPath("$.username").value("specialchar"))
+            .andExpect(jsonPath("$.username").value("test_specialchar"))
     }
 }

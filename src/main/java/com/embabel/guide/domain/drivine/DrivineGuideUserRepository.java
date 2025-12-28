@@ -287,6 +287,24 @@ public class DrivineGuideUserRepository {
     }
 
     /**
+     * Delete GuideUsers where username starts with the given prefix (for test cleanup)
+     */
+    @Transactional
+    public void deleteByUsernameStartingWith(String prefix) {
+        String cypher = """
+            MATCH (u:GuideUser)-[:IS_WEB_USER]->(w:WebUser)
+            WHERE toLower(w.userName) STARTS WITH toLower($prefix)
+            DETACH DELETE u, w
+            """;
+
+        manager.execute(
+            QuerySpecification
+                .withStatement(cypher)
+                .bind(Map.of("prefix", prefix))
+        );
+    }
+
+    /**
      * Find all GuideUsers (for testing)
      */
     @Transactional(readOnly = true)
