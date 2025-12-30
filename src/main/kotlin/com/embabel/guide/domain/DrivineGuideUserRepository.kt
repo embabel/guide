@@ -1,221 +1,204 @@
-package com.embabel.guide.domain.drivine;
+package com.embabel.guide.domain
 
-import org.drivine.manager.PersistenceManager;
-import org.drivine.query.QuerySpecification;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
+import org.drivine.manager.PersistenceManager
+import org.drivine.query.QuerySpecification
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.stereotype.Repository
+import org.springframework.transaction.annotation.Transactional
+import java.util.Optional
 
 /**
  * Drivine-based implementation of GuideUser repository.
  * Uses composition-based queries rather than OGM relationships.
  */
 @Repository
-public class DrivineGuideUserRepository {
-
-    private final PersistenceManager manager;
-    private final GuideUserMapper mapper;
-
-    @Autowired
-    public DrivineGuideUserRepository(@Qualifier("neo") PersistenceManager manager,
-                                      GuideUserMapper mapper) {
-        this.manager = manager;
-        this.mapper = mapper;
-    }
+class DrivineGuideUserRepository(
+    @Qualifier("neo") private val manager: PersistenceManager,
+    private val mapper: GuideUserMapper
+) {
 
     /**
      * Find a GuideUser by Discord user ID, returning a composed result
      */
     @Transactional(readOnly = true)
-    public Optional<GuideUserWithDiscordUserInfo> findByDiscordUserId(String discordUserId) {
-        String cypher = """
+    fun findByDiscordUserId(discordUserId: String): Optional<GuideUserWithDiscordUserInfo> {
+        val cypher = """
             MATCH (u:GuideUser)-[:IS_DISCORD_USER]->(d:DiscordUserInfo)
-            WHERE d.id = $discordUserId
+            WHERE d.id = ${'$'}discordUserId
             RETURN {
               guideUserData: properties(u),
               discordUserInfo: properties(d)
             }
-            """;
+            """
 
         return manager.optionalGetOne(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(Map.of("discordUserId", discordUserId))
-                .transform(GuideUserWithDiscordUserInfo.class)
-        );
+                .bind(mapOf("discordUserId" to discordUserId))
+                .transform(GuideUserWithDiscordUserInfo::class.java)
+        )
     }
 
     /**
      * Find a GuideUser by web user ID, returning composed result
      */
     @Transactional(readOnly = true)
-    public Optional<GuideUserWithWebUser> findByWebUserId(String webUserId) {
-        String cypher = """
+    fun findByWebUserId(webUserId: String): Optional<GuideUserWithWebUser> {
+        val cypher = """
             MATCH (u:GuideUser)-[:IS_WEB_USER]->(w:WebUser)
-            WHERE w.id = $webUserId
+            WHERE w.id = ${'$'}webUserId
             RETURN {
               guideUserData: properties(u),
               webUser: properties(w)
             }
-            """;
+            """
 
         return manager.optionalGetOne(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(Map.of("webUserId", webUserId))
-                .transform(GuideUserWithWebUser.class)
-        );
+                .bind(mapOf("webUserId" to webUserId))
+                .transform(GuideUserWithWebUser::class.java)
+        )
     }
 
     /**
      * Find the anonymous web user
      */
     @Transactional(readOnly = true)
-    public Optional<GuideUserWithWebUser> findAnonymousWebUser() {
-        String cypher = """
+    fun findAnonymousWebUser(): Optional<GuideUserWithWebUser> {
+        val cypher = """
             MATCH (u:GuideUser)-[:IS_WEB_USER]->(w:WebUser:Anonymous)
             RETURN {
               guideUserData: properties(u),
               webUser: properties(w)
             }
             LIMIT 1
-            """;
+            """
 
         return manager.optionalGetOne(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(Map.of())
-                .transform(GuideUserWithWebUser.class)
-        );
+                .bind(emptyMap<String, Any>())
+                .transform(GuideUserWithWebUser::class.java)
+        )
     }
 
     /**
      * Find a GuideUser by username
      */
     @Transactional(readOnly = true)
-    public Optional<GuideUserWithWebUser> findByWebUserName(String userName) {
-        String cypher = """
+    fun findByWebUserName(userName: String): Optional<GuideUserWithWebUser> {
+        val cypher = """
             MATCH (u:GuideUser)-[:IS_WEB_USER]->(w:WebUser)
-            WHERE w.userName = $userName
+            WHERE w.userName = ${'$'}userName
             RETURN {
               guideUserData: properties(u),
               webUser: properties(w)
             }
-            """;
+            """
 
         return manager.optionalGetOne(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(Map.of("userName", userName))
-                .transform(GuideUserWithWebUser.class)
-        );
+                .bind(mapOf("userName" to userName))
+                .transform(GuideUserWithWebUser::class.java)
+        )
     }
 
     /**
      * Create a new GuideUser with Discord info
      */
     @Transactional
-    public GuideUserWithDiscordUserInfo createWithDiscord(GuideUserData guideUserData,
-                                                          DiscordUserInfoData discordUserInfo) {
-        String cypher = """
+    fun createWithDiscord(
+        guideUserData: GuideUserData,
+        discordUserInfo: DiscordUserInfoData
+    ): GuideUserWithDiscordUserInfo {
+        val cypher = """
             CREATE (u:GuideUser)
-            SET u += $guideUserProps
+            SET u += ${'$'}guideUserProps
             CREATE (d:DiscordUserInfo)
-            SET d += $discordProps
+            SET d += ${'$'}discordProps
             CREATE (u)-[:IS_DISCORD_USER]->(d)
             RETURN {
               guideUserData: properties(u),
               discordUserInfo: properties(d)
             }
-            """;
+            """
 
         return manager.getOne(
             QuerySpecification
                 .withStatement(cypher)
                 .bindObject("guideUserProps", guideUserData)
                 .bindObject("discordProps", discordUserInfo)
-                .transform(GuideUserWithDiscordUserInfo.class)
-        );
+                .transform(GuideUserWithDiscordUserInfo::class.java)
+        )
     }
 
     /**
      * Create a new GuideUser with WebUser info
      */
     @Transactional
-    public GuideUserWithWebUser createWithWebUser(GuideUserData guideUserData,
-                                                  WebUserData webUserData) {
+    fun createWithWebUser(
+        guideUserData: GuideUserData,
+        webUserData: WebUserData
+    ): GuideUserWithWebUser {
         // Determine labels based on the WebUserData subtype
-        String webUserLabels = webUserData instanceof AnonymousWebUserData
-            ? "WebUser:Anonymous"
-            : "WebUser";
+        val webUserLabels = if (webUserData is AnonymousWebUserData) "WebUser:Anonymous" else "WebUser"
 
-        String cypher = """
+        val cypher = """
             CREATE (u:GuideUser)
-            SET u += $guideUserProps
-            CREATE (w:%s)
-            SET w += $webUserProps
+            SET u += ${'$'}guideUserProps
+            CREATE (w:$webUserLabels)
+            SET w += ${'$'}webUserProps
             CREATE (u)-[:IS_WEB_USER]->(w)
             RETURN {
               guideUserData: properties(u),
               webUser: properties(w)
             }
-            """.formatted(webUserLabels);
+            """
 
         return manager.getOne(
             QuerySpecification
                 .withStatement(cypher)
                 .bindObject("guideUserProps", guideUserData)
                 .bindObject("webUserProps", webUserData)
-                .transform(GuideUserWithWebUser.class)
-        );
+                .transform(GuideUserWithWebUser::class.java)
+        )
     }
 
     /**
      * Update GuideUser persona
      */
     @Transactional
-    public void updatePersona(String guideUserId, String persona) {
-        String cypher = """
-            MATCH (u:GuideUser {id: $id})
-            SET u.persona = $persona
-            """;
+    fun updatePersona(guideUserId: String, persona: String) {
+        val cypher = """
+            MATCH (u:GuideUser {id: ${'$'}id})
+            SET u.persona = ${'$'}persona
+            """
 
         manager.execute(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(Map.of(
-                    "id", guideUserId,
-                    "persona", persona
-                ))
-                .transform(Void.class)
-        );
+                .bind(mapOf("id" to guideUserId, "persona" to persona))
+                .transform(Void::class.java)
+        )
     }
 
     /**
      * Update GuideUser custom prompt
      */
     @Transactional
-    public void updateCustomPrompt(String guideUserId, String customPrompt) {
-        String cypher = """
-            MATCH (u:GuideUser {id: $id})
-            SET u.customPrompt = $customPrompt
-            """;
+    fun updateCustomPrompt(guideUserId: String, customPrompt: String) {
+        val cypher = """
+            MATCH (u:GuideUser {id: ${'$'}id})
+            SET u.customPrompt = ${'$'}customPrompt
+            """
 
         manager.execute(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(Map.of(
-                    "id", guideUserId,
-                    "customPrompt", customPrompt
-                ))
-        );
+                .bind(mapOf("id" to guideUserId, "customPrompt" to customPrompt))
+        )
     }
 
     /**
@@ -223,10 +206,9 @@ public class DrivineGuideUserRepository {
      * depending on what relationships exist
      */
     @Transactional(readOnly = true)
-    public Optional<HasGuideUserData> findById(String id) {
-        // First try to find with Discord info
-        String cypher = """
-            MATCH (u:GuideUser {id: $id})
+    fun findById(id: String): Optional<HasGuideUserData> {
+        val cypher = """
+            MATCH (u:GuideUser {id: ${'$'}id})
             OPTIONAL MATCH (u)-[:IS_DISCORD_USER]->(d:DiscordUserInfo)
             OPTIONAL MATCH (u)-[:IS_WEB_USER]->(w:WebUser)
             RETURN {
@@ -234,82 +216,83 @@ public class DrivineGuideUserRepository {
               discordUserInfo: properties(d),
               webUser: properties(w)
             }
-            """;
+            """
 
-        var result = manager.optionalGetOne(
+        val result = manager.optionalGetOne(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(Map.of("id", id))
-                .transform(Map.class)
-        );
+                .bind(mapOf("id" to id))
+                .transform(Map::class.java)
+        )
 
-        return result.map(mapper::mapToGuideUserComposite);
+        @Suppress("UNCHECKED_CAST")
+        return result.map { mapper.mapToGuideUserComposite(it as Map<String, Any?>) }
     }
 
     /**
      * Save a GuideUser - this is a simplified version that updates persona/customPrompt
      */
     @Transactional
-    public HasGuideUserData save(GuideUserData guideUser) {
-        String cypher = """
-            MERGE (u:GuideUser {id: $id})
+    fun save(guideUser: GuideUserData): HasGuideUserData {
+        val cypher = """
+            MERGE (u:GuideUser {id: ${'$'}id})
             SET u += props
-            """;
+            """
 
         manager.execute(
             QuerySpecification
                 .withStatement(cypher)
                 .bindObject("props", guideUser)
-                .bind(Map.of("id", guideUser.getId()))
-        );
+                .bind(mapOf("id" to guideUser.id))
+        )
 
         // Return the updated user
-        return findById(guideUser.getId()).orElseThrow();
+        return findById(guideUser.id!!).orElseThrow()
     }
 
     /**
      * Delete all GuideUsers (for testing) - also deletes related WebUser and DiscordUserInfo nodes
      */
     @Transactional
-    public void deleteAllGuideUsers() {
-        String cypher = """
+    fun deleteAllGuideUsers() {
+        val cypher = """
             MATCH (u:GuideUser)
             OPTIONAL MATCH (u)-[:IS_WEB_USER]->(w:WebUser)
             OPTIONAL MATCH (u)-[:IS_DISCORD_USER]->(d:DiscordUserInfo)
             DETACH DELETE u, w, d
-            """;
+            """
 
         manager.execute(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(Map.of())
-        );
+                .bind(emptyMap<String, Any>())
+        )
     }
 
     /**
      * Delete GuideUsers where username starts with the given prefix (for test cleanup)
      */
     @Transactional
-    public void deleteByUsernameStartingWith(String prefix) {
-        String cypher = """
+    fun deleteByUsernameStartingWith(prefix: String) {
+        val cypher = """
             MATCH (u:GuideUser)-[:IS_WEB_USER]->(w:WebUser)
-            WHERE toLower(w.userName) STARTS WITH toLower($prefix)
+            WHERE toLower(w.userName) STARTS WITH toLower(${'$'}prefix)
             DETACH DELETE u, w
-            """;
+            """
 
         manager.execute(
             QuerySpecification
                 .withStatement(cypher)
-                .bind(Map.of("prefix", prefix))
-        );
+                .bind(mapOf("prefix" to prefix))
+        )
     }
 
     /**
      * Find all GuideUsers (for testing)
      */
     @Transactional(readOnly = true)
-    public List<HasGuideUserData> findAllGuideUsers() {
-        String cypher = """
+    fun findAllGuideUsers(): List<HasGuideUserData> {
+        val cypher = """
             MATCH (u:GuideUser)
             OPTIONAL MATCH (u)-[:IS_DISCORD_USER]->(d:DiscordUserInfo)
             OPTIONAL MATCH (u)-[:IS_WEB_USER]->(w:WebUser)
@@ -318,17 +301,14 @@ public class DrivineGuideUserRepository {
               discordUserInfo: properties(d),
               webUser: properties(w)
             }
-            """;
+            """
 
+        @Suppress("UNCHECKED_CAST")
         return manager.query(
-                QuerySpecification
-                    .withStatement(cypher)
-                    .bind(Map.of())
-                    .transform(Map.class)
-            ).stream()
-            .map(mapper::mapToGuideUserComposite)
-            .collect(Collectors.toList());
+            QuerySpecification
+                .withStatement(cypher)
+                .bind(emptyMap<String, Any>())
+                .transform(Map::class.java)
+        ).map { mapper.mapToGuideUserComposite(it as Map<String, Any?>) }
     }
-
-
 }

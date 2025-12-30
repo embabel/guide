@@ -49,9 +49,8 @@ class AnonymousPrincipalHandshakeHandler(
         logger.info("Falling back to anonymous user")
         return object : Principal {
             private val user = guideUserService.findOrCreateAnonymousWebUser()
-            private val webUser = requireNotNull(user.webUser) { "webUser should not be null here" }
 
-            override fun getName(): String = webUser.id
+            override fun getName(): String = user.webUser.id
         }
     }
 

@@ -16,7 +16,6 @@
 package com.embabel.guide.domain
 
 import com.embabel.guide.Neo4jPropertiesInitializer
-import com.embabel.guide.domain.drivine.DrivineGuideUserRepository
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.springframework.ai.mcp.client.common.autoconfigure.McpClientAutoConfiguration

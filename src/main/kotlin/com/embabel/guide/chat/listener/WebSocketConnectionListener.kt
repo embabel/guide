@@ -1,7 +1,7 @@
 package com.embabel.guide.chat.listener
 
 import com.embabel.guide.chat.service.JesseService
-import com.embabel.guide.domain.drivine.DrivineGuideUserRepository
+import com.embabel.guide.domain.DrivineGuideUserRepository
 import org.slf4j.LoggerFactory
 import org.springframework.context.event.EventListener
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor

@@ -16,6 +16,10 @@
 package com.embabel.guide.domain.drivine
 
 import com.embabel.guide.Neo4jPropertiesInitializer
+import com.embabel.guide.domain.DiscordUserInfoData
+import com.embabel.guide.domain.DrivineGuideUserRepository
+import com.embabel.guide.domain.GuideUserData
+import com.embabel.guide.domain.WebUserData
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.springframework.ai.mcp.client.common.autoconfigure.McpClientAutoConfiguration

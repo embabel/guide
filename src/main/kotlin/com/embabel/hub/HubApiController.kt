@@ -1,6 +1,6 @@
 package com.embabel.hub
 
-import com.embabel.guide.domain.drivine.GuideUserWithWebUser
+import com.embabel.guide.domain.GuideUserWithWebUser
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping

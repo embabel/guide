@@ -5,7 +5,7 @@ import com.embabel.chat.AssistantMessage
 import com.embabel.chat.ChatSession
 import com.embabel.chat.Chatbot
 import com.embabel.chat.UserMessage
-import com.embabel.guide.domain.drivine.DrivineGuideUserRepository
+import com.embabel.guide.domain.DrivineGuideUserRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext

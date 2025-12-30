@@ -2,7 +2,8 @@ package com.embabel.hub
 
 //import org.springframework.ai.mcp.client.autoconfigure.McpClientAutoConfiguration
 import com.embabel.guide.Neo4jPropertiesInitializer
-import com.embabel.guide.domain.drivine.DrivineGuideUserRepository
+import com.embabel.guide.domain.DrivineGuideUserRepository
+import com.embabel.guide.domain.GuideUserWithWebUser
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -79,10 +80,10 @@ class HubApiControllerTest {
 
         // Verify the password was properly hashed
         val responseBody = result.response.contentAsString
-        val createdUser = objectMapper.readValue(responseBody, com.embabel.guide.domain.drivine.GuideUserWithWebUser::class.java)
+        val createdUser = objectMapper.readValue(responseBody, GuideUserWithWebUser::class.java)
 
-        assertNotNull(createdUser.getWebUser())
-        val webUser = createdUser.getWebUser()
+        assertNotNull(createdUser.webUser)
+        val webUser = createdUser.webUser
         assertNotEquals("SecurePassword123!", webUser.passwordHash)
         assertTrue(passwordEncoder.matches("SecurePassword123!", webUser.passwordHash))
 
@@ -255,11 +256,11 @@ class HubApiControllerTest {
 
         // Then - Verify user was persisted to database
         val responseBody = result.response.contentAsString
-        val createdUser = objectMapper.readValue(responseBody, com.embabel.guide.domain.drivine.GuideUserWithWebUser::class.java)
+        val createdUser = objectMapper.readValue(responseBody, GuideUserWithWebUser::class.java)
 
-        val foundUser = drivineGuideUserRepository.findByWebUserId(createdUser.getWebUser().id)
+        val foundUser = drivineGuideUserRepository.findByWebUserId(createdUser.webUser.id)
         assertTrue(foundUser.isPresent)
-        val foundWebUser = foundUser.get() as com.embabel.guide.domain.drivine.GuideUserWithWebUser
+        val foundWebUser = foundUser.get() as GuideUserWithWebUser
         assertEquals("Frank Green", foundWebUser.displayName)
         assertEquals("frankgreen", foundWebUser.username)
         assertEquals("frank.green@example.com", foundWebUser.email)

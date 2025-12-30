@@ -1,9 +1,9 @@
 package com.embabel.hub
 
 import com.embabel.guide.domain.GuideUserService
-import com.embabel.guide.domain.drivine.GuideUserWithWebUser
-import com.embabel.guide.domain.drivine.HasGuideUserData
-import com.embabel.guide.domain.drivine.WebUserData
+import com.embabel.guide.domain.GuideUserWithWebUser
+import com.embabel.guide.domain.HasGuideUserData
+import com.embabel.guide.domain.WebUserData
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Service
 import java.util.*
@@ -90,7 +90,7 @@ class HubService(
             LoginException("Invalid username or password")
         }
 
-        val webUser = guideUser.getWebUser()
+        val webUser = guideUser.webUser
 
         if (!passwordEncoder.matches(request.password, webUser.passwordHash)) {
             throw LoginException("Invalid username or password")
@@ -155,7 +155,7 @@ class HubService(
             throw ChangePasswordException("User not found")
         }
 
-        val webUser = guideUserComposite.getWebUser()
+        val webUser = guideUserComposite.webUser
 
         if (!passwordEncoder.matches(request.currentPassword, webUser.passwordHash)) {
             throw ChangePasswordException("Current password is incorrect")
