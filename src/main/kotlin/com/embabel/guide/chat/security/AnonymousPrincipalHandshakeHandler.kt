@@ -50,7 +50,7 @@ class AnonymousPrincipalHandshakeHandler(
         return object : Principal {
             private val user = guideUserService.findOrCreateAnonymousWebUser()
 
-            override fun getName(): String = user.webUser.id
+            override fun getName(): String = user.webUser?.id ?: user.id
         }
     }
 

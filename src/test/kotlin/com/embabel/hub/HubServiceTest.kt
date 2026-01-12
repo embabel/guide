@@ -47,15 +47,16 @@ class HubServiceTest {
         assertEquals("john.doe@example.com", result.email)
 
         // Verify password is hashed (not stored as plain text)
-        val webUser = result.webUser
-        assertNotNull(webUser)
-        assertNotEquals("SecurePassword123!", webUser.passwordHash)
-        assertTrue(passwordEncoder.matches("SecurePassword123!", webUser.passwordHash))
+        result.webUser?.let { webUser ->
+            assertNotEquals("SecurePassword123!", webUser.passwordHash)
+            assertTrue(passwordEncoder.matches("SecurePassword123!", webUser.passwordHash))
 
-        // Verify refresh token is a valid JWT
-        assertNotNull(webUser.refreshToken)
-        val userId = jwtTokenService.validateRefreshToken(webUser.refreshToken!!)
-        assertEquals(webUser.id, userId)
+            // Verify refresh token is a valid JWT
+            webUser.refreshToken?.let { refreshToken ->
+                val userId = jwtTokenService.validateRefreshToken(refreshToken)
+                assertEquals(webUser.id, userId)
+            } ?: fail("Expected refresh token to be present")
+        } ?: fail("Expected webUser to be present")
     }
 
     @Test

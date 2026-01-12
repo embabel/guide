@@ -36,7 +36,7 @@ public record GuideProperties(
         @NotNull
         @NotBlank(message = "projectsPath must not be blank")
         String projectsPath,
-        @NestedConfigurationProperty ContentChunker.DefaultConfig chunkerConfig,
+        @NestedConfigurationProperty ContentChunker.Config chunkerConfig,
         @DefaultValue("references.yml")
         @NotBlank(message = "referencesFile must not be blank")
         String referencesFile,

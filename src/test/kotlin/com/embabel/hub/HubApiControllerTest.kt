@@ -2,8 +2,8 @@ package com.embabel.hub
 
 //import org.springframework.ai.mcp.client.autoconfigure.McpClientAutoConfiguration
 import com.embabel.guide.Neo4jPropertiesInitializer
-import com.embabel.guide.domain.DrivineGuideUserRepository
-import com.embabel.guide.domain.GuideUserWithWebUser
+import com.embabel.guide.domain.GuideUser
+import com.embabel.guide.domain.GuideUserRepository
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -38,7 +38,7 @@ class HubApiControllerTest {
     lateinit var objectMapper: ObjectMapper
 
     @Autowired
-    lateinit var drivineGuideUserRepository: DrivineGuideUserRepository
+    lateinit var guideUserRepository: GuideUserRepository
 
     @Autowired
     lateinit var jwtTokenService: JwtTokenService
@@ -48,7 +48,7 @@ class HubApiControllerTest {
     @BeforeEach
     fun cleanup() {
         // Clean up any test users from previous runs
-        drivineGuideUserRepository.deleteByUsernameStartingWith("test_")
+        guideUserRepository.deleteByUsernameStartingWith("test_")
     }
 
     @Test
@@ -80,17 +80,18 @@ class HubApiControllerTest {
 
         // Verify the password was properly hashed
         val responseBody = result.response.contentAsString
-        val createdUser = objectMapper.readValue(responseBody, GuideUserWithWebUser::class.java)
+        val createdUser = objectMapper.readValue(responseBody, GuideUser::class.java)
 
-        assertNotNull(createdUser.webUser)
-        val webUser = createdUser.webUser
-        assertNotEquals("SecurePassword123!", webUser.passwordHash)
-        assertTrue(passwordEncoder.matches("SecurePassword123!", webUser.passwordHash))
+        createdUser.webUser?.let { webUser ->
+            assertNotEquals("SecurePassword123!", webUser.passwordHash)
+            assertTrue(passwordEncoder.matches("SecurePassword123!", webUser.passwordHash))
 
-        // Verify refresh token is valid
-        assertNotNull(webUser.refreshToken)
-        val userId = jwtTokenService.validateRefreshToken(webUser.refreshToken!!)
-        assertEquals(webUser.id, userId)
+            // Verify refresh token is valid
+            webUser.refreshToken?.let { refreshToken ->
+                val userId = jwtTokenService.validateRefreshToken(refreshToken)
+                assertEquals(webUser.id, userId)
+            } ?: fail("Expected refresh token to be present")
+        } ?: fail("Expected webUser to be present")
     }
 
     @Test
@@ -256,14 +257,16 @@ class HubApiControllerTest {
 
         // Then - Verify user was persisted to database
         val responseBody = result.response.contentAsString
-        val createdUser = objectMapper.readValue(responseBody, GuideUserWithWebUser::class.java)
+        val createdUser = objectMapper.readValue(responseBody, GuideUser::class.java)
 
-        val foundUser = drivineGuideUserRepository.findByWebUserId(createdUser.webUser.id)
-        assertTrue(foundUser.isPresent)
-        val foundWebUser = foundUser.get() as GuideUserWithWebUser
-        assertEquals("Frank Green", foundWebUser.displayName)
-        assertEquals("frankgreen", foundWebUser.username)
-        assertEquals("frank.green@example.com", foundWebUser.email)
+        createdUser.webUser?.let { webUser ->
+            val foundUser = guideUserRepository.findByWebUserId(webUser.id)
+            assertTrue(foundUser.isPresent)
+            val foundGuideUser = foundUser.get()
+            assertEquals("Frank Green", foundGuideUser.displayName)
+            assertEquals("frankgreen", foundGuideUser.username)
+            assertEquals("frank.green@example.com", foundGuideUser.email)
+        } ?: fail("Expected webUser to be present")
     }
 
     // ========== Login Tests ==========

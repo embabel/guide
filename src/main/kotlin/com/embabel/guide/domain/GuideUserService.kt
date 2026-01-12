@@ -6,7 +6,7 @@ import java.util.UUID
 
 @Service
 class GuideUserService(
-    private val guideUserRepository: DrivineGuideUserRepository
+    private val guideUserRepository: GuideUserRepository
 ) {
 
     /**
@@ -19,7 +19,7 @@ class GuideUserService(
      * @return the anonymous web user GuideUser
      */
     @Synchronized
-    fun findOrCreateAnonymousWebUser(): GuideUserWithWebUser {
+    fun findOrCreateAnonymousWebUser(): GuideUser {
         return guideUserRepository.findAnonymousWebUser()
             .orElseGet {
                 // Double-check after acquiring lock to avoid duplicate creation
@@ -46,20 +46,19 @@ class GuideUserService(
      * Finds a GuideUser by their WebUser ID.
      *
      * @param webUserId the WebUser's ID
-     * @return the HasGuideUser composite if found
+     * @return the GuideUser if found
      */
-    fun findByWebUserId(webUserId: String): Optional<HasGuideUserData> {
+    fun findByWebUserId(webUserId: String): Optional<GuideUser> {
         return guideUserRepository.findByWebUserId(webUserId)
-            .map { it as HasGuideUserData }
     }
 
     /**
      * Creates and saves a new GuideUser from a WebUser.
      *
      * @param webUser the WebUser to create a GuideUser from
-     * @return the saved GuideUser composite
+     * @return the saved GuideUser
      */
-    fun saveFromWebUser(webUser: WebUserData): GuideUserWithWebUser {
+    fun saveFromWebUser(webUser: WebUserData): GuideUser {
         val guideUser = GuideUserData(UUID.randomUUID().toString(), null, null)
         return guideUserRepository.createWithWebUser(guideUser, webUser)
     }
@@ -68,9 +67,9 @@ class GuideUserService(
      * Finds a GuideUser by their username.
      *
      * @param username the username to search for
-     * @return the GuideUser if found, null otherwise
+     * @return the GuideUser if found
      */
-    fun findByWebUserName(username: String): Optional<GuideUserWithWebUser> {
+    fun findByWebUserName(username: String): Optional<GuideUser> {
         return guideUserRepository.findByWebUserName(username)
     }
 
@@ -81,7 +80,7 @@ class GuideUserService(
      * @param persona the persona name to set
      * @return the updated GuideUser
      */
-    fun updatePersona(userId: String, persona: String): HasGuideUserData {
+    fun updatePersona(userId: String, persona: String): GuideUser {
         guideUserRepository.updatePersona(userId, persona)
         return guideUserRepository.findById(userId)
             .orElseThrow { IllegalArgumentException("User not found: $userId") }
@@ -91,9 +90,9 @@ class GuideUserService(
      * Saves a GuideUser.
      *
      * @param guideUser the GuideUser to save
-     * @return the saved HasGuideUser composite
+     * @return the saved GuideUser
      */
-    fun saveUser(guideUser: GuideUserData): HasGuideUserData {
+    fun saveUser(guideUser: GuideUser): GuideUser {
         return guideUserRepository.save(guideUser)
     }
 }

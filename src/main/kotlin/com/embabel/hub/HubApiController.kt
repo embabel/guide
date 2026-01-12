@@ -1,6 +1,6 @@
 package com.embabel.hub
 
-import com.embabel.guide.domain.GuideUserWithWebUser
+import com.embabel.guide.domain.GuideUser
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
@@ -17,7 +17,7 @@ class HubApiController(
 ) {
 
     @PostMapping("/register")
-    fun registerUser(@RequestBody request: UserRegistrationRequest): GuideUserWithWebUser {
+    fun registerUser(@RequestBody request: UserRegistrationRequest): GuideUser {
         return hubService.registerUser(request)
     }
 

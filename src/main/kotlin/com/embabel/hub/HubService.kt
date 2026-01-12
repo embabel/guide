@@ -1,8 +1,7 @@
 package com.embabel.hub
 
+import com.embabel.guide.domain.GuideUser
 import com.embabel.guide.domain.GuideUserService
-import com.embabel.guide.domain.GuideUserWithWebUser
-import com.embabel.guide.domain.HasGuideUserData
 import com.embabel.guide.domain.WebUserData
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Service
@@ -23,10 +22,10 @@ class HubService(
      * generates a JWT refresh token with expiry, and stores the user.
      *
      * @param request The user registration request
-     * @return The created GuideUserWithWebUser composite
+     * @return The created GuideUser
      * @throws RegistrationException if validation fails or registration cannot be completed
      */
-    fun registerUser(request: UserRegistrationRequest): GuideUserWithWebUser {
+    fun registerUser(request: UserRegistrationRequest): GuideUser {
         if (request.password != request.passwordConfirmation) {
             throw RegistrationException("Password and password confirmation do not match")
         }
@@ -91,6 +90,7 @@ class HubService(
         }
 
         val webUser = guideUser.webUser
+            ?: throw LoginException("Invalid username or password")
 
         if (!passwordEncoder.matches(request.password, webUser.passwordHash)) {
             throw LoginException("Invalid username or password")
@@ -102,7 +102,7 @@ class HubService(
             username = webUser.userName,
             displayName = webUser.displayName,
             email = webUser.userEmail ?: "",
-            persona = guideUser.guideUserData().persona
+            persona = guideUser.core.persona
         )
     }
 
@@ -111,14 +111,14 @@ class HubService(
      *
      * @param userId the user's ID (from authentication)
      * @param persona the persona name to set
-     * @return the updated GuideUser composite
+     * @return the updated GuideUser
      */
-    fun updatePersona(userId: String, persona: String): HasGuideUserData {
+    fun updatePersona(userId: String, persona: String): GuideUser {
         if (persona.isBlank()) {
             throw IllegalArgumentException("Persona cannot be blank")
         }
         val user = guideUserService.findByWebUserId(userId).orElseThrow()
-        return guideUserService.updatePersona(user.guideUserData().id, persona)
+        return guideUserService.updatePersona(user.core.id, persona)
     }
 
     /**
@@ -147,15 +147,11 @@ class HubService(
             throw ChangePasswordException("New password must be at least 8 characters long")
         }
 
-        val guideUserComposite = guideUserService.findByWebUserId(userId)
+        val guideUser = guideUserService.findByWebUserId(userId)
             .orElseThrow { ChangePasswordException("User not found") }
 
-        // Cast to GuideUserWithWebUser to access web user data
-        if (guideUserComposite !is GuideUserWithWebUser) {
-            throw ChangePasswordException("User not found")
-        }
-
-        val webUser = guideUserComposite.webUser
+        val webUser = guideUser.webUser
+            ?: throw ChangePasswordException("User not found")
 
         if (!passwordEncoder.matches(request.currentPassword, webUser.passwordHash)) {
             throw ChangePasswordException("Current password is incorrect")

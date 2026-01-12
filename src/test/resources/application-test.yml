@@ -11,7 +11,7 @@
 
 test:
   neo4j:
-    use-local: true
+    use-local: false
 
 OPENAI_API_KEY: test-fake-key
 

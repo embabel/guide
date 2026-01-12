@@ -13,7 +13,7 @@ import java.util.Optional
  */
 @Repository
 class GraphObjectGuideUserRepository(
-    @Qualifier("neoGraphObjectManager") private val graphObjectManager: GraphObjectManager
+    @param:Qualifier("neoGraphObjectManager") private val graphObjectManager: GraphObjectManager
 ) : GuideUserRepository {
 
     @Transactional(readOnly = true)

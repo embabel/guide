@@ -68,6 +68,10 @@ class Neo4jPropertiesInitializer : ApplicationContextInitializer<ConfigurableApp
     }
 }
 
+/**
+ * Test configuration that enables Drivine test support.
+ * DrivineStore and related beans are created by RagConfiguration in the main context.
+ */
 @Configuration
 @ComponentScan(basePackages = ["com.embabel"])
 @PropertySource("classpath:application.yml")

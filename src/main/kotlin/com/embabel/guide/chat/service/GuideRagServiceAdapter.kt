@@ -5,7 +5,7 @@ import com.embabel.chat.AssistantMessage
 import com.embabel.chat.ChatSession
 import com.embabel.chat.Chatbot
 import com.embabel.chat.UserMessage
-import com.embabel.guide.domain.DrivineGuideUserRepository
+import com.embabel.guide.domain.GuideUserRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap
 )
 class GuideRagServiceAdapter(
     private val chatbot: Chatbot,
-    private val guideUserRepository: DrivineGuideUserRepository
+    private val guideUserRepository: GuideUserRepository
 ) : RagServiceAdapter {
 
     private val logger = LoggerFactory.getLogger(GuideRagServiceAdapter::class.java)
