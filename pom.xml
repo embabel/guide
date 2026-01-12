@@ -46,7 +46,7 @@
         <dependency>
             <groupId>org.drivine</groupId>
             <artifactId>drivine4j-spring-boot-starter</artifactId>
-            <version>0.0.14</version>
+            <version>0.0.15</version>
         </dependency>
 
 
@@ -148,6 +148,13 @@
             <artifactId>jjwt-jackson</artifactId>
             <version>0.12.6</version>
             <scope>runtime</scope>
+        </dependency>
+
+        <!-- UUID v7 Support -->
+        <dependency>
+            <groupId>com.fasterxml.uuid</groupId>
+            <artifactId>java-uuid-generator</artifactId>
+            <version>5.2.0</version>
         </dependency>
 
         <!-- Unit and Integration Testing -->

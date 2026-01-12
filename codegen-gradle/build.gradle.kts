@@ -31,10 +31,10 @@ repositories {
 
 dependencies {
     // Drivine core library
-    implementation("org.drivine:drivine4j:0.0.12")
+    implementation("org.drivine:drivine4j:0.0.15")
 
     // KSP processor for code generation
-    ksp("org.drivine:drivine4j-codegen:0.0.12")
+    ksp("org.drivine:drivine4j-codegen:0.0.15")
 
     // Dependencies needed for domain classes to compile
     implementation("com.embabel.agent:embabel-agent-api:0.3.2-SNAPSHOT")

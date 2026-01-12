@@ -39,10 +39,10 @@ import java.util.*
 @ContextConfiguration(initializers = [Neo4jPropertiesInitializer::class])
 @ImportAutoConfiguration(exclude = [McpClientAutoConfiguration::class])
 @Transactional
-class GraphObjectGuideUserRepositoryTest {
+class GuideUserRepositoryDefaultImplTest {
 
     @Autowired
-    private lateinit var repository: GraphObjectGuideUserRepository
+    private lateinit var repository: GuideUserRepositoryDefaultImpl
 
     @Test
     fun `test create and find GuideUser with Discord info`() {

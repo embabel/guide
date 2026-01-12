@@ -1,16 +1,18 @@
 package com.embabel.hub
 
+import com.embabel.guide.chat.service.ThreadService
 import com.embabel.guide.domain.GuideUser
 import com.embabel.guide.domain.GuideUserService
 import com.embabel.guide.domain.WebUserData
+import com.embabel.guide.util.UUIDv7
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Service
-import java.util.*
 
 @Service
 class HubService(
     private val guideUserService: GuideUserService,
-    private val jwtTokenService: JwtTokenService
+    private val jwtTokenService: JwtTokenService,
+    private val threadService: ThreadService
 ) {
 
     private val passwordEncoder = BCryptPasswordEncoder()
@@ -44,8 +46,8 @@ class HubService(
             throw RegistrationException("Display name is required")
         }
 
-        // Generate unique user ID
-        val userId = UUID.randomUUID().toString()
+        // Generate unique user ID using UUIDv7 (time-ordered)
+        val userId = UUIDv7.generateString()
 
         // Hash the password with BCrypt (includes automatic salt generation)
         val passwordHash = passwordEncoder.encode(request.password)
@@ -63,8 +65,13 @@ class HubService(
             refreshToken
         )
 
-        // Save the user through GuideUserService and return the composite
-        return guideUserService.saveFromWebUser(webUser)
+        // Save the user through GuideUserService
+        val guideUser = guideUserService.saveFromWebUser(webUser)
+
+        // Create a welcome thread for the new user
+        threadService.createWelcomeThread(guideUser.core.id)
+
+        return guideUser
     }
 
     /**
