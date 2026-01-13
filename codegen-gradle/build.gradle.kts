@@ -18,6 +18,8 @@ plugins {
 group = "com.embabel.guide"
 version = "0.1.0-SNAPSHOT"
 
+val drivineVersion = "0.0.18"
+
 repositories {
     mavenCentral()
     mavenLocal()
@@ -31,10 +33,10 @@ repositories {
 
 dependencies {
     // Drivine core library
-    implementation("org.drivine:drivine4j:0.0.15")
+    implementation("org.drivine:drivine4j:$drivineVersion")
 
     // KSP processor for code generation
-    ksp("org.drivine:drivine4j-codegen:0.0.15")
+    ksp("org.drivine:drivine4j-codegen:$drivineVersion")
 
     // Dependencies needed for domain classes to compile
     implementation("com.embabel.agent:embabel-agent-api:0.3.2-SNAPSHOT")
