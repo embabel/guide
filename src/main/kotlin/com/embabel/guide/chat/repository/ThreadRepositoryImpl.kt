@@ -69,7 +69,7 @@ class ThreadRepositoryImpl(
                 createdAt = now
             ),
             owner = owner,
-            messages = listOf(
+            _messages = listOf(
                 MessageWithVersion(
                     message = MessageData(
                         messageId = messageId,
