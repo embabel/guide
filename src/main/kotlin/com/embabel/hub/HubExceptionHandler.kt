@@ -29,6 +29,14 @@ class HubExceptionHandler {
     fun handleUnauthorizedException(ex: UnauthorizedException, request: HttpServletRequest) =
         buildResponse(HttpStatus.UNAUTHORIZED, ex.message, request)
 
+    @ExceptionHandler(NotFoundException::class)
+    fun handleNotFoundException(ex: NotFoundException, request: HttpServletRequest) =
+        buildResponse(HttpStatus.NOT_FOUND, ex.message, request)
+
+    @ExceptionHandler(ForbiddenException::class)
+    fun handleForbiddenException(ex: ForbiddenException, request: HttpServletRequest) =
+        buildResponse(HttpStatus.FORBIDDEN, ex.message, request)
+
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgumentException(ex: IllegalArgumentException, request: HttpServletRequest) =
         buildResponse(HttpStatus.BAD_REQUEST, ex.message, request)

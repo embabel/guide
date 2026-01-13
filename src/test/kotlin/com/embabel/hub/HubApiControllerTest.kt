@@ -609,4 +609,126 @@ class HubApiControllerTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").isArray)
     }
+
+    // ========== Thread History Tests ==========
+
+    @Test
+    fun `GET thread history should return messages for owned thread`() {
+        // Given - Register a user and create a thread
+        val registerRequest = UserRegistrationRequest(
+            userDisplayName = "History Test User",
+            username = "test_historyuser",
+            userEmail = "test_historyuser@example.com",
+            password = "SecurePassword123!",
+            passwordConfirmation = "SecurePassword123!"
+        )
+        val registerResult = mockMvc.perform(
+            post("/api/hub/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(registerRequest))
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+
+        val createdUser = objectMapper.readValue(registerResult.response.contentAsString, GuideUser::class.java)
+        val token = createdUser.webUser?.refreshToken ?: fail("Expected refresh token")
+
+        // Create a thread with a message
+        val thread = threadService.createWelcomeThreadWithMessage(
+            ownerId = createdUser.core.id,
+            welcomeMessage = "Hello, welcome!"
+        )
+
+        // When - Get thread history
+        mockMvc.perform(
+            get("/api/hub/threads/${thread.thread.threadId}")
+                .header("Authorization", "Bearer $token")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").isArray)
+            .andExpect(jsonPath("$[0].id").exists())
+            .andExpect(jsonPath("$[0].threadId").value(thread.thread.threadId))
+            .andExpect(jsonPath("$[0].role").value("assistant"))
+            .andExpect(jsonPath("$[0].body").value("Hello, welcome!"))
+    }
+
+    @Test
+    fun `GET thread history should return 403 for thread not owned by user`() {
+        // Given - Register two users
+        val user1Request = UserRegistrationRequest(
+            userDisplayName = "User One",
+            username = "test_userone",
+            userEmail = "test_userone@example.com",
+            password = "SecurePassword123!",
+            passwordConfirmation = "SecurePassword123!"
+        )
+        val user1Result = mockMvc.perform(
+            post("/api/hub/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(user1Request))
+        ).andReturn()
+        val user1 = objectMapper.readValue(user1Result.response.contentAsString, GuideUser::class.java)
+
+        val user2Request = UserRegistrationRequest(
+            userDisplayName = "User Two",
+            username = "test_usertwo",
+            userEmail = "test_usertwo@example.com",
+            password = "SecurePassword123!",
+            passwordConfirmation = "SecurePassword123!"
+        )
+        val user2Result = mockMvc.perform(
+            post("/api/hub/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(user2Request))
+        ).andReturn()
+        val user2 = objectMapper.readValue(user2Result.response.contentAsString, GuideUser::class.java)
+        val user2Token = user2.webUser?.refreshToken ?: fail("Expected refresh token")
+
+        // Create a thread owned by user1
+        val thread = threadService.createWelcomeThreadWithMessage(
+            ownerId = user1.core.id,
+            welcomeMessage = "User 1's private message"
+        )
+
+        // When - User2 tries to access user1's thread
+        mockMvc.perform(
+            get("/api/hub/threads/${thread.thread.threadId}")
+                .header("Authorization", "Bearer $user2Token")
+        )
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `GET thread history should return 404 for non-existent thread`() {
+        // Given - Register a user
+        val registerRequest = UserRegistrationRequest(
+            userDisplayName = "NotFound Test User",
+            username = "test_notfounduser",
+            userEmail = "test_notfounduser@example.com",
+            password = "SecurePassword123!",
+            passwordConfirmation = "SecurePassword123!"
+        )
+        val registerResult = mockMvc.perform(
+            post("/api/hub/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(registerRequest))
+        ).andReturn()
+
+        val createdUser = objectMapper.readValue(registerResult.response.contentAsString, GuideUser::class.java)
+        val token = createdUser.webUser?.refreshToken ?: fail("Expected refresh token")
+
+        // When - Try to get non-existent thread
+        mockMvc.perform(
+            get("/api/hub/threads/nonexistent-thread-id")
+                .header("Authorization", "Bearer $token")
+        )
+            .andExpect(status().isNotFound)
+    }
+
+    @Test
+    fun `GET thread history should return 403 when not authenticated`() {
+        // When & Then - No auth header
+        mockMvc.perform(get("/api/hub/threads/some-thread-id"))
+            .andExpect(status().isForbidden)
+    }
 }
