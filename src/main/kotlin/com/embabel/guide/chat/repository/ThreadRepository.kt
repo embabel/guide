@@ -14,27 +14,28 @@ interface ThreadRepository {
     fun findByThreadId(threadId: String): Optional<ThreadTimeline>
 
     /**
-     * Find all threads for a user.
-     * Ownership is determined by the first message's author.
+     * Find all threads owned by a user.
      */
-    fun findByUserId(userId: String): List<ThreadTimeline>
+    fun findByOwnerId(ownerId: String): List<ThreadTimeline>
 
     /**
      * Create a new thread with an initial message.
      *
      * @param threadId the thread ID (should be UUIDv7)
-     * @param userId the owning user's ID
+     * @param ownerId the owning user's ID
      * @param title optional thread title
      * @param message the initial message text
      * @param role the message role ("user", "assistant", or "tool")
+     * @param authorId optional author ID for the message (null for system messages)
      * @return the created thread timeline
      */
     fun createWithMessage(
         threadId: String,
-        userId: String,
+        ownerId: String,
         title: String?,
         message: String,
-        role: String
+        role: String,
+        authorId: String? = null
     ): ThreadTimeline
 
     /**

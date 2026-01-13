@@ -27,44 +27,53 @@ class ThreadService(
     }
 
     /**
-     * Find all threads for a user.
+     * Find all threads owned by a user.
      */
-    fun findByUserId(userId: String): List<ThreadTimeline> {
-        return threadRepository.findByUserId(userId)
+    fun findByOwnerId(ownerId: String): List<ThreadTimeline> {
+        return threadRepository.findByOwnerId(ownerId)
     }
 
     /**
      * Create a new thread with an initial message.
+     *
+     * @param ownerId the user who owns the thread
+     * @param title optional thread title
+     * @param message the initial message text
+     * @param role the message role
+     * @param authorId optional author of the message (null for system messages)
      */
     fun createThread(
-        userId: String,
+        ownerId: String,
         title: String? = null,
         message: String,
-        role: String
+        role: String,
+        authorId: String? = null
     ): ThreadTimeline {
         val threadId = UUIDv7.generateString()
         return threadRepository.createWithMessage(
             threadId = threadId,
-            userId = userId,
+            ownerId = ownerId,
             title = title,
             message = message,
-            role = role
+            role = role,
+            authorId = authorId
         )
     }
 
     /**
      * Create a welcome thread for a new user.
-     * The welcome message is from the assistant.
+     * The thread is owned by the user, but the welcome message is from the system (no author).
      */
     fun createWelcomeThread(
-        userId: String,
+        ownerId: String,
         welcomeMessage: String = DEFAULT_WELCOME_MESSAGE
     ): ThreadTimeline {
         return createThread(
-            userId = userId,
+            ownerId = ownerId,
             title = "Welcome",
             message = welcomeMessage,
-            role = ROLE_ASSISTANT
+            role = ROLE_ASSISTANT,
+            authorId = null  // System message - no author
         )
     }
 }

@@ -28,10 +28,10 @@ class ThreadRepositoryImpl(
     }
 
     @Transactional(readOnly = true)
-    override fun findByUserId(userId: String): List<ThreadTimeline> {
+    override fun findByOwnerId(ownerId: String): List<ThreadTimeline> {
         return graphObjectManager.loadAll<ThreadTimeline> {
             where {
-                turns.authoredBy.core.id eq userId
+                owner.core.id eq ownerId
             }
         }
     }
@@ -39,35 +39,45 @@ class ThreadRepositoryImpl(
     @Transactional
     override fun createWithMessage(
         threadId: String,
-        userId: String,
+        ownerId: String,
         title: String?,
         message: String,
-        role: String
+        role: String,
+        authorId: String?
     ): ThreadTimeline {
         val now = Instant.now()
 
-        val author = guideUserRepository.findById(userId).orElseThrow {
-            IllegalArgumentException("User not found: $userId")
+        val owner = guideUserRepository.findById(ownerId).orElseThrow {
+            IllegalArgumentException("Owner not found: $ownerId")
         }
 
-        val turnId = UUIDv7.generateString()
+        val author = if (authorId != null) {
+            guideUserRepository.findById(authorId).orElseThrow {
+                IllegalArgumentException("Author not found: $authorId")
+            }
+        } else {
+            null
+        }
+
+        val messageId = UUIDv7.generateString()
         val versionId = UUIDv7.generateString()
 
         val timeline = ThreadTimeline(
-            thread = ThreadCore(
+            thread = ThreadData(
                 threadId = threadId,
                 title = title,
                 createdAt = now
             ),
-            turns = listOf(
-                TurnWithCurrentText(
-                    turn = TurnCore(
-                        turnId = turnId,
+            owner = owner,
+            messages = listOf(
+                MessageWithVersion(
+                    message = MessageData(
+                        messageId = messageId,
                         threadId = threadId,
                         role = role,
                         createdAt = now
                     ),
-                    current = TurnVersionCore(
+                    current = MessageVersionData(
                         versionId = versionId,
                         createdAt = now,
                         editorRole = role,

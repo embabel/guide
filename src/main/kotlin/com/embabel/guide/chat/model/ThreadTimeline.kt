@@ -1,18 +1,22 @@
 package com.embabel.guide.chat.model
 
+import com.embabel.guide.domain.GuideUser
 import org.drivine.annotation.Direction
 import org.drivine.annotation.GraphRelationship
 import org.drivine.annotation.GraphView
 import org.drivine.annotation.Root
 
 /**
- * Simplified thread timeline - direct Thread → Turn relationship.
- * Each turn includes its current version text and author.
+ * Thread timeline with messages.
+ * Each message includes its current version text and author.
  */
 @GraphView
 data class ThreadTimeline(
-    @Root val thread: ThreadCore,
+    @Root val thread: ThreadData,
 
-    @GraphRelationship(type = "HAS_TURN", direction = Direction.OUTGOING)
-    val turns: List<TurnWithCurrentText>
+    @GraphRelationship(type = "OWNED_BY", direction = Direction.OUTGOING)
+    val owner: GuideUser,
+
+    @GraphRelationship(type = "HAS_MESSAGE", direction = Direction.OUTGOING)
+    val messages: List<MessageWithVersion>
 )

@@ -4,8 +4,8 @@ import org.drivine.annotation.NodeFragment
 import org.drivine.annotation.NodeId
 import java.time.Instant
 
-@NodeFragment(labels = ["TurnVersion"])
-data class TurnVersionCore(
+@NodeFragment(labels = ["MessageVersion"])
+data class MessageVersionData(
     @NodeId val versionId: String,
     val createdAt: Instant?,
     val editorRole: String?,   // "user" | "assistant" | "system"

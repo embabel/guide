@@ -7,11 +7,11 @@ import org.drivine.annotation.GraphView
 import org.drivine.annotation.Root
 
 @GraphView
-data class TurnWithCurrentText(
-    @Root val turn: TurnCore,
+data class MessageWithVersion(
+    @Root val message: MessageData,
 
     @GraphRelationship(type = "CURRENT", direction = Direction.OUTGOING)
-    val current: TurnVersionCore,
+    val current: MessageVersionData,
 
     @GraphRelationship(type = "AUTHORED_BY", direction = Direction.OUTGOING)
     val authoredBy: GuideUser?
