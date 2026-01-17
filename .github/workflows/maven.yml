@@ -53,7 +53,7 @@ jobs:
       # Publish test results as check run annotations
       - name: Publish Test Results
         uses: dorny/test-reporter@v1
-        if: always()
+        if: always() && github.ref == 'refs/heads/main'
         with:
           name: Test Results
           path: target/surefire-reports/*.xml
