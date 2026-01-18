@@ -7,6 +7,8 @@ WORKDIR /workspace
 
 COPY pom.xml ./
 COPY src ./src
+COPY codegen-gradle ./codegen-gradle
+RUN chmod +x /workspace/codegen-gradle/gradlew
 
 RUN mvn -q -DskipTests package
 

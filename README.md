@@ -365,7 +365,7 @@ client.activate();
 By default, this starts `neo4j` + `guide` (the Java application):
 
 ```bash
-docker compose up --build -d
+docker compose --profile java up --build -d
 ```
 
 #### Running Neo4j only (for local Java development)
@@ -445,6 +445,9 @@ docker compose down --remove-orphans
 | `NEO4J_VERSION`    | `2025.10.1-community-bullseye` | Neo4j Docker image tag                           |
 | `NEO4J_USERNAME`   | `neo4j`                        | Neo4j username                                   |
 | `NEO4J_PASSWORD`   | `brahmsian`                    | Neo4j password                                   |
+| `NEO4J_HTTP_PORT`  | 7474                           | Neo4j HTTP port                                  |
+| `NEO4J_BOLT_PORT`  | 7687                           | Neo4j Bolt port                                  |
+| `NEO4J_HTTPS_PORT` | 7473                           | Neo4j HTTPS port                                 |
 | `OPENAI_API_KEY`   | (required)                     | OpenAI API key                                   |
 | `DISCORD_TOKEN`    | (optional)                     | Discord bot token                                |
 
