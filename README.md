@@ -362,11 +362,25 @@ client.activate();
 
 ### Start (Docker Compose)
 
-By default, this starts `neo4j` + `guide` (the Java application):
+Start `neo4j` + `guide` (the Java application):
 
 ```bash
-docker compose up --build -d
+docker compose --profile java up --build -d
 ```
+
+#### Docker Build Details
+
+The Dockerfile uses a multi-stage build that compiles the application from source inside the container. This means:
+
+- ✅ Works from a fresh clone (no Java/Maven installation required locally)
+- ✅ Only Docker is needed to build and run
+- ⚠️ First build takes ~2-3 minutes (Maven compilation inside Docker)
+
+The build process:
+1. Stage 1: Uses `maven:3.9.9-eclipse-temurin-21` to compile the application
+2. Stage 2: Uses lightweight `eclipse-temurin:21-jre-jammy` runtime image with the compiled JAR
+
+This approach ensures consistency across environments and simplifies onboarding for new contributors.
 
 #### Running Neo4j only (for local Java development)
 
@@ -389,7 +403,7 @@ This is useful during development when you want faster iteration with your local
 If port `1337` is already in use (for example, the `chatbot` app is running), override the exposed port:
 
 ```bash
-GUIDE_PORT=1338 docker compose up --build -d
+GUIDE_PORT=1338 docker compose --profile java up --build -d
 ```
 
 This maps container port `1337` → host port `1338`, so MCP SSE becomes:
@@ -419,7 +433,7 @@ OPENAI_API_KEY=sk-your-key-here
 2. **Or pass it inline**:
 
 ```bash
-OPENAI_API_KEY=sk-... docker compose up --build -d
+OPENAI_API_KEY=sk-... docker compose --profile java up --build -d
 ```
 
 #### Verify MCP
@@ -434,7 +448,7 @@ You should see `Content-Type: text/event-stream` and an `event:endpoint` line.
 #### Stop
 
 ```bash
-docker compose down --remove-orphans
+docker compose --profile java down --remove-orphans
 ```
 
 ### Environment Variables
@@ -445,13 +459,16 @@ docker compose down --remove-orphans
 | `NEO4J_VERSION`    | `2025.10.1-community-bullseye` | Neo4j Docker image tag                           |
 | `NEO4J_USERNAME`   | `neo4j`                        | Neo4j username                                   |
 | `NEO4J_PASSWORD`   | `brahmsian`                    | Neo4j password                                   |
+| `NEO4J_HTTP_PORT`  | `7474`                         | Neo4j HTTP port                                  |
+| `NEO4J_BOLT_PORT`  | `7687`                         | Neo4j Bolt port                                  |
+| `NEO4J_HTTPS_PORT` | `7473`                         | Neo4j HTTPS port                                 |
 | `OPENAI_API_KEY`   | (required)                     | OpenAI API key                                   |
 | `DISCORD_TOKEN`    | (optional)                     | Discord bot token                                |
 
 Example:
 
 ```bash
-NEO4J_PASSWORD=mysecretpassword OPENAI_API_KEY=sk-... GUIDE_PORT=1338 docker compose up --build -d
+NEO4J_PASSWORD=mysecretpassword OPENAI_API_KEY=sk-... GUIDE_PORT=1338 docker compose --profile java up --build -d
 ```
 
 ## Testing
@@ -510,7 +527,7 @@ Leave `USE_LOCAL_NEO4J` unset (the default). GitHub Actions uses Testcontainers 
 ./mvnw test
 ```
 
-All 38 tests should pass, including:
+All 77 tests should pass, including:
 
 - Hub API controller tests
 - User service tests
