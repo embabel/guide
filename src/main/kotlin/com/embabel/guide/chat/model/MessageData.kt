@@ -7,7 +7,7 @@ import java.time.Instant
 @NodeFragment(labels = ["Message"])
 data class MessageData(
     @NodeId val messageId: String,
-    val threadId: String,
+    val sessionId: String,
     val role: String,          // "user" | "assistant" | "tool"
     val createdAt: Instant?,
     val isVariant: Boolean? = null,

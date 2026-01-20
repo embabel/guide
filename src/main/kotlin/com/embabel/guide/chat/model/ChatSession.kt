@@ -7,13 +7,13 @@ import org.drivine.annotation.GraphView
 import org.drivine.annotation.Root
 
 /**
- * Thread timeline with messages.
+ * Chat session with messages.
  * Each message includes its current version text and author.
  * Messages are sorted by messageId (UUIDv7 = chronological order) via DSL deep sorting.
  */
 @GraphView
-data class ThreadTimeline(
-    @Root val thread: ThreadData,
+data class ChatSession(
+    @Root val session: ChatSessionData,
 
     @GraphRelationship(type = "OWNED_BY", direction = Direction.OUTGOING)
     val owner: GuideUser,
@@ -21,7 +21,7 @@ data class ThreadTimeline(
     @GraphRelationship(type = "HAS_MESSAGE", direction = Direction.OUTGOING)
     val messages: List<MessageWithVersion> = emptyList()
 ) {
-    /** Returns a copy of this timeline with an additional message. */
-    fun withMessage(message: MessageWithVersion): ThreadTimeline =
+    /** Returns a copy of this session with an additional message. */
+    fun withMessage(message: MessageWithVersion): ChatSession =
         copy(messages = messages + message)
 }

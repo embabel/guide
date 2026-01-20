@@ -1,7 +1,7 @@
 package com.embabel.guide.chat.service
 
 import com.embabel.guide.chat.model.*
-import com.embabel.guide.chat.repository.ThreadRepository
+import com.embabel.guide.chat.repository.ChatSessionRepository
 import com.embabel.guide.domain.GuideUserService
 import com.embabel.guide.util.UUIDv7
 import kotlinx.coroutines.Dispatchers
@@ -11,8 +11,8 @@ import java.time.Instant
 import java.util.Optional
 
 @Service
-class ThreadService(
-    private val threadRepository: ThreadRepository,
+class ChatSessionService(
+    private val chatSessionRepository: ChatSessionRepository,
     private val ragAdapter: RagServiceAdapter,
     private val guideUserService: GuideUserService
 ) {
@@ -27,47 +27,47 @@ class ThreadService(
     }
 
     /**
-     * Find a thread by its ID.
+     * Find a session by its ID.
      */
-    fun findByThreadId(threadId: String): Optional<ThreadTimeline> {
-        return threadRepository.findByThreadId(threadId)
+    fun findBySessionId(sessionId: String): Optional<ChatSession> {
+        return chatSessionRepository.findBySessionId(sessionId)
     }
 
     /**
-     * Find all threads owned by a user.
+     * Find all sessions owned by a user.
      */
-    fun findByOwnerId(ownerId: String): List<ThreadTimeline> {
-        return threadRepository.findByOwnerId(ownerId)
+    fun findByOwnerId(ownerId: String): List<ChatSession> {
+        return chatSessionRepository.findByOwnerId(ownerId)
     }
 
     /**
-     * Find all threads owned by a user, sorted by most recent activity.
-     * Threads with the most recent messages appear first.
+     * Find all sessions owned by a user, sorted by most recent activity.
+     * Sessions with the most recent messages appear first.
      */
-    fun findByOwnerIdByRecentActivity(ownerId: String): List<ThreadTimeline> {
-        return threadRepository.findByOwnerId(ownerId)
+    fun findByOwnerIdByRecentActivity(ownerId: String): List<ChatSession> {
+        return chatSessionRepository.findByOwnerId(ownerId)
             .sortedByDescending { it.messages.lastOrNull()?.message?.messageId ?: "" }
     }
 
     /**
-     * Create a new thread with an initial message.
+     * Create a new session with an initial message.
      *
-     * @param ownerId the user who owns the thread
-     * @param title optional thread title
+     * @param ownerId the user who owns the session
+     * @param title optional session title
      * @param message the initial message text
      * @param role the message role
      * @param authorId optional author of the message (null for system messages)
      */
-    fun createThread(
+    fun createSession(
         ownerId: String,
         title: String? = null,
         message: String,
         role: String,
         authorId: String? = null
-    ): ThreadTimeline {
-        val threadId = UUIDv7.generateString()
-        return threadRepository.createWithMessage(
-            threadId = threadId,
+    ): ChatSession {
+        val sessionId = UUIDv7.generateString()
+        return chatSessionRepository.createWithMessage(
+            sessionId = sessionId,
             ownerId = ownerId,
             title = title,
             message = message,
@@ -77,32 +77,32 @@ class ThreadService(
     }
 
     /**
-     * Create a welcome thread for a new user with an AI-generated greeting.
+     * Create a welcome session for a new user with an AI-generated greeting.
      *
      * Sends a prompt to the AI asking it to greet and welcome the user.
-     * The prompt itself is NOT stored in the thread - only the AI's response.
-     * The thread is owned by the user, but the welcome message has no author (system-generated).
+     * The prompt itself is NOT stored in the session - only the AI's response.
+     * The session is owned by the user, but the welcome message has no author (system-generated).
      *
-     * @param ownerId the user who owns the thread
+     * @param ownerId the user who owns the session
      * @param displayName the user's display name for the personalized greeting
      */
-    suspend fun createWelcomeThread(
+    suspend fun createWelcomeSession(
         ownerId: String,
         displayName: String
-    ): ThreadTimeline = withContext(Dispatchers.IO) {
-        // Generate threadId upfront so we can pass it to the RAG adapter
-        val threadId = UUIDv7.generateString()
+    ): ChatSession = withContext(Dispatchers.IO) {
+        // Generate sessionId upfront so we can pass it to the RAG adapter
+        val sessionId = UUIDv7.generateString()
         val prompt = WELCOME_PROMPT_TEMPLATE.format(displayName)
         val welcomeMessage = ragAdapter.sendMessage(
-            threadId = threadId,
+            threadId = sessionId,
             message = prompt,
             fromUserId = ownerId,
-            priorMessages = emptyList(),  // No prior context for welcome thread
+            priorMessages = emptyList(),  // No prior context for welcome session
             onEvent = { }  // No status updates needed for welcome message
         )
 
-        threadRepository.createWithMessage(
-            threadId = threadId,
+        chatSessionRepository.createWithMessage(
+            sessionId = sessionId,
             ownerId = ownerId,
             title = "Welcome",
             message = welcomeMessage,
@@ -112,13 +112,13 @@ class ThreadService(
     }
 
     /**
-     * Create a welcome thread with a static message (for testing or fallback).
+     * Create a welcome session with a static message (for testing or fallback).
      */
-    fun createWelcomeThreadWithMessage(
+    fun createWelcomeSessionWithMessage(
         ownerId: String,
         welcomeMessage: String = DEFAULT_WELCOME_MESSAGE
-    ): ThreadTimeline {
-        return createThread(
+    ): ChatSession {
+        return createSession(
             ownerId = ownerId,
             title = "Welcome",
             message = welcomeMessage,
@@ -128,19 +128,19 @@ class ThreadService(
     }
 
     /**
-     * Create a new thread from user message content.
+     * Create a new session from user message content.
      * Generates a title from the content using AI.
      *
-     * @param ownerId the user who owns the thread
+     * @param ownerId the user who owns the session
      * @param content the initial message content
-     * @return the created thread timeline
+     * @return the created session
      */
-    suspend fun createThreadFromContent(
+    suspend fun createSessionFromContent(
         ownerId: String,
         content: String
-    ): ThreadTimeline = withContext(Dispatchers.IO) {
+    ): ChatSession = withContext(Dispatchers.IO) {
         val title = ragAdapter.generateTitle(content, ownerId)
-        createThread(
+        createSession(
             ownerId = ownerId,
             title = title,
             message = content,
@@ -150,16 +150,16 @@ class ThreadService(
     }
 
     /**
-     * Add a message to an existing thread.
+     * Add a message to an existing session.
      *
-     * @param threadId the thread to add the message to
+     * @param sessionId the session to add the message to
      * @param text the message text
      * @param role the message role (user, assistant, tool)
      * @param authorId optional author ID (null for system messages)
      * @return the created message
      */
     fun addMessage(
-        threadId: String,
+        sessionId: String,
         text: String,
         role: String,
         authorId: String? = null
@@ -180,7 +180,7 @@ class ThreadService(
         val message = MessageWithVersion(
             message = MessageData(
                 messageId = messageId,
-                threadId = threadId,
+                sessionId = sessionId,
                 role = role,
                 createdAt = now
             ),
@@ -194,7 +194,7 @@ class ThreadService(
             authoredBy = author
         )
 
-        threadRepository.addMessage(threadId, message)
+        chatSessionRepository.addMessage(sessionId, message)
         return message
     }
 }

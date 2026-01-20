@@ -1,7 +1,7 @@
 package com.embabel.hub
 
 import com.embabel.guide.chat.model.DeliveredMessage
-import com.embabel.guide.chat.service.ThreadService
+import com.embabel.guide.chat.service.ChatSessionService
 import com.embabel.guide.domain.GuideUser
 import com.embabel.guide.domain.GuideUserService
 import kotlinx.coroutines.runBlocking
@@ -20,7 +20,7 @@ class HubApiController(
     private val hubService: HubService,
     private val personaService: PersonaService,
     private val guideUserService: GuideUserService,
-    private val threadService: ThreadService
+    private val chatSessionService: ChatSessionService
 ) {
 
     @PostMapping("/register")
@@ -60,42 +60,42 @@ class HubApiController(
         hubService.changePassword(userId, request)
     }
 
-    data class ThreadSummary(val id: String, val title: String?)
-    data class CreateThreadRequest(val content: String)
-    data class CreateThreadResponse(val threadId: String, val title: String?)
+    data class SessionSummary(val id: String, val title: String?)
+    data class CreateSessionRequest(val content: String)
+    data class CreateSessionResponse(val sessionId: String, val title: String?)
 
-    @PostMapping("/threads")
-    fun createThread(
-        @RequestBody request: CreateThreadRequest,
+    @PostMapping("/sessions")
+    fun createSession(
+        @RequestBody request: CreateSessionRequest,
         authentication: Authentication?
-    ): CreateThreadResponse {
+    ): CreateSessionResponse {
         val webUserId = authentication?.principal as? String
             ?: throw UnauthorizedException()
         val guideUser = guideUserService.findByWebUserId(webUserId)
             .orElseThrow { UnauthorizedException() }
 
-        val timeline = runBlocking {
-            threadService.createThreadFromContent(
+        val chatSession = runBlocking {
+            chatSessionService.createSessionFromContent(
                 ownerId = guideUser.core.id,
                 content = request.content
             )
         }
-        return CreateThreadResponse(timeline.thread.threadId, timeline.thread.title)
+        return CreateSessionResponse(chatSession.session.sessionId, chatSession.session.title)
     }
 
-    @GetMapping("/threads")
-    fun listThreads(authentication: Authentication?): List<ThreadSummary> {
+    @GetMapping("/sessions")
+    fun listSessions(authentication: Authentication?): List<SessionSummary> {
         val webUserId = authentication?.principal as? String
             ?: throw UnauthorizedException()
         val guideUser = guideUserService.findByWebUserId(webUserId)
             .orElseThrow { UnauthorizedException() }
-        return threadService.findByOwnerIdByRecentActivity(guideUser.core.id)
-            .map { ThreadSummary(it.thread.threadId, it.thread.title) }
+        return chatSessionService.findByOwnerIdByRecentActivity(guideUser.core.id)
+            .map { SessionSummary(it.session.sessionId, it.session.title) }
     }
 
-    @GetMapping("/threads/{threadId}")
-    fun getThreadHistory(
-        @PathVariable threadId: String,
+    @GetMapping("/sessions/{sessionId}")
+    fun getSessionHistory(
+        @PathVariable sessionId: String,
         authentication: Authentication?
     ): List<DeliveredMessage> {
         val webUserId = authentication?.principal as? String
@@ -103,14 +103,14 @@ class HubApiController(
         val guideUser = guideUserService.findByWebUserId(webUserId)
             .orElseThrow { UnauthorizedException() }
 
-        val timeline = threadService.findByThreadId(threadId)
-            .orElseThrow { NotFoundException("Thread not found") }
+        val chatSession = chatSessionService.findBySessionId(sessionId)
+            .orElseThrow { NotFoundException("Session not found") }
 
-        // Security check: only owner can view thread
-        if (timeline.owner.core.id != guideUser.core.id) {
+        // Security check: only owner can view session
+        if (chatSession.owner.core.id != guideUser.core.id) {
             throw ForbiddenException("Access denied")
         }
 
-        return timeline.messages.map { DeliveredMessage.createFrom(it, threadId) }
+        return chatSession.messages.map { DeliveredMessage.createFrom(it, sessionId) }
     }
 }

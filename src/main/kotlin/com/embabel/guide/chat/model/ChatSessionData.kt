@@ -4,9 +4,9 @@ import org.drivine.annotation.NodeFragment
 import org.drivine.annotation.NodeId
 import java.time.Instant
 
-@NodeFragment(labels = ["Thread"])
-data class ThreadData(
-    @NodeId val threadId: String,
+@NodeFragment(labels = ["ChatSession"])
+data class ChatSessionData(
+    @NodeId val sessionId: String,
     val title: String?,
     val createdAt: Instant?
 )

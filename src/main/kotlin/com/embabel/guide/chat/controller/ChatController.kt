@@ -14,14 +14,14 @@ class ChatController(private val jesseService: JesseService) {
 
     /**
      * Receive a chat message and send it to Jesse for processing.
-     * Messages are persisted to the specified thread.
+     * Messages are persisted to the specified session.
      */
     @MessageMapping("chat.send")
     fun receive(principal: Principal, payload: ChatMessage) {
-        logger.info("ChatController received message from webUser {} in thread {}: {}",
-            principal.name, payload.threadId, payload.body)
+        logger.info("ChatController received message from webUser {} in session {}: {}",
+            principal.name, payload.sessionId, payload.body)
         jesseService.receiveMessage(
-            threadId = payload.threadId,
+            sessionId = payload.sessionId,
             fromWebUserId = principal.name,
             message = payload.body
         )

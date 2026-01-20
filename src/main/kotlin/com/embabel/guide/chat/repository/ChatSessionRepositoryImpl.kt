@@ -11,16 +11,16 @@ import java.time.Instant
 import java.util.Optional
 
 @Repository
-class ThreadRepositoryImpl(
+class ChatSessionRepositoryImpl(
     @param:Qualifier("neoGraphObjectManager") private val graphObjectManager: GraphObjectManager,
     private val guideUserRepository: GuideUserRepository
-) : ThreadRepository {
+) : ChatSessionRepository {
 
     @Transactional(readOnly = true)
-    override fun findByThreadId(threadId: String): Optional<ThreadTimeline> {
-        val results = graphObjectManager.loadAll<ThreadTimeline> {
+    override fun findBySessionId(sessionId: String): Optional<ChatSession> {
+        val results = graphObjectManager.loadAll<ChatSession> {
             where {
-                thread.threadId eq threadId
+                session.sessionId eq sessionId
             }
             orderBy {
                 messages.message.messageId.asc()
@@ -30,8 +30,8 @@ class ThreadRepositoryImpl(
     }
 
     @Transactional(readOnly = true)
-    override fun findByOwnerId(ownerId: String): List<ThreadTimeline> {
-        return graphObjectManager.loadAll<ThreadTimeline> {
+    override fun findByOwnerId(ownerId: String): List<ChatSession> {
+        return graphObjectManager.loadAll<ChatSession> {
             where {
                 owner.core.id eq ownerId
             }
@@ -43,13 +43,13 @@ class ThreadRepositoryImpl(
 
     @Transactional
     override fun createWithMessage(
-        threadId: String,
+        sessionId: String,
         ownerId: String,
         title: String?,
         message: String,
         role: String,
         authorId: String?
-    ): ThreadTimeline {
+    ): ChatSession {
         val now = Instant.now()
 
         val owner = guideUserRepository.findById(ownerId).orElseThrow {
@@ -67,9 +67,9 @@ class ThreadRepositoryImpl(
         val messageId = UUIDv7.generateString()
         val versionId = UUIDv7.generateString()
 
-        val timeline = ThreadTimeline(
-            thread = ThreadData(
-                threadId = threadId,
+        val chatSession = ChatSession(
+            session = ChatSessionData(
+                sessionId = sessionId,
                 title = title,
                 createdAt = now
             ),
@@ -78,7 +78,7 @@ class ThreadRepositoryImpl(
                 MessageWithVersion(
                     message = MessageData(
                         messageId = messageId,
-                        threadId = threadId,
+                        sessionId = sessionId,
                         role = role,
                         createdAt = now
                     ),
@@ -94,20 +94,20 @@ class ThreadRepositoryImpl(
             )
         )
 
-        return graphObjectManager.save(timeline)
+        return graphObjectManager.save(chatSession)
     }
 
     @Transactional
-    override fun addMessage(threadId: String, message: MessageWithVersion): ThreadTimeline {
-        val timeline = findByThreadId(threadId).orElseThrow {
-            IllegalArgumentException("Thread not found: $threadId")
+    override fun addMessage(sessionId: String, message: MessageWithVersion): ChatSession {
+        val chatSession = findBySessionId(sessionId).orElseThrow {
+            IllegalArgumentException("Session not found: $sessionId")
         }
-        val updatedTimeline = timeline.withMessage(message)
-        return graphObjectManager.save(updatedTimeline)
+        val updatedSession = chatSession.withMessage(message)
+        return graphObjectManager.save(updatedSession)
     }
 
     @Transactional
     override fun deleteAll() {
-        graphObjectManager.deleteAll<ThreadTimeline> { }
+        graphObjectManager.deleteAll<ChatSession> { }
     }
 }

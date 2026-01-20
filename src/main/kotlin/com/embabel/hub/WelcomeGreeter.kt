@@ -2,7 +2,7 @@ package com.embabel.hub
 
 import com.embabel.guide.chat.model.DeliveredMessage
 import com.embabel.guide.chat.service.ChatService
-import com.embabel.guide.chat.service.ThreadService
+import com.embabel.guide.chat.service.ChatSessionService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -13,10 +13,10 @@ import org.springframework.stereotype.Component
  */
 interface WelcomeGreeter {
     /**
-     * Greet a new user by creating a welcome thread and sending the message.
+     * Greet a new user by creating a welcome session and sending the message.
      * This is a fire-and-forget operation that runs asynchronously.
      *
-     * @param guideUserId the GuideUser's core ID (owner of the thread)
+     * @param guideUserId the GuideUser's core ID (owner of the session)
      * @param webUserId the WebUser's ID (for WebSocket delivery)
      * @param displayName the user's display name for personalized greeting
      */
@@ -24,24 +24,24 @@ interface WelcomeGreeter {
 }
 
 /**
- * Production implementation that creates AI-generated welcome threads.
+ * Production implementation that creates AI-generated welcome sessions.
  */
 @Component
 class WelcomeGreeterImpl(
-    private val threadService: ThreadService,
+    private val chatSessionService: ChatSessionService,
     private val chatService: ChatService
 ) : WelcomeGreeter {
 
     override fun greetNewUser(guideUserId: String, webUserId: String, displayName: String) {
         CoroutineScope(Dispatchers.IO).launch {
-            val timeline = threadService.createWelcomeThread(
+            val chatSession = chatSessionService.createWelcomeSession(
                 ownerId = guideUserId,
                 displayName = displayName
             )
             // Send the welcome message to the user via WebSocket
-            val welcomeMessage = timeline.messages.firstOrNull()
+            val welcomeMessage = chatSession.messages.firstOrNull()
             if (welcomeMessage != null) {
-                val delivered = DeliveredMessage.createFrom(welcomeMessage, timeline.thread.threadId)
+                val delivered = DeliveredMessage.createFrom(welcomeMessage, chatSession.session.sessionId)
                 chatService.sendToUser(webUserId, delivered)
             }
         }

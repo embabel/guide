@@ -2,7 +2,7 @@ package com.embabel.hub
 
 //import org.springframework.ai.mcp.client.autoconfigure.McpClientAutoConfiguration
 import com.embabel.guide.Neo4jPropertiesInitializer
-import com.embabel.guide.chat.service.ThreadService
+import com.embabel.guide.chat.service.ChatSessionService
 import com.embabel.guide.domain.GuideUser
 import com.embabel.guide.domain.GuideUserRepository
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -46,7 +46,7 @@ class HubApiControllerTest {
     lateinit var jwtTokenService: JwtTokenService
 
     @Autowired
-    lateinit var threadService: ThreadService
+    lateinit var chatSessionService: ChatSessionService
 
     private val passwordEncoder = BCryptPasswordEncoder()
 
@@ -530,15 +530,15 @@ class HubApiControllerTest {
             .andExpect(jsonPath("$.username").value("test_specialchar"))
     }
 
-    // ========== Threads Tests ==========
+    // ========== Sessions Tests ==========
 
     @Test
-    fun `GET threads should return list of threads for authenticated user`() {
+    fun `GET sessions should return list of sessions for authenticated user`() {
         // Given - Register and login a user
         val registerRequest = UserRegistrationRequest(
-            userDisplayName = "Thread Test User",
-            username = "test_threaduser",
-            userEmail = "test_threaduser@example.com",
+            userDisplayName = "Session Test User",
+            username = "test_sessionuser",
+            userEmail = "test_sessionuser@example.com",
             password = "SecurePassword123!",
             passwordConfirmation = "SecurePassword123!"
         )
@@ -553,15 +553,15 @@ class HubApiControllerTest {
         val createdUser = objectMapper.readValue(registerResult.response.contentAsString, GuideUser::class.java)
         val token = createdUser.webUser?.refreshToken ?: fail("Expected refresh token")
 
-        // Create a thread directly (since async welcome thread may not be ready)
-        threadService.createWelcomeThreadWithMessage(
+        // Create a session directly (since async welcome session may not be ready)
+        chatSessionService.createWelcomeSessionWithMessage(
             ownerId = createdUser.core.id,
             welcomeMessage = "Test welcome message"
         )
 
-        // When - Get threads with auth token
+        // When - Get sessions with auth token
         mockMvc.perform(
-            get("/api/hub/threads")
+            get("/api/hub/sessions")
                 .header("Authorization", "Bearer $token")
         )
             .andExpect(status().isOk)
@@ -571,19 +571,19 @@ class HubApiControllerTest {
     }
 
     @Test
-    fun `GET threads should return 403 when not authenticated`() {
+    fun `GET sessions should return 403 when not authenticated`() {
         // When & Then - No auth header (Spring Security returns 403 Forbidden)
-        mockMvc.perform(get("/api/hub/threads"))
+        mockMvc.perform(get("/api/hub/sessions"))
             .andExpect(status().isForbidden)
     }
 
     @Test
-    fun `GET threads should return empty list when user has no threads`() {
-        // Given - Register a user but don't create any threads
+    fun `GET sessions should return empty list when user has no sessions`() {
+        // Given - Register a user but don't create any sessions
         val registerRequest = UserRegistrationRequest(
-            userDisplayName = "No Threads User",
-            username = "test_nothreadsuser",
-            userEmail = "test_nothreadsuser@example.com",
+            userDisplayName = "No Sessions User",
+            username = "test_nosessionsuser",
+            userEmail = "test_nosessionsuser@example.com",
             password = "SecurePassword123!",
             passwordConfirmation = "SecurePassword123!"
         )
@@ -598,23 +598,23 @@ class HubApiControllerTest {
         val createdUser = objectMapper.readValue(registerResult.response.contentAsString, GuideUser::class.java)
         val token = createdUser.webUser?.refreshToken ?: fail("Expected refresh token")
 
-        // Note: The async welcome thread might not be created yet, which is fine for this test
+        // Note: The async welcome session might not be created yet, which is fine for this test
         // We're testing that the endpoint works and returns an array (possibly empty)
 
-        // When - Get threads with auth token
+        // When - Get sessions with auth token
         mockMvc.perform(
-            get("/api/hub/threads")
+            get("/api/hub/sessions")
                 .header("Authorization", "Bearer $token")
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").isArray)
     }
 
-    // ========== Thread History Tests ==========
+    // ========== Session History Tests ==========
 
     @Test
-    fun `GET thread history should return messages for owned thread`() {
-        // Given - Register a user and create a thread
+    fun `GET session history should return messages for owned session`() {
+        // Given - Register a user and create a session
         val registerRequest = UserRegistrationRequest(
             userDisplayName = "History Test User",
             username = "test_historyuser",
@@ -633,27 +633,27 @@ class HubApiControllerTest {
         val createdUser = objectMapper.readValue(registerResult.response.contentAsString, GuideUser::class.java)
         val token = createdUser.webUser?.refreshToken ?: fail("Expected refresh token")
 
-        // Create a thread with a message
-        val thread = threadService.createWelcomeThreadWithMessage(
+        // Create a session with a message
+        val chatSession = chatSessionService.createWelcomeSessionWithMessage(
             ownerId = createdUser.core.id,
             welcomeMessage = "Hello, welcome!"
         )
 
-        // When - Get thread history
+        // When - Get session history
         mockMvc.perform(
-            get("/api/hub/threads/${thread.thread.threadId}")
+            get("/api/hub/sessions/${chatSession.session.sessionId}")
                 .header("Authorization", "Bearer $token")
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").isArray)
             .andExpect(jsonPath("$[0].id").exists())
-            .andExpect(jsonPath("$[0].threadId").value(thread.thread.threadId))
+            .andExpect(jsonPath("$[0].sessionId").value(chatSession.session.sessionId))
             .andExpect(jsonPath("$[0].role").value("assistant"))
             .andExpect(jsonPath("$[0].body").value("Hello, welcome!"))
     }
 
     @Test
-    fun `GET thread history should return 403 for thread not owned by user`() {
+    fun `GET session history should return 403 for session not owned by user`() {
         // Given - Register two users
         val user1Request = UserRegistrationRequest(
             userDisplayName = "User One",
@@ -684,22 +684,22 @@ class HubApiControllerTest {
         val user2 = objectMapper.readValue(user2Result.response.contentAsString, GuideUser::class.java)
         val user2Token = user2.webUser?.refreshToken ?: fail("Expected refresh token")
 
-        // Create a thread owned by user1
-        val thread = threadService.createWelcomeThreadWithMessage(
+        // Create a session owned by user1
+        val chatSession = chatSessionService.createWelcomeSessionWithMessage(
             ownerId = user1.core.id,
             welcomeMessage = "User 1's private message"
         )
 
-        // When - User2 tries to access user1's thread
+        // When - User2 tries to access user1's session
         mockMvc.perform(
-            get("/api/hub/threads/${thread.thread.threadId}")
+            get("/api/hub/sessions/${chatSession.session.sessionId}")
                 .header("Authorization", "Bearer $user2Token")
         )
             .andExpect(status().isForbidden)
     }
 
     @Test
-    fun `GET thread history should return 404 for non-existent thread`() {
+    fun `GET session history should return 404 for non-existent session`() {
         // Given - Register a user
         val registerRequest = UserRegistrationRequest(
             userDisplayName = "NotFound Test User",
@@ -717,30 +717,30 @@ class HubApiControllerTest {
         val createdUser = objectMapper.readValue(registerResult.response.contentAsString, GuideUser::class.java)
         val token = createdUser.webUser?.refreshToken ?: fail("Expected refresh token")
 
-        // When - Try to get non-existent thread
+        // When - Try to get non-existent session
         mockMvc.perform(
-            get("/api/hub/threads/nonexistent-thread-id")
+            get("/api/hub/sessions/nonexistent-session-id")
                 .header("Authorization", "Bearer $token")
         )
             .andExpect(status().isNotFound)
     }
 
     @Test
-    fun `GET thread history should return 403 when not authenticated`() {
+    fun `GET session history should return 403 when not authenticated`() {
         // When & Then - No auth header
-        mockMvc.perform(get("/api/hub/threads/some-thread-id"))
+        mockMvc.perform(get("/api/hub/sessions/some-session-id"))
             .andExpect(status().isForbidden)
     }
 
-    // ========== Create Thread Tests ==========
+    // ========== Create Session Tests ==========
 
     @Test
-    fun `POST threads should create thread with generated title`() {
+    fun `POST sessions should create session with generated title`() {
         // Given - Register a user
         val registerRequest = UserRegistrationRequest(
-            userDisplayName = "Create Thread User",
-            username = "test_createthread",
-            userEmail = "test_createthread@example.com",
+            userDisplayName = "Create Session User",
+            username = "test_createsession",
+            userEmail = "test_createsession@example.com",
             password = "SecurePassword123!",
             passwordConfirmation = "SecurePassword123!"
         )
@@ -753,27 +753,27 @@ class HubApiControllerTest {
         val createdUser = objectMapper.readValue(registerResult.response.contentAsString, GuideUser::class.java)
         val token = createdUser.webUser?.refreshToken ?: fail("Expected refresh token")
 
-        // When - Create a new thread
+        // When - Create a new session
         val createRequest = mapOf("content" to "How do I configure the database connection settings?")
 
         mockMvc.perform(
-            post("/api/hub/threads")
+            post("/api/hub/sessions")
                 .header("Authorization", "Bearer $token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(createRequest))
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.threadId").exists())
+            .andExpect(jsonPath("$.sessionId").exists())
             .andExpect(jsonPath("$.title").exists())
     }
 
     @Test
-    fun `POST threads should persist thread with user message`() {
+    fun `POST sessions should persist session with user message`() {
         // Given - Register a user
         val registerRequest = UserRegistrationRequest(
-            userDisplayName = "Persist Thread User",
-            username = "test_persistthread",
-            userEmail = "test_persistthread@example.com",
+            userDisplayName = "Persist Session User",
+            username = "test_persistsession",
+            userEmail = "test_persistsession@example.com",
             password = "SecurePassword123!",
             passwordConfirmation = "SecurePassword123!"
         )
@@ -786,12 +786,12 @@ class HubApiControllerTest {
         val createdUser = objectMapper.readValue(registerResult.response.contentAsString, GuideUser::class.java)
         val token = createdUser.webUser?.refreshToken ?: fail("Expected refresh token")
 
-        // When - Create a new thread
+        // When - Create a new session
         val messageContent = "What are the best practices for error handling?"
         val createRequest = mapOf("content" to messageContent)
 
         val createResult = mockMvc.perform(
-            post("/api/hub/threads")
+            post("/api/hub/sessions")
                 .header("Authorization", "Bearer $token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(createRequest))
@@ -799,12 +799,12 @@ class HubApiControllerTest {
             .andExpect(status().isOk)
             .andReturn()
 
-        // Then - Verify thread was persisted with the message
+        // Then - Verify session was persisted with the message
         val response = objectMapper.readTree(createResult.response.contentAsString)
-        val threadId = response.get("threadId").asText()
+        val sessionId = response.get("sessionId").asText()
 
         mockMvc.perform(
-            get("/api/hub/threads/$threadId")
+            get("/api/hub/sessions/$sessionId")
                 .header("Authorization", "Bearer $token")
         )
             .andExpect(status().isOk)
@@ -813,13 +813,13 @@ class HubApiControllerTest {
     }
 
     @Test
-    fun `POST threads should return 403 when not authenticated`() {
+    fun `POST sessions should return 403 when not authenticated`() {
         // Given
         val createRequest = mapOf("content" to "Some message content")
 
         // When & Then - Note: Non-authenticated requests don't start async
         mockMvc.perform(
-            post("/api/hub/threads")
+            post("/api/hub/sessions")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(createRequest))
         )
@@ -827,12 +827,12 @@ class HubApiControllerTest {
     }
 
     @Test
-    fun `POST threads should appear in thread list`() {
+    fun `POST sessions should appear in session list`() {
         // Given - Register a user
         val registerRequest = UserRegistrationRequest(
-            userDisplayName = "List Thread User",
-            username = "test_listthread",
-            userEmail = "test_listthread@example.com",
+            userDisplayName = "List Session User",
+            username = "test_listsession",
+            userEmail = "test_listsession@example.com",
             password = "SecurePassword123!",
             passwordConfirmation = "SecurePassword123!"
         )
@@ -845,11 +845,11 @@ class HubApiControllerTest {
         val createdUser = objectMapper.readValue(registerResult.response.contentAsString, GuideUser::class.java)
         val token = createdUser.webUser?.refreshToken ?: fail("Expected refresh token")
 
-        // When - Create a new thread
+        // When - Create a new session
         val createRequest = mapOf("content" to "Tell me about machine learning algorithms")
 
         val createResult = mockMvc.perform(
-            post("/api/hub/threads")
+            post("/api/hub/sessions")
                 .header("Authorization", "Bearer $token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(createRequest))
@@ -858,14 +858,14 @@ class HubApiControllerTest {
             .andReturn()
 
         val response = objectMapper.readTree(createResult.response.contentAsString)
-        val threadId = response.get("threadId").asText()
+        val sessionId = response.get("sessionId").asText()
 
-        // Then - Thread should appear in list
+        // Then - Session should appear in list
         mockMvc.perform(
-            get("/api/hub/threads")
+            get("/api/hub/sessions")
                 .header("Authorization", "Bearer $token")
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$[?(@.id == '$threadId')]").exists())
+            .andExpect(jsonPath("$[?(@.id == '$sessionId')]").exists())
     }
 }

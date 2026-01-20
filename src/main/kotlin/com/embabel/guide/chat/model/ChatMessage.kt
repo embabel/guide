@@ -5,6 +5,6 @@ package com.embabel.guide.chat.model
  * Default values required for STOMP message converter deserialization.
  */
 data class ChatMessage(
-    val threadId: String = "",
+    val sessionId: String = "",
     val body: String = ""
 )

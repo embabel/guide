@@ -10,12 +10,12 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/messages")
 class ChatApiController(private val jesseService: JesseService) {
 
-    data class SendMessageRequest(val threadId: String, val fromWebUserId: String, val body: String)
+    data class SendMessageRequest(val sessionId: String, val fromWebUserId: String, val body: String)
 
     @PostMapping("/send")
     fun sendMessage(@RequestBody req: SendMessageRequest) {
         jesseService.receiveMessage(
-            threadId = req.threadId,
+            sessionId = req.sessionId,
             fromWebUserId = req.fromWebUserId,
             message = req.body
         )
