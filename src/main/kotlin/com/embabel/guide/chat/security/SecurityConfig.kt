@@ -91,6 +91,7 @@ class SecurityConfig(
                     HttpMethod.GET,
                     "/api/auth/me",
                     "/api/hub/personas",
+                    "/api/hub/sessions",
                     "/api/v1/data/stats"
                 ).permitAll()
                 it.anyRequest().authenticated()

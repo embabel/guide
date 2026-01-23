@@ -571,10 +571,12 @@ class HubApiControllerTest {
     }
 
     @Test
-    fun `GET sessions should return 403 when not authenticated`() {
-        // When & Then - No auth header (Spring Security returns 403 Forbidden)
+    fun `GET sessions should return empty list when not authenticated`() {
+        // When & Then - Anonymous users get empty list (can't see other anonymous users' sessions)
         mockMvc.perform(get("/api/hub/sessions"))
-            .andExpect(status().isForbidden)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").isArray)
+            .andExpect(jsonPath("$").isEmpty)
     }
 
     @Test
@@ -732,140 +734,4 @@ class HubApiControllerTest {
             .andExpect(status().isForbidden)
     }
 
-    // ========== Create Session Tests ==========
-
-    @Test
-    fun `POST sessions should create session with generated title`() {
-        // Given - Register a user
-        val registerRequest = UserRegistrationRequest(
-            userDisplayName = "Create Session User",
-            username = "test_createsession",
-            userEmail = "test_createsession@example.com",
-            password = "SecurePassword123!",
-            passwordConfirmation = "SecurePassword123!"
-        )
-        val registerResult = mockMvc.perform(
-            post("/api/hub/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(registerRequest))
-        ).andReturn()
-
-        val createdUser = objectMapper.readValue(registerResult.response.contentAsString, GuideUser::class.java)
-        val token = createdUser.webUser?.refreshToken ?: fail("Expected refresh token")
-
-        // When - Create a new session
-        val createRequest = mapOf("content" to "How do I configure the database connection settings?")
-
-        mockMvc.perform(
-            post("/api/hub/sessions")
-                .header("Authorization", "Bearer $token")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(createRequest))
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.sessionId").exists())
-            .andExpect(jsonPath("$.title").exists())
-    }
-
-    @Test
-    fun `POST sessions should persist session with user message`() {
-        // Given - Register a user
-        val registerRequest = UserRegistrationRequest(
-            userDisplayName = "Persist Session User",
-            username = "test_persistsession",
-            userEmail = "test_persistsession@example.com",
-            password = "SecurePassword123!",
-            passwordConfirmation = "SecurePassword123!"
-        )
-        val registerResult = mockMvc.perform(
-            post("/api/hub/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(registerRequest))
-        ).andReturn()
-
-        val createdUser = objectMapper.readValue(registerResult.response.contentAsString, GuideUser::class.java)
-        val token = createdUser.webUser?.refreshToken ?: fail("Expected refresh token")
-
-        // When - Create a new session
-        val messageContent = "What are the best practices for error handling?"
-        val createRequest = mapOf("content" to messageContent)
-
-        val createResult = mockMvc.perform(
-            post("/api/hub/sessions")
-                .header("Authorization", "Bearer $token")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(createRequest))
-        )
-            .andExpect(status().isOk)
-            .andReturn()
-
-        // Then - Verify session was persisted with the message
-        val response = objectMapper.readTree(createResult.response.contentAsString)
-        val sessionId = response.get("sessionId").asText()
-
-        mockMvc.perform(
-            get("/api/hub/sessions/$sessionId")
-                .header("Authorization", "Bearer $token")
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$[0].body").value(messageContent))
-            .andExpect(jsonPath("$[0].role").value("user"))
-    }
-
-    @Test
-    fun `POST sessions should return 403 when not authenticated`() {
-        // Given
-        val createRequest = mapOf("content" to "Some message content")
-
-        // When & Then - Note: Non-authenticated requests don't start async
-        mockMvc.perform(
-            post("/api/hub/sessions")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(createRequest))
-        )
-            .andExpect(status().isForbidden)
-    }
-
-    @Test
-    fun `POST sessions should appear in session list`() {
-        // Given - Register a user
-        val registerRequest = UserRegistrationRequest(
-            userDisplayName = "List Session User",
-            username = "test_listsession",
-            userEmail = "test_listsession@example.com",
-            password = "SecurePassword123!",
-            passwordConfirmation = "SecurePassword123!"
-        )
-        val registerResult = mockMvc.perform(
-            post("/api/hub/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(registerRequest))
-        ).andReturn()
-
-        val createdUser = objectMapper.readValue(registerResult.response.contentAsString, GuideUser::class.java)
-        val token = createdUser.webUser?.refreshToken ?: fail("Expected refresh token")
-
-        // When - Create a new session
-        val createRequest = mapOf("content" to "Tell me about machine learning algorithms")
-
-        val createResult = mockMvc.perform(
-            post("/api/hub/sessions")
-                .header("Authorization", "Bearer $token")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(createRequest))
-        )
-            .andExpect(status().isOk)
-            .andReturn()
-
-        val response = objectMapper.readTree(createResult.response.contentAsString)
-        val sessionId = response.get("sessionId").asText()
-
-        // Then - Session should appear in list
-        mockMvc.perform(
-            get("/api/hub/sessions")
-                .header("Authorization", "Bearer $token")
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$[?(@.id == '$sessionId')]").exists())
-    }
 }

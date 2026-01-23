@@ -177,6 +177,62 @@ class ChatSessionService(
     }
 
     /**
+     * Result of getOrCreateSession - contains the session and whether it was newly created.
+     */
+    data class SessionResult(
+        val session: StoredSession,
+        val created: Boolean
+    )
+
+    /**
+     * Get an existing session or create a new one with the given message.
+     * If the session doesn't exist, generates a title from the message content.
+     *
+     * @param sessionId the session ID (client-provided)
+     * @param ownerId the user who owns the session
+     * @param message the message text
+     * @param authorId the author of the message
+     * @return SessionResult containing the session and whether it was created
+     */
+    suspend fun getOrCreateSessionWithMessage(
+        sessionId: String,
+        ownerId: String,
+        message: String,
+        authorId: String
+    ): SessionResult = withContext(Dispatchers.IO) {
+        val existing = chatSessionRepository.findBySessionId(sessionId)
+        if (existing.isPresent) {
+            // Session exists - just add the message
+            addMessage(sessionId, message, ROLE_USER, authorId)
+            SessionResult(existing.get(), created = false)
+        } else {
+            // Session doesn't exist - create with generated title
+            val title = ragAdapter.generateTitle(message, ownerId)
+            val owner = guideUserRepository.findById(ownerId).orElseThrow {
+                IllegalArgumentException("Owner not found: $ownerId")
+            }
+
+            val messageData = MessageData(
+                messageId = UUIDv7.generateString(),
+                role = ROLE_USER,
+                content = message,
+                createdAt = Instant.now()
+            )
+
+            val messageAuthor = guideUserRepository.findById(authorId).orElse(null)?.guideUserData()
+
+            val session = chatSessionRepository.createSessionWithMessage(
+                sessionId = sessionId,
+                owner = owner.guideUserData(),
+                title = title,
+                messageData = messageData,
+                messageAuthor = messageAuthor
+            )
+            SessionResult(session, created = true)
+        }
+    }
+
+    /**
      * Add a message to an existing session.
      *
      * @param sessionId the session to add the message to
