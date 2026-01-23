@@ -28,8 +28,8 @@ import org.drivine.manager.PersistenceManager;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Primary;
 import org.springframework.transaction.PlatformTransactionManager;
 
@@ -43,6 +43,7 @@ class RagConfiguration {
 
     @Bean
     @Primary
+    @ConditionalOnMissingBean
     EmbeddingService embeddingService(ModelProvider modelProvider) {
         return modelProvider.getEmbeddingService(ModelSelectionCriteria.getPlatformDefault());
     }
@@ -57,7 +58,7 @@ class RagConfiguration {
     DrivineStore drivineStore(
             @Qualifier("neo") PersistenceManager persistenceManager,
             PlatformTransactionManager platformTransactionManager,
-            @Lazy EmbeddingService embeddingService,
+            EmbeddingService embeddingService,
             ChunkTransformer chunkTransformer,
             NeoRagServiceProperties neoRagProperties,
             GuideProperties guideProperties) {

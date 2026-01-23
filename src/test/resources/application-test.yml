@@ -43,14 +43,14 @@ embabel:
       auto: false
 
   models:
-    default-llm: gpt-4.1-nano
-    default-embedding-model: text-embedding-3-small
+    default-llm: test-llm
+    default-embedding-model: test
     embedding-services:
-      best: text-embedding-3-small
-      cheapest: text-embedding-3-small
+      best: test
+      cheapest: test
     llms:
-      best: gpt-4.1-nano
-      cheapest: gpt-4.1-nano
+      best: test-llm
+      cheapest: test-llm
 
 # Logging configuration for tests
 logging:
