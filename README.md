@@ -67,6 +67,7 @@ Within the inspector UI, connect to `http://localhost:1337/sse`.
 
 - [Claude Desktop](#claude-desktop)
 - [Claude Code](#claude-code)
+- [Codex](#codex)
 - [Cursor](#cursor)
 - [Antigravity](#antigravity)
 - [Copilot CLI](#copilot-cli)
@@ -142,6 +143,18 @@ tools.
 
 See [Claude Code Permission Modes](https://code.claude.com/docs/en/iam#permission-modes) for detailed documentation on
 how permissions work.
+
+### Codex
+
+Create or update `.codex/config.toml` and add the following MCP server entry:
+
+```toml
+[mcp_servers.embabel_guide]
+command = "npx"
+args = ["-y", "mcp-remote", "http://localhost:1337/sse", "--transport", "sse-only"]
+startup_timeout_sec = 60
+tool_timeout_sec = 120
+```
 
 ### Cursor
 
