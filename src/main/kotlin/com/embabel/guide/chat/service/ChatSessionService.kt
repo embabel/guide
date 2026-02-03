@@ -1,6 +1,13 @@
 package com.embabel.guide.chat.service
 
+import com.embabel.chat.AssistantMessage
+import com.embabel.chat.ConversationFactoryProvider
+import com.embabel.chat.ConversationStoreType
+import com.embabel.chat.Role
+import com.embabel.chat.UserMessage
+import com.embabel.chat.store.adapter.StoredConversationFactory
 import com.embabel.chat.store.model.MessageData
+import com.embabel.chat.store.model.SessionUser
 import com.embabel.chat.store.model.StoredMessage
 import com.embabel.chat.store.model.StoredSession
 import com.embabel.chat.store.repository.ChatSessionRepository
@@ -15,15 +22,12 @@ import java.util.Optional
 @Service
 class ChatSessionService(
     private val chatSessionRepository: ChatSessionRepository,
+    private val conversationFactoryProvider: ConversationFactoryProvider,
     private val ragAdapter: RagServiceAdapter,
     private val guideUserRepository: GuideUserRepository
 ) {
 
     companion object {
-        const val ROLE_USER = "user"
-        const val ROLE_ASSISTANT = "assistant"
-        const val ROLE_TOOL = "tool"
-
         const val DEFAULT_WELCOME_MESSAGE = "Welcome! How can I help you today?"
         const val WELCOME_PROMPT_TEMPLATE = "User %s has created a new account. Could you please greet and welcome them"
     }
@@ -64,7 +68,7 @@ class ChatSessionService(
         ownerId: String,
         title: String? = null,
         message: String,
-        role: String,
+        role: Role,
         authorId: String? = null
     ): StoredSession {
         val sessionId = UUIDv7.generateString()
@@ -124,7 +128,7 @@ class ChatSessionService(
 
         val messageData = MessageData(
             messageId = UUIDv7.generateString(),
-            role = ROLE_ASSISTANT,
+            role = Role.ASSISTANT,
             content = welcomeMessage,
             createdAt = Instant.now()
         )
@@ -149,7 +153,7 @@ class ChatSessionService(
             ownerId = ownerId,
             title = "Welcome",
             message = welcomeMessage,
-            role = ROLE_ASSISTANT,
+            role = Role.ASSISTANT,
             authorId = null
         )
     }
@@ -171,7 +175,7 @@ class ChatSessionService(
             ownerId = ownerId,
             title = title,
             message = content,
-            role = ROLE_USER,
+            role = Role.USER,
             authorId = ownerId
         )
     }
@@ -202,8 +206,8 @@ class ChatSessionService(
     ): SessionResult = withContext(Dispatchers.IO) {
         val existing = chatSessionRepository.findBySessionId(sessionId)
         if (existing.isPresent) {
-            // Session exists - just add the message
-            addMessage(sessionId, message, ROLE_USER, authorId)
+            // Session exists - just add the message (user messages don't need event delivery)
+            addMessageDirect(sessionId, message, Role.USER, authorId)
             SessionResult(existing.get(), created = false)
         } else {
             // Session doesn't exist - create with generated title
@@ -214,7 +218,7 @@ class ChatSessionService(
 
             val messageData = MessageData(
                 messageId = UUIDv7.generateString(),
-                role = ROLE_USER,
+                role = Role.USER,
                 content = message,
                 createdAt = Instant.now()
             )
@@ -233,18 +237,53 @@ class ChatSessionService(
     }
 
     /**
-     * Add a message to an existing session.
+     * Add a message to an existing session using the new ConversationFactory pattern.
+     * Messages are persisted asynchronously and delivered via MessageEvent.
      *
      * @param sessionId the session to add the message to
      * @param text the message text
-     * @param role the message role (user, assistant, tool)
-     * @param authorId optional author ID (null for system messages)
-     * @return the created message
+     * @param role the message role
+     * @param user the human user participant (for routing USER messages from, ASSISTANT messages to)
+     * @param agent the AI/system user participant (for routing ASSISTANT messages from, USER messages to)
+     * @param title the session title (included in events for UI display)
      */
     fun addMessage(
         sessionId: String,
         text: String,
-        role: String,
+        role: Role,
+        user: SessionUser,
+        agent: SessionUser?,
+        title: String? = null
+    ) {
+        val factory = conversationFactoryProvider.getFactory(ConversationStoreType.STORED)
+            as StoredConversationFactory
+
+        val conversation = factory.createForParticipants(sessionId, user, agent, title)
+
+        val message = when (role) {
+            Role.USER -> UserMessage(text)
+            Role.ASSISTANT -> AssistantMessage(text)
+            else -> UserMessage(text)  // Default to user message
+        }
+
+        // This triggers MessageEvent(ADDED) synchronously, then persists async
+        conversation.addMessage(message)
+    }
+
+    /**
+     * Add a message to an existing session (legacy method for backwards compatibility).
+     * Uses direct repository access - no events fired.
+     *
+     * @param sessionId the session to add the message to
+     * @param text the message text
+     * @param role the message role
+     * @param authorId optional author ID (null for system messages)
+     * @return the created message
+     */
+    fun addMessageDirect(
+        sessionId: String,
+        text: String,
+        role: Role,
         authorId: String? = null
     ): StoredMessage {
         val messageData = MessageData(

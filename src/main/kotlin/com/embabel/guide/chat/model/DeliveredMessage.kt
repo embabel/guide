@@ -20,7 +20,7 @@ data class DeliveredMessage(
             return DeliveredMessage(
                 id = msg.messageId,
                 sessionId = sessionId,
-                role = msg.role,
+                role = msg.role.name.lowercase(),
                 body = msg.content,
                 ts = msg.createdAt,
                 authorId = msg.author?.id,

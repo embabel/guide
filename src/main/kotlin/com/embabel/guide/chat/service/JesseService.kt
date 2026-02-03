@@ -1,14 +1,18 @@
 package com.embabel.guide.chat.service
 
-import com.embabel.chat.store.model.StoredMessage
-import com.embabel.guide.chat.model.DeliveredMessage
+import com.embabel.chat.Role
+import com.embabel.chat.store.model.SessionUser
 import com.embabel.guide.chat.model.StatusMessage
+import com.embabel.guide.domain.GuideUserData
+import com.embabel.guide.domain.GuideUserRepository
 import com.embabel.guide.domain.GuideUserService
 import com.embabel.guide.util.UUIDv7
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.drivine.manager.GraphObjectManager
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
 import org.springframework.scheduling.annotation.Scheduled
@@ -20,19 +24,39 @@ class JesseService(
     private val presenceService: PresenceService,
     private val ragAdapter: RagServiceAdapter,
     private val chatSessionService: ChatSessionService,
-    private val guideUserService: GuideUserService
+    private val guideUserService: GuideUserService,
+    private val guideUserRepository: GuideUserRepository,
+    @Qualifier("neoGraphObjectManager") private val graphObjectManager: GraphObjectManager
 ) {
     private val logger = LoggerFactory.getLogger(JesseService::class.java)
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
+    // Jesse's GuideUserData - initialized on startup
+    private lateinit var jesseUser: GuideUserData
+
     companion object {
         const val JESSE_USER_ID = "bot:jesse"
         const val JESSE_SESSION_ID = "jesse-bot-session"
+        const val JESSE_DISPLAY_NAME = "Jesse"
     }
 
     @EventListener(ApplicationReadyEvent::class)
     fun initializeJesse() {
         logger.info("Initializing Jesse bot")
+
+        // Get or create Jesse as a GuideUser (SessionUser) for message authorship
+        jesseUser = guideUserRepository.findById(JESSE_USER_ID)
+            .map { it.core }
+            .orElseGet {
+                logger.info("Creating Jesse user in database")
+                val jesse = GuideUserData(
+                    id = JESSE_USER_ID,
+                    displayName = JESSE_DISPLAY_NAME
+                )
+                graphObjectManager.save(jesse)
+                jesse
+            }
+
         presenceService.touch(JESSE_USER_ID, JESSE_SESSION_ID, "active")
         logger.info("Jesse bot is now online with ID: {}", JESSE_USER_ID)
     }
@@ -42,12 +66,10 @@ class JesseService(
         presenceService.touch(JESSE_USER_ID, JESSE_SESSION_ID, "active")
     }
 
-    private fun sendMessageToUser(toUserId: String, message: StoredMessage, sessionId: String, title: String? = null) {
-        logger.debug("Jesse sending message to user: {}", toUserId)
-        val deliveredMessage = DeliveredMessage.createFrom(message, sessionId, title)
-        chatService.sendToUser(toUserId, deliveredMessage)
-        chatService.sendStatusToUser(toUserId, status = StatusMessage(fromUserId = JESSE_USER_ID))
-    }
+    /**
+     * Get Jesse's SessionUser for use as agent in conversations.
+     */
+    fun getJesseUser(): SessionUser = jesseUser
 
     private fun sendStatusToUser(toUserId: String, status: String) {
         logger.debug("Jesse sending status to user {}: {}", toUserId, status)
@@ -61,6 +83,8 @@ class JesseService(
     /**
      * Receive a message from a user, persist it, get AI response, and send back.
      * Creates the session lazily if it doesn't exist.
+     *
+     * Assistant responses are delivered via MessageEvent -> MessageEventListener -> WebSocket.
      *
      * @param sessionId the session to add messages to, or blank/empty to create a new session
      * @param fromWebUserId the WebUser ID from the JWT principal
@@ -112,7 +136,7 @@ class JesseService(
                 // Load existing session messages for context (exclude the message we just added)
                 val priorMessages = sessionResult.session.messages
                     .dropLast(1)
-                    .map { PriorMessage(it.role, it.content) }
+                    .map { PriorMessage(it.role.name.lowercase(), it.content) }
                 logger.info("[session={}] Loaded {} prior messages for context", effectiveSessionId, priorMessages.size)
 
                 // Send status updates to the user while processing
@@ -128,33 +152,33 @@ class JesseService(
                 }
                 logger.info("[session={}] RAG adapter returned response ({} chars)", effectiveSessionId, response.length)
 
-                // Save the assistant's response to the session
-                logger.info("[session={}] Saving assistant response to session", effectiveSessionId)
-                val assistantMessage = chatSessionService.addMessage(
+                // Save the assistant's response - WebSocket delivery happens via MessageEvent
+                logger.info("[session={}] Saving assistant response (event-based delivery)", effectiveSessionId)
+                chatSessionService.addMessage(
                     sessionId = effectiveSessionId,
                     text = response,
-                    role = ChatSessionService.ROLE_ASSISTANT,
-                    authorId = null  // System-generated response
+                    role = Role.ASSISTANT,
+                    user = guideUser.core,  // Human user (recipient of assistant messages)
+                    agent = jesseUser,      // Jesse (sender of assistant messages)
+                    title = title           // Session title for UI display
                 )
-                logger.info("[session={}] Assistant message saved", effectiveSessionId)
-
-                // Send the response to the user via WebSocket (include title for new sessions)
-                logger.info("[session={}] Sending response to webUser {} via WebSocket", effectiveSessionId, fromWebUserId)
-                sendMessageToUser(fromWebUserId, assistantMessage, effectiveSessionId, title)
-                logger.info("[session={}] Response sent successfully", effectiveSessionId)
+                logger.info("[session={}] Assistant message queued for delivery", effectiveSessionId)
             } catch (e: Exception) {
                 logger.error("[session={}] Error processing message from webUser {}: {}", effectiveSessionId, fromWebUserId, e.message, e)
                 sendStatusToUser(fromWebUserId, "Error processing your request")
 
                 // Try to save error message to session - may fail if session wasn't created
                 try {
-                    val errorMessage = chatSessionService.addMessage(
-                        sessionId = effectiveSessionId,
-                        text = "Sorry, I encountered an error while processing your message. Please try again!",
-                        role = ChatSessionService.ROLE_ASSISTANT,
-                        authorId = null
-                    )
-                    sendMessageToUser(fromWebUserId, errorMessage, effectiveSessionId)
+                    val guideUser = guideUserService.findByWebUserId(fromWebUserId).orElse(null)
+                    if (guideUser != null) {
+                        chatSessionService.addMessage(
+                            sessionId = effectiveSessionId,
+                            text = "Sorry, I encountered an error while processing your message. Please try again!",
+                            role = Role.ASSISTANT,
+                            user = guideUser.core,
+                            agent = jesseUser
+                        )
+                    }
                 } catch (e2: Exception) {
                     logger.error("[session={}] Failed to save error message: {}", effectiveSessionId, e2.message)
                 }
