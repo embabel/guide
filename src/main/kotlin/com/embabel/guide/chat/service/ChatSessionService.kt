@@ -5,16 +5,17 @@ import com.embabel.chat.ConversationFactoryProvider
 import com.embabel.chat.ConversationStoreType
 import com.embabel.chat.Role
 import com.embabel.chat.UserMessage
-import com.embabel.chat.store.adapter.StoredConversationFactory
+import com.embabel.chat.event.MessageEvent
 import com.embabel.chat.store.model.MessageData
-import com.embabel.chat.store.model.SessionUser
-import com.embabel.chat.store.model.StoredMessage
+import com.embabel.chat.store.model.SimpleStoredMessage
 import com.embabel.chat.store.model.StoredSession
+import com.embabel.chat.store.model.StoredUser
 import com.embabel.chat.store.repository.ChatSessionRepository
 import com.embabel.guide.domain.GuideUserRepository
 import com.embabel.guide.util.UUIDv7
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import java.time.Instant
 import java.util.Optional
@@ -24,7 +25,8 @@ class ChatSessionService(
     private val chatSessionRepository: ChatSessionRepository,
     private val conversationFactoryProvider: ConversationFactoryProvider,
     private val ragAdapter: RagServiceAdapter,
-    private val guideUserRepository: GuideUserRepository
+    private val guideUserRepository: GuideUserRepository,
+    private val eventPublisher: ApplicationEventPublisher
 ) {
 
     companion object {
@@ -251,13 +253,11 @@ class ChatSessionService(
         sessionId: String,
         text: String,
         role: Role,
-        user: SessionUser,
-        agent: SessionUser?,
+        user: StoredUser,
+        agent: StoredUser?,
         title: String? = null
     ) {
         val factory = conversationFactoryProvider.getFactory(ConversationStoreType.STORED)
-            as StoredConversationFactory
-
         val conversation = factory.createForParticipants(sessionId, user, agent, title)
 
         val message = when (role) {
@@ -285,7 +285,7 @@ class ChatSessionService(
         text: String,
         role: Role,
         authorId: String? = null
-    ): StoredMessage {
+    ): SimpleStoredMessage {
         val messageData = MessageData(
             messageId = UUIDv7.generateString(),
             role = role,

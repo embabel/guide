@@ -1,7 +1,7 @@
 package com.embabel.guide.chat.service
 
 import com.embabel.chat.Role
-import com.embabel.chat.store.model.SessionUser
+import com.embabel.chat.store.model.StoredUser
 import com.embabel.guide.chat.model.StatusMessage
 import com.embabel.guide.domain.GuideUserData
 import com.embabel.guide.domain.GuideUserRepository
@@ -67,9 +67,9 @@ class JesseService(
     }
 
     /**
-     * Get Jesse's SessionUser for use as agent in conversations.
+     * Get Jesse's StoredUser for use as agent in conversations.
      */
-    fun getJesseUser(): SessionUser = jesseUser
+    fun getJesseUser(): StoredUser = jesseUser
 
     private fun sendStatusToUser(toUserId: String, status: String) {
         logger.debug("Jesse sending status to user {}: {}", toUserId, status)

@@ -61,8 +61,10 @@ public class ChatActions {
                             var guideUserData = new GuideUserData(
                                     java.util.UUID.randomUUID().toString(),
                                     displayName != null ? displayName : "",
-                                    null,
-                                    null
+                                    discordInfo.getUsername() != null ? discordInfo.getUsername() : "",
+                                    null,  // email
+                                    null,  // persona
+                                    null   // customPrompt
                             );
                             var discordUserInfo = new DiscordUserInfoData(
                                     discordInfo.getId(),

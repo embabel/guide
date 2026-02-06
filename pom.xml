@@ -49,20 +49,12 @@
             <version>0.0.22</version>
         </dependency>
 
-        <!-- Chat session storage library -->
+        <!-- Chat session storage with autoconfiguration -->
         <dependency>
             <groupId>com.embabel.agent</groupId>
-            <artifactId>embabel-chat-store</artifactId>
+            <artifactId>embabel-agent-starter-chat-store</artifactId>
             <version>0.2.0-SNAPSHOT</version>
         </dependency>
-
-        <!-- Chat store autoconfigure - provides ConversationFactoryProvider -->
-        <dependency>
-            <groupId>com.embabel.agent</groupId>
-            <artifactId>embabel-agent-chatstore-autoconfigure</artifactId>
-            <version>${embabel-agent.version}</version>
-        </dependency>
-
 
         <dependency>
             <groupId>com.embabel.agent</groupId>
