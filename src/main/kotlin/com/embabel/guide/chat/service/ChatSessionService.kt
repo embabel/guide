@@ -135,13 +135,28 @@ class ChatSessionService(
             createdAt = Instant.now()
         )
 
-        chatSessionRepository.createSessionWithMessage(
+        val title = "Welcome"
+        val session = chatSessionRepository.createSessionWithMessage(
             sessionId = sessionId,
             owner = owner.guideUserData(),
-            title = "Welcome",
+            title = title,
             messageData = messageData,
             messageAuthor = null  // System message - no author
         )
+
+        // Publish event so UI receives the welcome message with title
+        val persistedMessage = session.messages.last().toMessage()
+        eventPublisher.publishEvent(
+            MessageEvent.persisted(
+                conversationId = sessionId,
+                message = persistedMessage,
+                fromUserId = null,  // System message
+                toUserId = ownerId,
+                title = title
+            )
+        )
+
+        session
     }
 
     /**
@@ -151,13 +166,28 @@ class ChatSessionService(
         ownerId: String,
         welcomeMessage: String = DEFAULT_WELCOME_MESSAGE
     ): StoredSession {
-        return createSession(
+        val title = "Welcome"
+        val session = createSession(
             ownerId = ownerId,
-            title = "Welcome",
+            title = title,
             message = welcomeMessage,
             role = Role.ASSISTANT,
             authorId = null
         )
+
+        // Publish event so UI receives the welcome message with title
+        val persistedMessage = session.messages.last().toMessage()
+        eventPublisher.publishEvent(
+            MessageEvent.persisted(
+                conversationId = session.session.sessionId,
+                message = persistedMessage,
+                fromUserId = null,  // System message
+                toUserId = ownerId,
+                title = title
+            )
+        )
+
+        return session
     }
 
     /**
