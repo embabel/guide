@@ -1,8 +1,8 @@
 package com.embabel.guide.rag;
 
-import com.embabel.agent.api.common.LlmReference;
-import com.embabel.agent.api.common.reference.LlmReferenceProviders;
 import com.embabel.agent.api.identity.User;
+import com.embabel.agent.api.reference.LlmReference;
+import com.embabel.agent.api.reference.LlmReferenceProviders;
 import com.embabel.agent.rag.ingestion.*;
 import com.embabel.agent.rag.ingestion.policy.UrlSpecificContentRefreshPolicy;
 import com.embabel.agent.rag.neo.drivine.DrivineStore;
@@ -14,8 +14,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.PlatformTransactionManager;
 
 import java.util.Collections;
 import java.util.List;
