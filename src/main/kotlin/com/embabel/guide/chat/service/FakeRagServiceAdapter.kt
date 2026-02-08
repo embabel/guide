@@ -24,7 +24,6 @@ class FakeRagServiceAdapter : RagServiceAdapter {
         threadId: String,
         message: String,
         fromUserId: String,
-        priorMessages: List<PriorMessage>,
         onEvent: (String) -> Unit
     ): String {
         logger.info("Processing fake RAG request from user: {} in thread: {}", fromUserId, threadId)

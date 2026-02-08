@@ -1,6 +1,5 @@
 package com.embabel.guide.chat.service
 
-import com.embabel.chat.Role
 import com.embabel.chat.store.model.StoredUser
 import com.embabel.guide.chat.model.StatusMessage
 import com.embabel.guide.domain.GuideUserData
@@ -118,13 +117,13 @@ class JesseService(
                 val guideUserId = guideUser.core.id
                 logger.info("[session={}] Found guideUser {} for webUser {}", effectiveSessionId, guideUserId, fromWebUserId)
 
-                // Get or create session with the user's message (lazy creation)
-                logger.info("[session={}] Getting or creating session with user message", effectiveSessionId)
-                val sessionResult = chatSessionService.getOrCreateSessionWithMessage(
+                // Get or create session (lazy creation)
+                // Message persistence is handled by the chatbot via STORED conversations
+                logger.info("[session={}] Getting or creating session", effectiveSessionId)
+                val sessionResult = chatSessionService.getOrCreateSession(
                     sessionId = effectiveSessionId,
                     ownerId = guideUserId,
-                    message = message,
-                    authorId = guideUserId
+                    messageForTitle = message
                 )
                 val title = sessionResult.session.session.title
                 if (sessionResult.created) {
@@ -133,55 +132,27 @@ class JesseService(
                     logger.info("[session={}] Added message to existing session", effectiveSessionId)
                 }
 
-                // Load existing session messages for context (exclude the message we just added)
-                val priorMessages = sessionResult.session.messages
-                    .dropLast(1)
-                    .map { PriorMessage(it.role.name.lowercase(), it.content) }
-                logger.info("[session={}] Loaded {} prior messages for context", effectiveSessionId, priorMessages.size)
-
-                // Send status updates to the user while processing
+                // Send message to RAG adapter - conversation history is auto-loaded by the chatbot
                 logger.info("[session={}] Calling RAG adapter", effectiveSessionId)
                 val response = ragAdapter.sendMessage(
                     threadId = effectiveSessionId,
                     message = message,
-                    fromUserId = guideUserId,
-                    priorMessages = priorMessages
+                    fromUserId = guideUserId
                 ) { event ->
                     logger.debug("[session={}] RAG event for user {}: {}", effectiveSessionId, fromWebUserId, event)
                     sendStatusToUser(fromWebUserId, event)
                 }
                 logger.info("[session={}] RAG adapter returned response ({} chars)", effectiveSessionId, response.length)
 
-                // Save the assistant's response - WebSocket delivery happens via MessageEvent
-                logger.info("[session={}] Saving assistant response (event-based delivery)", effectiveSessionId)
-                chatSessionService.addMessage(
-                    sessionId = effectiveSessionId,
-                    text = response,
-                    role = Role.ASSISTANT,
-                    user = guideUser.core,  // Human user (recipient of assistant messages)
-                    agent = jesseUser,      // Jesse (sender of assistant messages)
-                    title = title           // Session title for UI display
-                )
-                logger.info("[session={}] Assistant message queued for delivery", effectiveSessionId)
+                // Clear status now that response is complete
+                sendStatusToUser(fromWebUserId, "")
+
+                // Message persistence and WebSocket delivery are handled automatically
+                // by the chatbot's STORED conversation factory (fires MessageEvent on persist)
             } catch (e: Exception) {
                 logger.error("[session={}] Error processing message from webUser {}: {}", effectiveSessionId, fromWebUserId, e.message, e)
                 sendStatusToUser(fromWebUserId, "Error processing your request")
-
-                // Try to save error message to session - may fail if session wasn't created
-                try {
-                    val guideUser = guideUserService.findByWebUserId(fromWebUserId).orElse(null)
-                    if (guideUser != null) {
-                        chatSessionService.addMessage(
-                            sessionId = effectiveSessionId,
-                            text = "Sorry, I encountered an error while processing your message. Please try again!",
-                            role = Role.ASSISTANT,
-                            user = guideUser.core,
-                            agent = jesseUser
-                        )
-                    }
-                } catch (e2: Exception) {
-                    logger.error("[session={}] Failed to save error message: {}", effectiveSessionId, e2.message)
-                }
+                // Error messages are sent via status channel - no need to persist
             }
         }
     }

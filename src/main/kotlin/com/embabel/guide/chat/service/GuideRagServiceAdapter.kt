@@ -20,7 +20,8 @@ import java.util.concurrent.ConcurrentHashMap
  * This adapter bridges the WebSocket chat system with the Guide's RAG-powered chatbot,
  * enabling real-time AI responses through the web interface.
  *
- * Sessions are cached per thread to maintain separate conversation contexts.
+ * The chatbot uses STORED conversations, so message history is automatically loaded
+ * when restoring a session by conversation ID.
  */
 @Service
 @ConditionalOnProperty(
@@ -35,7 +36,7 @@ class GuideRagServiceAdapter(
 
     private val logger = LoggerFactory.getLogger(GuideRagServiceAdapter::class.java)
 
-    // Session cache to maintain conversation continuity per thread
+    // Session cache to maintain AgentProcess continuity per thread
     private val threadSessions = ConcurrentHashMap<String, SessionContext>()
 
     companion object {
@@ -70,7 +71,6 @@ class GuideRagServiceAdapter(
         threadId: String,
         message: String,
         fromUserId: String,
-        priorMessages: List<PriorMessage>,
         onEvent: (String) -> Unit
     ): String = withContext(Dispatchers.IO) {
         logger.info("Processing Guide RAG request from user: {} in thread: {}", fromUserId, threadId)
@@ -85,31 +85,18 @@ class GuideRagServiceAdapter(
             val guideUser = guideUserRepository.findById(fromUserId)
                 .orElseThrow { RuntimeException("No user found with id: $fromUserId") }
 
-            // Get or create session context for this thread to maintain conversation continuity
-            var isNewSession = false
+            // Get or create session context for this thread
+            // The chatbot uses STORED conversations with conversationId=threadId,
+            // so message history is automatically loaded when restoring a session
             val sessionContext = threadSessions.computeIfAbsent(threadId) {
-                logger.info("Creating new chat session for thread: {} (user: {})", threadId, fromUserId)
-                isNewSession = true
+                logger.info("Creating/restoring chat session for thread: {} (user: {})", threadId, fromUserId)
                 val dynamicChannel = DynamicOutputChannel()
                 dynamicChannel.currentDelegate = messageOutputChannel
-                val session = chatbot.createSession(guideUser, dynamicChannel, null)
+                val session = chatbot.createSession(guideUser, dynamicChannel, null, threadId)
                 SessionContext(session, dynamicChannel)
             }
 
-            // Load prior messages into the conversation if this is a new session
-            // Messages are added directly to the conversation without being processed by AI
-            if (isNewSession && priorMessages.isNotEmpty()) {
-                logger.info("Loading {} prior messages into conversation for thread: {}", priorMessages.size, threadId)
-                for (prior in priorMessages) {
-                    when (prior.role) {
-                        "user" -> sessionContext.session.conversation.addMessage(UserMessage(prior.content))
-                        "assistant" -> sessionContext.session.conversation.addMessage(AssistantMessage(prior.content))
-                    }
-                }
-            }
-
             // Update the dynamic channel to point to this message's output channel
-            // (for existing sessions, or if this is a new session this ensures it's set)
             sessionContext.dynamicChannel.currentDelegate = messageOutputChannel
 
             // Process the message with the cached session (which maintains conversation history)

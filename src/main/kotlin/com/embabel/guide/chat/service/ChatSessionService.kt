@@ -1,15 +1,9 @@
 package com.embabel.guide.chat.service
 
-import com.embabel.chat.AssistantMessage
-import com.embabel.chat.ConversationFactoryProvider
-import com.embabel.chat.ConversationStoreType
 import com.embabel.chat.Role
-import com.embabel.chat.UserMessage
 import com.embabel.chat.event.MessageEvent
 import com.embabel.chat.store.model.MessageData
-import com.embabel.chat.store.model.SimpleStoredMessage
 import com.embabel.chat.store.model.StoredSession
-import com.embabel.chat.store.model.StoredUser
 import com.embabel.chat.store.repository.ChatSessionRepository
 import com.embabel.guide.domain.GuideUserRepository
 import com.embabel.guide.util.UUIDv7
@@ -20,10 +14,13 @@ import org.springframework.stereotype.Service
 import java.time.Instant
 import java.util.Optional
 
+/**
+ * Service for managing chat session metadata (titles, ownership, listing).
+ * Message persistence is handled by the chatbot via STORED conversations.
+ */
 @Service
 class ChatSessionService(
     private val chatSessionRepository: ChatSessionRepository,
-    private val conversationFactoryProvider: ConversationFactoryProvider,
     private val ragAdapter: RagServiceAdapter,
     private val guideUserRepository: GuideUserRepository,
     private val eventPublisher: ApplicationEventPublisher
@@ -119,9 +116,7 @@ class ChatSessionService(
         val welcomeMessage = ragAdapter.sendMessage(
             threadId = sessionId,
             message = prompt,
-            fromUserId = ownerId,
-            priorMessages = emptyList(),  // No prior context for welcome session
-            onEvent = { }  // No status updates needed for welcome message
+            fromUserId = ownerId
         )
 
         val owner = guideUserRepository.findById(ownerId).orElseThrow {
@@ -221,115 +216,38 @@ class ChatSessionService(
     )
 
     /**
-     * Get an existing session or create a new one with the given message.
+     * Get an existing session or create a new one.
      * If the session doesn't exist, generates a title from the message content.
+     *
+     * Note: This method only creates the session metadata (title, owner).
+     * Message persistence is handled by the chatbot via STORED conversations.
      *
      * @param sessionId the session ID (client-provided)
      * @param ownerId the user who owns the session
-     * @param message the message text
-     * @param authorId the author of the message
+     * @param messageForTitle the message text (used only for title generation if new session)
      * @return SessionResult containing the session and whether it was created
      */
-    suspend fun getOrCreateSessionWithMessage(
+    suspend fun getOrCreateSession(
         sessionId: String,
         ownerId: String,
-        message: String,
-        authorId: String
+        messageForTitle: String
     ): SessionResult = withContext(Dispatchers.IO) {
         val existing = chatSessionRepository.findBySessionId(sessionId)
         if (existing.isPresent) {
-            // Session exists - just add the message (user messages don't need event delivery)
-            addMessageDirect(sessionId, message, Role.USER, authorId)
             SessionResult(existing.get(), created = false)
         } else {
             // Session doesn't exist - create with generated title
-            val title = ragAdapter.generateTitle(message, ownerId)
+            val title = ragAdapter.generateTitle(messageForTitle, ownerId)
             val owner = guideUserRepository.findById(ownerId).orElseThrow {
                 IllegalArgumentException("Owner not found: $ownerId")
             }
 
-            val messageData = MessageData(
-                messageId = UUIDv7.generateString(),
-                role = Role.USER,
-                content = message,
-                createdAt = Instant.now()
-            )
-
-            val messageAuthor = guideUserRepository.findById(authorId).orElse(null)?.guideUserData()
-
-            val session = chatSessionRepository.createSessionWithMessage(
+            val session = chatSessionRepository.createSession(
                 sessionId = sessionId,
                 owner = owner.guideUserData(),
-                title = title,
-                messageData = messageData,
-                messageAuthor = messageAuthor
+                title = title
             )
             SessionResult(session, created = true)
         }
-    }
-
-    /**
-     * Add a message to an existing session using the new ConversationFactory pattern.
-     * Messages are persisted asynchronously and delivered via MessageEvent.
-     *
-     * @param sessionId the session to add the message to
-     * @param text the message text
-     * @param role the message role
-     * @param user the human user participant (for routing USER messages from, ASSISTANT messages to)
-     * @param agent the AI/system user participant (for routing ASSISTANT messages from, USER messages to)
-     * @param title the session title (included in events for UI display)
-     */
-    fun addMessage(
-        sessionId: String,
-        text: String,
-        role: Role,
-        user: StoredUser,
-        agent: StoredUser?,
-        title: String? = null
-    ) {
-        val factory = conversationFactoryProvider.getFactory(ConversationStoreType.STORED)
-        val conversation = factory.createForParticipants(sessionId, user, agent, title)
-
-        val message = when (role) {
-            Role.USER -> UserMessage(text)
-            Role.ASSISTANT -> AssistantMessage(text)
-            else -> UserMessage(text)  // Default to user message
-        }
-
-        // This triggers MessageEvent(ADDED) synchronously, then persists async
-        conversation.addMessage(message)
-    }
-
-    /**
-     * Add a message to an existing session (legacy method for backwards compatibility).
-     * Uses direct repository access - no events fired.
-     *
-     * @param sessionId the session to add the message to
-     * @param text the message text
-     * @param role the message role
-     * @param authorId optional author ID (null for system messages)
-     * @return the created message
-     */
-    fun addMessageDirect(
-        sessionId: String,
-        text: String,
-        role: Role,
-        authorId: String? = null
-    ): SimpleStoredMessage {
-        val messageData = MessageData(
-            messageId = UUIDv7.generateString(),
-            role = role,
-            content = text,
-            createdAt = Instant.now()
-        )
-
-        // Look up the author if provided
-        val author = authorId?.let { id ->
-            guideUserRepository.findById(id).orElse(null)?.guideUserData()
-        }
-
-        val updatedSession = chatSessionRepository.addMessage(sessionId, messageData, author)
-        // Return the last message (the one we just added)
-        return updatedSession.messages.last()
     }
 }
