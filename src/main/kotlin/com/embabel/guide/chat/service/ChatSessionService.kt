@@ -1,29 +1,32 @@
 package com.embabel.guide.chat.service
 
+import com.embabel.chat.Role
+import com.embabel.chat.event.MessageEvent
 import com.embabel.chat.store.model.MessageData
-import com.embabel.chat.store.model.StoredMessage
 import com.embabel.chat.store.model.StoredSession
 import com.embabel.chat.store.repository.ChatSessionRepository
 import com.embabel.guide.domain.GuideUserRepository
 import com.embabel.guide.util.UUIDv7
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import java.time.Instant
 import java.util.Optional
 
+/**
+ * Service for managing chat session metadata (titles, ownership, listing).
+ * Message persistence is handled by the chatbot via STORED conversations.
+ */
 @Service
 class ChatSessionService(
     private val chatSessionRepository: ChatSessionRepository,
     private val ragAdapter: RagServiceAdapter,
-    private val guideUserRepository: GuideUserRepository
+    private val guideUserRepository: GuideUserRepository,
+    private val eventPublisher: ApplicationEventPublisher
 ) {
 
     companion object {
-        const val ROLE_USER = "user"
-        const val ROLE_ASSISTANT = "assistant"
-        const val ROLE_TOOL = "tool"
-
         const val DEFAULT_WELCOME_MESSAGE = "Welcome! How can I help you today?"
         const val WELCOME_PROMPT_TEMPLATE = "User %s has created a new account. Could you please greet and welcome them"
     }
@@ -64,7 +67,7 @@ class ChatSessionService(
         ownerId: String,
         title: String? = null,
         message: String,
-        role: String,
+        role: Role,
         authorId: String? = null
     ): StoredSession {
         val sessionId = UUIDv7.generateString()
@@ -113,9 +116,7 @@ class ChatSessionService(
         val welcomeMessage = ragAdapter.sendMessage(
             threadId = sessionId,
             message = prompt,
-            fromUserId = ownerId,
-            priorMessages = emptyList(),  // No prior context for welcome session
-            onEvent = { }  // No status updates needed for welcome message
+            fromUserId = ownerId
         )
 
         val owner = guideUserRepository.findById(ownerId).orElseThrow {
@@ -124,18 +125,33 @@ class ChatSessionService(
 
         val messageData = MessageData(
             messageId = UUIDv7.generateString(),
-            role = ROLE_ASSISTANT,
+            role = Role.ASSISTANT,
             content = welcomeMessage,
             createdAt = Instant.now()
         )
 
-        chatSessionRepository.createSessionWithMessage(
+        val title = "Welcome"
+        val session = chatSessionRepository.createSessionWithMessage(
             sessionId = sessionId,
             owner = owner.guideUserData(),
-            title = "Welcome",
+            title = title,
             messageData = messageData,
             messageAuthor = null  // System message - no author
         )
+
+        // Publish event so UI receives the welcome message with title
+        val persistedMessage = session.messages.last().toMessage()
+        eventPublisher.publishEvent(
+            MessageEvent.persisted(
+                conversationId = sessionId,
+                message = persistedMessage,
+                fromUserId = null,  // System message
+                toUserId = ownerId,
+                title = title
+            )
+        )
+
+        session
     }
 
     /**
@@ -145,13 +161,28 @@ class ChatSessionService(
         ownerId: String,
         welcomeMessage: String = DEFAULT_WELCOME_MESSAGE
     ): StoredSession {
-        return createSession(
+        val title = "Welcome"
+        val session = createSession(
             ownerId = ownerId,
-            title = "Welcome",
+            title = title,
             message = welcomeMessage,
-            role = ROLE_ASSISTANT,
+            role = Role.ASSISTANT,
             authorId = null
         )
+
+        // Publish event so UI receives the welcome message with title
+        val persistedMessage = session.messages.last().toMessage()
+        eventPublisher.publishEvent(
+            MessageEvent.persisted(
+                conversationId = session.session.sessionId,
+                message = persistedMessage,
+                fromUserId = null,  // System message
+                toUserId = ownerId,
+                title = title
+            )
+        )
+
+        return session
     }
 
     /**
@@ -171,7 +202,7 @@ class ChatSessionService(
             ownerId = ownerId,
             title = title,
             message = content,
-            role = ROLE_USER,
+            role = Role.USER,
             authorId = ownerId
         )
     }
@@ -185,82 +216,38 @@ class ChatSessionService(
     )
 
     /**
-     * Get an existing session or create a new one with the given message.
+     * Get an existing session or create a new one.
      * If the session doesn't exist, generates a title from the message content.
+     *
+     * Note: This method only creates the session metadata (title, owner).
+     * Message persistence is handled by the chatbot via STORED conversations.
      *
      * @param sessionId the session ID (client-provided)
      * @param ownerId the user who owns the session
-     * @param message the message text
-     * @param authorId the author of the message
+     * @param messageForTitle the message text (used only for title generation if new session)
      * @return SessionResult containing the session and whether it was created
      */
-    suspend fun getOrCreateSessionWithMessage(
+    suspend fun getOrCreateSession(
         sessionId: String,
         ownerId: String,
-        message: String,
-        authorId: String
+        messageForTitle: String
     ): SessionResult = withContext(Dispatchers.IO) {
         val existing = chatSessionRepository.findBySessionId(sessionId)
         if (existing.isPresent) {
-            // Session exists - just add the message
-            addMessage(sessionId, message, ROLE_USER, authorId)
             SessionResult(existing.get(), created = false)
         } else {
             // Session doesn't exist - create with generated title
-            val title = ragAdapter.generateTitle(message, ownerId)
+            val title = ragAdapter.generateTitle(messageForTitle, ownerId)
             val owner = guideUserRepository.findById(ownerId).orElseThrow {
                 IllegalArgumentException("Owner not found: $ownerId")
             }
 
-            val messageData = MessageData(
-                messageId = UUIDv7.generateString(),
-                role = ROLE_USER,
-                content = message,
-                createdAt = Instant.now()
-            )
-
-            val messageAuthor = guideUserRepository.findById(authorId).orElse(null)?.guideUserData()
-
-            val session = chatSessionRepository.createSessionWithMessage(
+            val session = chatSessionRepository.createSession(
                 sessionId = sessionId,
                 owner = owner.guideUserData(),
-                title = title,
-                messageData = messageData,
-                messageAuthor = messageAuthor
+                title = title
             )
             SessionResult(session, created = true)
         }
-    }
-
-    /**
-     * Add a message to an existing session.
-     *
-     * @param sessionId the session to add the message to
-     * @param text the message text
-     * @param role the message role (user, assistant, tool)
-     * @param authorId optional author ID (null for system messages)
-     * @return the created message
-     */
-    fun addMessage(
-        sessionId: String,
-        text: String,
-        role: String,
-        authorId: String? = null
-    ): StoredMessage {
-        val messageData = MessageData(
-            messageId = UUIDv7.generateString(),
-            role = role,
-            content = text,
-            createdAt = Instant.now()
-        )
-
-        // Look up the author if provided
-        val author = authorId?.let { id ->
-            guideUserRepository.findById(id).orElse(null)?.guideUserData()
-        }
-
-        val updatedSession = chatSessionRepository.addMessage(sessionId, messageData, author)
-        // Return the last message (the one we just added)
-        return updatedSession.messages.last()
     }
 }

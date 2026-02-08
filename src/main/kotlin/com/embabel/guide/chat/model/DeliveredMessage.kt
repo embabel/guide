@@ -1,6 +1,6 @@
 package com.embabel.guide.chat.model
 
-import com.embabel.chat.store.model.StoredMessage
+import com.embabel.chat.store.model.SimpleStoredMessage
 import java.time.Instant
 
 /**
@@ -16,13 +16,13 @@ data class DeliveredMessage(
     val title: String? = null
 ) {
     companion object {
-        fun createFrom(msg: StoredMessage, sessionId: String, title: String? = null): DeliveredMessage {
+        fun createFrom(msg: SimpleStoredMessage, sessionId: String, title: String? = null): DeliveredMessage {
             return DeliveredMessage(
                 id = msg.messageId,
                 sessionId = sessionId,
-                role = msg.role,
+                role = msg.role.name.lowercase(),
                 body = msg.content,
-                ts = msg.createdAt,
+                ts = msg.message.createdAt,
                 authorId = msg.author?.id,
                 title = title
             )

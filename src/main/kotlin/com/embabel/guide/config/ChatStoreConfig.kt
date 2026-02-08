@@ -1,6 +1,6 @@
 package com.embabel.guide.config
 
-import com.embabel.chat.store.model.SessionUser
+import com.embabel.chat.store.model.StoredUser
 import com.embabel.chat.store.repository.ChatSessionRepository
 import com.embabel.chat.store.repository.ChatSessionRepositoryImpl
 import com.embabel.guide.domain.GuideUserData
@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Primary
 
 /**
  * Configuration for embabel-chat-store integration.
- * Registers GuideUserData as the SessionUser implementation for polymorphic deserialization,
+ * Registers GuideUserData as the StoredUser implementation for polymorphic deserialization,
  * and wires up the ChatSessionRepository bean.
  */
 @Configuration
@@ -24,11 +24,11 @@ class ChatStoreConfig {
     @Primary
     fun persistenceManager(factory: PersistenceManagerFactory): PersistenceManager {
         val pm = factory.get("neo")
-        // Register GuideUserData as implementation of SessionUser interface.
+        // Register GuideUserData as implementation of StoredUser interface.
         // Composite label key is sorted alphabetically with pipe separator.
         pm.registerSubtype(
-            SessionUser::class.java,
-            "GuideUser|SessionUser",
+            StoredUser::class.java,
+            "GuideUser|User",
             GuideUserData::class.java
         )
         return pm
