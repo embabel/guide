@@ -34,7 +34,7 @@
         <dependency>
             <groupId>com.embabel.agent</groupId>
             <artifactId>embabel-agent-rag-neo-drivine</artifactId>
-            <version>0.1.1-SNAPSHOT</version>
+            <version>0.1.2-SNAPSHOT</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.drivine</groupId>

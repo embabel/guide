@@ -10,7 +10,7 @@ COPY src ./src
 COPY codegen-gradle ./codegen-gradle
 RUN chmod +x /workspace/codegen-gradle/gradlew
 
-RUN mvn -q -DskipTests package
+RUN mvn -q -U -DskipTests package
 
 FROM eclipse-temurin:21-jre-jammy AS runtime
 WORKDIR /app
