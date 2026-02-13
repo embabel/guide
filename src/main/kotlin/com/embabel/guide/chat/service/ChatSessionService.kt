@@ -28,7 +28,7 @@ class ChatSessionService(
 
     companion object {
         const val DEFAULT_WELCOME_MESSAGE = "Welcome! How can I help you today?"
-        const val WELCOME_PROMPT_TEMPLATE = "User %s has created a new account. Could you please greet and welcome them"
+        const val WELCOME_PROMPT_TEMPLATE = "User %s has created a new account. Please briefly greet and welcome them"
     }
 
     /**
