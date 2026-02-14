@@ -18,6 +18,7 @@ package com.embabel.guide.domain.drivine
 import com.embabel.guide.Neo4jPropertiesInitializer
 import com.embabel.guide.domain.*
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.ai.mcp.client.common.autoconfigure.McpClientAutoConfiguration
 import org.springframework.beans.factory.annotation.Autowired

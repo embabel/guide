@@ -8,6 +8,7 @@ import org.drivine.manager.GraphObjectManager
 import org.drivine.manager.PersistenceManager
 import org.drivine.manager.PersistenceManagerFactory
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
@@ -36,8 +37,9 @@ class ChatStoreConfig {
 
     @Bean
     fun chatSessionRepository(
-        @Qualifier("neoGraphObjectManager") graphObjectManager: GraphObjectManager
+        @Qualifier("neoGraphObjectManager") graphObjectManager: GraphObjectManager,
+        eventPublisher: ApplicationEventPublisher
     ): ChatSessionRepository {
-        return ChatSessionRepositoryImpl(graphObjectManager)
+        return ChatSessionRepositoryImpl(graphObjectManager, eventPublisher)
     }
 }
