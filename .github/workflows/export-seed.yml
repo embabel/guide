@@ -60,12 +60,13 @@ jobs:
         run: |
           echo "Waiting for guide to start and finish ingestion..."
           for i in $(seq 1 120); do
-            if curl -sf http://localhost:1337/api/v1/data/stats > /dev/null 2>&1; then
-              echo "Guide is ready after ~${i}0 seconds"
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:1337/api/v1/data/stats 2>/dev/null || echo "000")
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Guide is ready after ~${i}0 seconds (HTTP $HTTP_CODE)"
               exit 0
             fi
             # Show recent log output for progress
-            echo "--- Attempt $i (${i}0s elapsed) ---"
+            echo "--- Attempt $i (${i}0s elapsed) HTTP=$HTTP_CODE ---"
             tail -5 /tmp/guide.log 2>/dev/null || true
             sleep 10
           done
