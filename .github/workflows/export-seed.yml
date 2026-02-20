@@ -79,8 +79,12 @@ jobs:
       - name: Tag all nodes with managedBy
         run: |
           echo "Tagging all nodes with managedBy=embabel..."
-          cypher-shell -u neo4j -p testpassword \
-            "MATCH (n) SET n.managedBy = 'embabel' RETURN count(n) AS tagged;"
+          RESULT=$(curl -sf \
+            -u "neo4j:testpassword" \
+            -H "Content-Type: application/json" \
+            "http://localhost:7474/db/neo4j/tx/commit" \
+            -d '{"statements": [{"statement": "MATCH (n) SET n.managedBy = '\''embabel'\'' RETURN count(n) AS tagged"}]}')
+          echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Tagged {d[\"results\"][0][\"data\"][0][\"row\"][0]} nodes')"
 
       - name: Export seed database
         run: |
