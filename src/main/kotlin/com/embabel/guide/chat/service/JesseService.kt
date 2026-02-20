@@ -2,10 +2,12 @@ package com.embabel.guide.chat.service
 
 import com.embabel.chat.store.model.StoredUser
 import com.embabel.guide.chat.model.StatusMessage
+import com.embabel.guide.chat.model.DeliveredMessage
 import com.embabel.guide.domain.GuideUserData
 import com.embabel.guide.domain.GuideUserRepository
 import com.embabel.guide.domain.GuideUserService
 import com.embabel.guide.util.UUIDv7
+import java.time.Instant
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -151,8 +153,16 @@ class JesseService(
                 // by the chatbot's STORED conversation factory (fires MessageEvent on persist)
             } catch (e: Exception) {
                 logger.error("[session={}] Error processing message from webUser {}: {}", effectiveSessionId, fromWebUserId, e.message, e)
-                sendStatusToUser(fromWebUserId, "Error processing your request")
-                // Error messages are sent via status channel - no need to persist
+                sendStatusToUser(fromWebUserId, "")
+                val errorMessage = DeliveredMessage(
+                    id = UUIDv7.generateString(),
+                    sessionId = effectiveSessionId,
+                    role = "assistant",
+                    body = "I'm sorry, I'm having trouble processing your request right now. Please try again in a moment.",
+                    ts = Instant.now(),
+                    authorId = JESSE_USER_ID
+                )
+                chatService.sendToUser(fromWebUserId, errorMessage)
             }
         }
     }

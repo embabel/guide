@@ -107,6 +107,8 @@ class GuideRagServiceAdapter(
             responseBuilder.toString().ifBlank { DEFAULT_ERROR_MESSAGE }
         } catch (e: Exception) {
             logger.error("Error processing message from user {} in thread {}: {}", fromUserId, threadId, e.message, e)
+            // Invalidate the cached session since it may be in a bad state
+            threadSessions.remove(threadId)
             throw e
         }
     }

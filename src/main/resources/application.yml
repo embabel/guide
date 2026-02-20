@@ -23,7 +23,7 @@ guide:
     overlap-size: 200
 
   urls:
-    - https://docs.embabel.com/embabel-agent/guide/0.3.4-SNAPSHOT/
+    - https://docs.embabel.com/embabel-agent/guide/0.3.5-SNAPSHOT/
     - https://medium.com/@springrod/build-better-agents-in-java-vs-python-embabel-vs-langgraph-f7951a0d855c
     - https://medium.com/@springrod/context-engineering-needs-domain-understanding-b4387e8e4bf8
     - https://github.com/embabel/embabel-agent/blob/main/README.md?plain=1

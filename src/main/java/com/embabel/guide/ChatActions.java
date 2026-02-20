@@ -8,6 +8,7 @@ import com.embabel.agent.discord.DiscordUser;
 import com.embabel.agent.rag.neo.drivine.DrivineStore;
 import com.embabel.agent.rag.tools.ToolishRag;
 import com.embabel.agent.rag.tools.TryHyDE;
+import com.embabel.chat.AssistantMessage;
 import com.embabel.chat.Conversation;
 import com.embabel.chat.UserMessage;
 import com.embabel.guide.domain.DiscordUserInfoData;
@@ -102,8 +103,11 @@ public class ChatActions {
             Conversation conversation,
             ActionContext context) {
         logger.info("Incoming request from user {}", context.user());
-        // TODO null safety is a problem here
         var guideUser = getGuideUser(context.user());
+        if (guideUser == null) {
+            logger.error("Cannot respond: guideUser is null for context user {}", context.user());
+            return;
+        }
 
         var persona = guideUser.getCore().getPersona() != null ? guideUser.getCore().getPersona() : guideProperties.defaultPersona();
         var templateModel = new HashMap<String, Object>();
@@ -119,22 +123,30 @@ public class ChatActions {
         }
         userMap.put("customPersona", guideUser.getCore().getCustomPrompt());
         templateModel.put("user", userMap);
-        var assistantMessage = context
-                .ai()
-                .withLlm(guideProperties.chatLlm())
-                .withId("chat_response")
-                .withReferences(dataManager.referencesForUser(context.user()))
-                .withToolGroups(guideProperties.toolGroups())
-                .withReference(new ToolishRag(
-                                "docs",
-                                "Embabel docs",
-                                drivineStore
-                        ).withHint(TryHyDE.usingConversationContext())
-                )
-                .withTemplate("guide_system")
-                .respondWithSystemPrompt(conversation, templateModel);
-        conversation.addMessage(assistantMessage);
-        context.sendMessage(assistantMessage);
+        try {
+            var assistantMessage = context
+                    .ai()
+                    .withLlm(guideProperties.chatLlm())
+                    .withId("chat_response")
+                    .withReferences(dataManager.referencesForUser(context.user()))
+                    .withToolGroups(guideProperties.toolGroups())
+                    .withReference(new ToolishRag(
+                                    "docs",
+                                    "Embabel docs",
+                                    drivineStore
+                            ).withHint(TryHyDE.usingConversationContext())
+                    )
+                    .withTemplate("guide_system")
+                    .respondWithSystemPrompt(conversation, templateModel);
+            conversation.addMessage(assistantMessage);
+            context.sendMessage(assistantMessage);
+        } catch (Exception e) {
+            logger.error("LLM call failed for user {}: {}", context.user(), e.getMessage(), e);
+            var errorMessage = new AssistantMessage(
+                    "I'm sorry, I'm having trouble connecting to the AI service right now. Please try again in a moment.");
+            conversation.addMessage(errorMessage);
+            context.sendMessage(errorMessage);
+        }
     }
 
 }
