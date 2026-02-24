@@ -54,6 +54,16 @@ class GuideUserRepositoryDefaultImpl(
     }
 
     @Transactional(readOnly = true)
+    override fun findByWebUserEmail(userEmail: String): Optional<GuideUser> {
+        val results = graphObjectManager.loadAll<GuideUser> {
+            where {
+                query.webUser.userEmail eq userEmail
+            }
+        }
+        return Optional.ofNullable(results.firstOrNull())
+    }
+
+    @Transactional(readOnly = true)
     override fun findById(id: String): Optional<GuideUser> {
         val results = graphObjectManager.loadAll<GuideUser> {
             where {

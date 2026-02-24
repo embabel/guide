@@ -50,5 +50,8 @@ class PresenceService(private val messaging: SimpMessagingTemplate) {
         // messaging.convertAndSend("/topic/presence", onlineUsers())
     }
 
+    fun isUserPresent(userId: String): Boolean =
+        byUser[userId]?.isNotEmpty() == true
+
     fun onlineUsers(): Set<String> = byUser.keys
 }

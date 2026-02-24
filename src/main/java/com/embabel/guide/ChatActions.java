@@ -10,6 +10,7 @@ import com.embabel.agent.rag.tools.ToolishRag;
 import com.embabel.agent.rag.tools.TryHyDE;
 import com.embabel.chat.AssistantMessage;
 import com.embabel.chat.Conversation;
+import com.embabel.chat.ChatTrigger;
 import com.embabel.chat.UserMessage;
 import com.embabel.guide.domain.DiscordUserInfoData;
 import com.embabel.guide.domain.GuideUser;
@@ -20,10 +21,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.Nullable;
 
+import com.embabel.agent.api.common.PromptRunner;
+
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
- * Actions to respond to user messages in the Guide application
+ * Actions to respond to user messages and system-initiated triggers in the Guide application.
  */
 @EmbabelComponent
 public class ChatActions {
@@ -98,54 +103,103 @@ public class ChatActions {
         }
     }
 
-    @Action(canRerun = true, trigger = UserMessage.class)
-    void respond(
-            Conversation conversation,
-            ActionContext context) {
-        logger.info("Incoming request from user {}", context.user());
-        var guideUser = getGuideUser(context.user());
-        if (guideUser == null) {
-            logger.error("Cannot respond: guideUser is null for context user {}", context.user());
-            return;
-        }
+    private PromptRunner.Rendering buildRendering(ActionContext context) {
+        return context
+                .ai()
+                .withLlm(guideProperties.chatLlm())
+                .withId("chat_response")
+                .withReferences(dataManager.referencesForUser(context.user()))
+                .withToolGroups(guideProperties.toolGroups())
+                .withReference(new ToolishRag(
+                                "docs",
+                                "Embabel docs",
+                                drivineStore
+                        ).withHint(TryHyDE.usingConversationContext())
+                )
+                .withTemplate("guide_system");
+    }
 
-        var persona = guideUser.getCore().getPersona() != null ? guideUser.getCore().getPersona() : guideProperties.defaultPersona();
+    private Map<String, Object> buildTemplateModel(GuideUser guideUser) {
+        var persona = guideUser.getCore().getPersona() != null
+                ? guideUser.getCore().getPersona()
+                : guideProperties.defaultPersona();
         var templateModel = new HashMap<String, Object>();
-
         templateModel.put("persona", persona);
 
-        // Pass user info to the template for personalization
         var userMap = new HashMap<String, Object>();
         var displayName = guideUser.getDisplayName();
-        // Only include display name if it's a real name (not the "Unknown" fallback)
         if (!"Unknown".equals(displayName)) {
             userMap.put("displayName", displayName);
         }
         userMap.put("customPersona", guideUser.getCore().getCustomPrompt());
         templateModel.put("user", userMap);
+        return templateModel;
+    }
+
+    private void sendResponse(AssistantMessage assistantMessage, Conversation conversation, ActionContext context) {
+        conversation.addMessage(assistantMessage);
+        context.sendMessage(assistantMessage);
+    }
+
+    private void sendErrorResponse(Conversation conversation, ActionContext context) {
+        var errorMessage = new AssistantMessage(
+                "I'm sorry, I'm having trouble connecting to the AI service right now. Please try again in a moment.");
+        sendResponse(errorMessage, conversation, context);
+    }
+
+    @Action(canRerun = true, trigger = UserMessage.class)
+    void respond(
+            Conversation conversation,
+            ActionContext context) {
+        logger.info("[TRACE] ChatActions.respond: user={}, conversationId={}", context.user(), conversation.getId());
+        var messages = conversation.getMessages();
+        logger.info("[TRACE] Conversation has {} messages", messages.size());
+        for (int i = 0; i < messages.size(); i++) {
+            var msg = messages.get(i);
+            logger.info("[TRACE]   msg[{}]: role={}, content='{}'", i, msg.getRole(), msg.getContent().length() > 80 ? msg.getContent().substring(0, 80) + "..." : msg.getContent());
+        }
+        logger.info("[TRACE] lastResult type={}, value={}", context.lastResult() != null ? context.lastResult().getClass().getSimpleName() : "null", context.lastResult());
+        var guideUser = getGuideUser(context.user());
+        if (guideUser == null) {
+            logger.error("Cannot respond: guideUser is null for context user {}", context.user());
+            return;
+        }
         try {
-            var assistantMessage = context
-                    .ai()
-                    .withLlm(guideProperties.chatLlm())
-                    .withId("chat_response")
-                    .withReferences(dataManager.referencesForUser(context.user()))
-                    .withToolGroups(guideProperties.toolGroups())
-                    .withReference(new ToolishRag(
-                                    "docs",
-                                    "Embabel docs",
-                                    drivineStore
-                            ).withHint(TryHyDE.usingConversationContext())
-                    )
-                    .withTemplate("guide_system")
-                    .respondWithSystemPrompt(conversation, templateModel);
-            conversation.addMessage(assistantMessage);
-            context.sendMessage(assistantMessage);
+            var snapshot = List.copyOf(conversation.getMessages());
+            var lastMsg = snapshot.isEmpty() ? null : snapshot.getLast();
+            logger.info("[TRACE] User turn: {} with {} conversation messages, last: role={}, content='{}'",
+                context.user(), snapshot.size(),
+                lastMsg != null ? lastMsg.getRole() : "none",
+                lastMsg != null ? (lastMsg.getContent().length() > 100 ? lastMsg.getContent().substring(0, 100) + "..." : lastMsg.getContent()) : "none");
+            var assistantMessage = buildRendering(context)
+                    .respondWithSystemPrompt(conversation, buildTemplateModel(guideUser));
+            logger.info("[TRACE] LLM response: '{}'", assistantMessage.getContent().length() > 100 ? assistantMessage.getContent().substring(0, 100) + "..." : assistantMessage.getContent());
+            sendResponse(assistantMessage, conversation, context);
         } catch (Exception e) {
             logger.error("LLM call failed for user {}: {}", context.user(), e.getMessage(), e);
-            var errorMessage = new AssistantMessage(
-                    "I'm sorry, I'm having trouble connecting to the AI service right now. Please try again in a moment.");
-            conversation.addMessage(errorMessage);
-            context.sendMessage(errorMessage);
+            sendErrorResponse(conversation, context);
+        }
+    }
+
+    @Action(canRerun = true, trigger = ChatTrigger.class)
+    void respondToTrigger(
+            Conversation conversation,
+            ActionContext context) {
+        var trigger = (ChatTrigger) context.lastResult();
+        var user = trigger != null ? trigger.getOnBehalfOf().stream().findFirst().orElse(null) : null;
+        logger.info("Incoming trigger for user {}", user);
+        var guideUser = getGuideUser(user != null ? user : context.user());
+        if (guideUser == null) {
+            logger.error("Cannot respond to trigger: guideUser is null");
+            return;
+        }
+        try {
+            var assistantMessage = buildRendering(context)
+                    .respondWithTrigger(conversation, trigger.getPrompt(), buildTemplateModel(guideUser));
+            sendResponse(assistantMessage, conversation, context);
+        } catch (Exception e) {
+            logger.error("Trigger LLM call failed: {}", e.getMessage(), e);
+            sendErrorResponse(conversation, context);
         }
     }
 

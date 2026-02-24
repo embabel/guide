@@ -29,6 +29,11 @@ interface GuideUserRepository {
     fun findByWebUserName(userName: String): Optional<GuideUser>
 
     /**
+     * Find a GuideUser by web user email
+     */
+    fun findByWebUserEmail(userEmail: String): Optional<GuideUser>
+
+    /**
      * Find a GuideUser by ID
      */
     fun findById(id: String): Optional<GuideUser>

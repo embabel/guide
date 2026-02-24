@@ -106,6 +106,28 @@ class DrivineGuideUserRepository(
     }
 
     /**
+     * Find a GuideUser by web user email
+     */
+    @Transactional(readOnly = true)
+    fun findByWebUserEmail(userEmail: String): Optional<GuideUserWithWebUser> {
+        val cypher = """
+            MATCH (u:GuideUser)-[:IS_WEB_USER]->(w:WebUser)
+            WHERE w.userEmail = ${'$'}userEmail
+            RETURN {
+              guideUserData: properties(u),
+              webUser: properties(w)
+            }
+            """
+
+        return manager.optionalGetOne(
+            QuerySpecification
+                .withStatement(cypher)
+                .bind(mapOf("userEmail" to userEmail))
+                .transform(GuideUserWithWebUser::class.java)
+        )
+    }
+
+    /**
      * Create a new GuideUser with Discord info
      */
     @Transactional

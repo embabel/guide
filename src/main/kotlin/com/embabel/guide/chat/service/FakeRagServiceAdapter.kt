@@ -1,5 +1,6 @@
 package com.embabel.guide.chat.service
 
+import com.embabel.chat.ChatTrigger
 import kotlinx.coroutines.delay
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -76,14 +77,21 @@ class FakeRagServiceAdapter : RagServiceAdapter {
         return response
     }
 
-    override suspend fun generateTitle(content: String, fromUserId: String): String {
-        logger.debug("Generating fake title for content from user: {}", fromUserId)
-        // Return first few words of content as title, or a default
-        val words = content.trim().split("\\s+".toRegex())
-        return if (words.size <= 4) {
-            content.take(50)
-        } else {
-            words.take(4).joinToString(" ") + "..."
-        }
+    override suspend fun sendTrigger(
+        threadId: String,
+        trigger: ChatTrigger,
+        onEvent: (String) -> Unit
+    ): String {
+        logger.info("Processing fake trigger in thread: {}", threadId)
+
+        onEvent("Processing trigger...")
+        delay(10)
+
+        val response = "I received a system trigger: \"${trigger.prompt}\". " +
+            "In a real system, I would generate a contextual response."
+
+        logger.debug("Fake trigger response generated for thread: {}", threadId)
+        return response
     }
+
 }

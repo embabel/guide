@@ -1,5 +1,6 @@
 package com.embabel.hub
 
+import com.embabel.guide.chat.service.ChatSessionService
 import com.embabel.guide.domain.GuideUser
 import com.embabel.guide.domain.GuideUserService
 import com.embabel.guide.domain.WebUserData
@@ -11,7 +12,8 @@ import org.springframework.stereotype.Service
 class HubService(
     private val guideUserService: GuideUserService,
     private val jwtTokenService: JwtTokenService,
-    private val welcomeGreeter: WelcomeGreeter
+    private val welcomeGreeter: WelcomeGreeter,
+    private val chatSessionService: ChatSessionService
 ) {
 
     private val passwordEncoder = BCryptPasswordEncoder()
@@ -45,6 +47,16 @@ class HubService(
             throw RegistrationException("Display name is required")
         }
 
+        // Check for duplicate username
+        if (guideUserService.findByWebUserName(request.username).isPresent) {
+            throw RegistrationException("Username '${request.username}' is already taken")
+        }
+
+        // Check for duplicate email
+        if (guideUserService.findByWebUserEmail(request.userEmail).isPresent) {
+            throw RegistrationException("An account with this email already exists")
+        }
+
         // Generate unique user ID using UUIDv7 (time-ordered)
         val userId = UUIDv7.generateString()
 
@@ -65,16 +77,7 @@ class HubService(
         )
 
         // Save the user through GuideUserService
-        val guideUser = guideUserService.saveFromWebUser(webUser)
-
-        // Greet the new user with a welcome message (fire-and-forget)
-        welcomeGreeter.greetNewUser(
-            guideUserId = guideUser.core.id,
-            webUserId = userId,
-            displayName = request.userDisplayName
-        )
-
-        return guideUser
+        return guideUserService.saveFromWebUser(webUser)
     }
 
     /**
@@ -104,6 +107,15 @@ class HubService(
 
         if (!passwordEncoder.matches(request.password, webUser.passwordHash)) {
             throw LoginException("Invalid username or password")
+        }
+
+        // Welcome new users on first login
+        if (chatSessionService.findByOwnerId(guideUser.core.id).isEmpty()) {
+            welcomeGreeter.greetNewUser(
+                guideUserId = guideUser.core.id,
+                webUserId = webUser.id,
+                displayName = webUser.displayName
+            )
         }
 
         // Generate a fresh token on login for accurate expiration

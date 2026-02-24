@@ -4,6 +4,7 @@ import com.embabel.agent.api.channel.*
 import com.embabel.chat.AssistantMessage
 import com.embabel.chat.ChatSession
 import com.embabel.chat.Chatbot
+import com.embabel.chat.ChatTrigger
 import com.embabel.chat.UserMessage
 import com.embabel.guide.domain.GuideUserRepository
 import kotlinx.coroutines.Dispatchers
@@ -73,7 +74,7 @@ class GuideRagServiceAdapter(
         fromUserId: String,
         onEvent: (String) -> Unit
     ): String = withContext(Dispatchers.IO) {
-        logger.info("Processing Guide RAG request from user: {} in thread: {}", fromUserId, threadId)
+        logger.info("[TRACE] sendMessage called: thread={}, user={}, message='{}'", threadId, fromUserId, message.take(100))
 
         val responseBuilder = StringBuilder()
         var isComplete = false
@@ -100,6 +101,7 @@ class GuideRagServiceAdapter(
             sessionContext.dynamicChannel.currentDelegate = messageOutputChannel
 
             // Process the message with the cached session (which maintains conversation history)
+            logger.info("[TRACE] Calling onUserMessage: thread={}, message='{}'", threadId, message.take(100))
             sessionContext.session.onUserMessage(UserMessage(message))
 
             waitForResponse { isComplete }
@@ -108,6 +110,45 @@ class GuideRagServiceAdapter(
         } catch (e: Exception) {
             logger.error("Error processing message from user {} in thread {}: {}", fromUserId, threadId, e.message, e)
             // Invalidate the cached session since it may be in a bad state
+            threadSessions.remove(threadId)
+            throw e
+        }
+    }
+
+    override suspend fun sendTrigger(
+        threadId: String,
+        trigger: ChatTrigger,
+        onEvent: (String) -> Unit
+    ): String = withContext(Dispatchers.IO) {
+        logger.info("Processing trigger for thread: {}", threadId)
+
+        val responseBuilder = StringBuilder()
+        var isComplete = false
+
+        val messageOutputChannel = createOutputChannel(responseBuilder, onEvent) { isComplete = true }
+
+        try {
+            val user = trigger.onBehalfOf.firstOrNull()
+
+            // Get or create session context for this thread
+            val sessionContext = threadSessions.computeIfAbsent(threadId) {
+                logger.info("Creating/restoring chat session for thread: {} (trigger for user: {})", threadId, user)
+                val dynamicChannel = DynamicOutputChannel()
+                dynamicChannel.currentDelegate = messageOutputChannel
+                val session = chatbot.createSession(user, dynamicChannel, null, threadId)
+                SessionContext(session, dynamicChannel)
+            }
+
+            sessionContext.dynamicChannel.currentDelegate = messageOutputChannel
+
+            // Trigger — prompt is NOT stored in conversation
+            sessionContext.session.onTrigger(trigger)
+
+            waitForResponse { isComplete }
+
+            responseBuilder.toString().ifBlank { DEFAULT_ERROR_MESSAGE }
+        } catch (e: Exception) {
+            logger.error("Error processing trigger in thread {}: {}", threadId, e.message, e)
             threadSessions.remove(threadId)
             throw e
         }
@@ -143,6 +184,7 @@ class GuideRagServiceAdapter(
     ) {
         when (val msg = event.message) {
             is AssistantMessage -> {
+                logger.info("[TRACE] OutputChannel received AssistantMessage: '{}'", msg.content.take(100))
                 responseBuilder.append(msg.content)
                 onComplete()
             }
@@ -162,32 +204,4 @@ class GuideRagServiceAdapter(
         }
     }
 
-    /**
-     * Generates a short title from message content using a one-shot call.
-     * This does NOT use the user's session to avoid polluting conversation history.
-     */
-    override suspend fun generateTitle(content: String, fromUserId: String): String = withContext(Dispatchers.IO) {
-        logger.debug("Generating title for content from user: {}", fromUserId)
-
-        val responseBuilder = StringBuilder()
-        var isComplete = false
-
-        val outputChannel = createOutputChannel(responseBuilder, {}) { isComplete = true }
-
-        try {
-            val guideUser = guideUserRepository.findById(fromUserId)
-                .orElseThrow { RuntimeException("No user found with id: $fromUserId") }
-
-            // Create a one-shot session (not cached) for title generation
-            val session = chatbot.createSession(guideUser, outputChannel, null)
-            session.onUserMessage(UserMessage(RagServiceAdapter.TITLE_PROMPT + content))
-
-            waitForResponse { isComplete }
-
-            responseBuilder.toString().trim().take(100).ifBlank { "New conversation" }
-        } catch (e: Exception) {
-            logger.error("Error generating title for user {}: {}", fromUserId, e.message, e)
-            "New conversation"  // Fallback title on error
-        }
-    }
 }

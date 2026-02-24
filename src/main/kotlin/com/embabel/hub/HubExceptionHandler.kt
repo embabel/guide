@@ -1,6 +1,7 @@
 package com.embabel.hub
 
 import jakarta.servlet.http.HttpServletRequest
+import org.drivine.DrivineException
 import org.springframework.core.annotation.Order
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -40,6 +41,20 @@ class HubExceptionHandler {
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgumentException(ex: IllegalArgumentException, request: HttpServletRequest) =
         buildResponse(HttpStatus.BAD_REQUEST, ex.message, request)
+
+    @ExceptionHandler(DrivineException::class)
+    fun handleDrivineException(ex: DrivineException, request: HttpServletRequest): ResponseEntity<StandardErrorResponse> {
+        val rootMessage = ex.rootCause?.message ?: ex.message ?: ""
+        if (rootMessage.contains("ConstraintValidationFailed") || rootMessage.contains("already exists")) {
+            val message = when {
+                rootMessage.contains("userName") -> "Username is already taken"
+                rootMessage.contains("userEmail") -> "An account with this email already exists"
+                else -> "A uniqueness constraint was violated"
+            }
+            return buildResponse(HttpStatus.CONFLICT, message, request)
+        }
+        throw ex
+    }
 
     @ExceptionHandler(HttpMessageNotReadableException::class)
     fun handleHttpMessageNotReadableException(ex: HttpMessageNotReadableException, request: HttpServletRequest) =

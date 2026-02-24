@@ -2,8 +2,10 @@ package com.embabel.guide.chat.event
 
 import com.embabel.chat.event.MessageEvent
 import com.embabel.guide.chat.model.DeliveredMessage
+import com.embabel.guide.chat.model.SessionEvent
 import com.embabel.guide.chat.model.StatusMessage
 import com.embabel.guide.chat.service.ChatService
+import com.embabel.guide.chat.service.MessageDeliveryService
 import com.embabel.guide.domain.GuideUserRepository
 import com.embabel.guide.util.UUIDv7
 import org.slf4j.LoggerFactory
@@ -14,12 +16,13 @@ import org.springframework.stereotype.Component
  * Listens for MessageEvents and delivers messages to users via WebSocket.
  *
  * This decouples message persistence from WebSocket delivery:
- * - ADDED: Message was added to conversation - send to recipient immediately
+ * - ADDED: Message was added to conversation — deliver with retry until acknowledged
  * - PERSISTENCE_FAILED: Log error for monitoring
  */
 @Component
 class MessageEventListener(
     private val chatService: ChatService,
+    private val messageDeliveryService: MessageDeliveryService,
     private val guideUserRepository: GuideUserRepository
 ) {
     private val logger = LoggerFactory.getLogger(MessageEventListener::class.java)
@@ -64,7 +67,15 @@ class MessageEventListener(
             title = event.title
         )
 
-        chatService.sendToUser(webUserId, delivered)
+        // Push session event so the frontend can update its session list
+        if (event.title != null) {
+            chatService.sendSessionToUser(webUserId, SessionEvent(
+                sessionId = event.conversationId,
+                title = event.title,
+            ))
+        }
+
+        messageDeliveryService.deliverWithRetry(webUserId, delivered)
 
         // Send status update to clear typing indicator
         event.fromUserId?.let { fromUserId ->

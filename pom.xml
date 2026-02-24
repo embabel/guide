@@ -46,7 +46,7 @@
         <dependency>
             <groupId>org.drivine</groupId>
             <artifactId>drivine4j-spring-boot-starter</artifactId>
-            <version>0.0.24</version>
+            <version>0.0.26</version>
         </dependency>
 
         <!-- Chat session storage with autoconfiguration -->

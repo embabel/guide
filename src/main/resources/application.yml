@@ -91,9 +91,9 @@ logging:
     com.embabel.agent.rag.tools: DEBUG
     com.embabel.agent.rag.pipeline: DEBUG
     # Drivine logging
-    org.drivine: TRACE
-    org.drivine.manager: TRACE
-    org.drivine.transaction: TRACE
+    org.drivine: WARN
+    org.drivine.manager: WARN
+    org.drivine.transaction: WARN
     # WebSocket and Chat logging
     org.springframework.web.socket: INFO
     org.springframework.messaging: INFO

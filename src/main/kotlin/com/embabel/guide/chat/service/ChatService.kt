@@ -1,6 +1,7 @@
 package com.embabel.guide.chat.service
 
 import com.embabel.guide.chat.model.DeliveredMessage
+import com.embabel.guide.chat.model.SessionEvent
 import com.embabel.guide.chat.model.StatusMessage
 import org.slf4j.LoggerFactory
 import org.springframework.messaging.simp.SimpMessagingTemplate
@@ -16,6 +17,12 @@ class ChatService(private val messaging: SimpMessagingTemplate) {
             msg.sessionId, toUserId, msg.body.length)
         messaging.convertAndSendToUser(toUserId, "/queue/messages", msg)
         logger.info("[session={}] Message sent to user {}", msg.sessionId, toUserId)
+    }
+
+    fun sendSessionToUser(toUserId: String, event: SessionEvent) {
+        logger.info("[session={}] Sending session event '{}' to user {}",
+            event.sessionId, event.type, toUserId)
+        messaging.convertAndSendToUser(toUserId, "/queue/sessions", event)
     }
 
     fun sendStatusToUser(toUserId: String, status: StatusMessage) {

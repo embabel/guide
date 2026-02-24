@@ -125,7 +125,6 @@ class JesseService(
                 val sessionResult = chatSessionService.getOrCreateSession(
                     sessionId = effectiveSessionId,
                     ownerId = guideUserId,
-                    messageForTitle = message
                 )
                 val title = sessionResult.session.session.title
                 if (sessionResult.created) {

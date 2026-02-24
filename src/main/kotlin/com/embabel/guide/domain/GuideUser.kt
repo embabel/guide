@@ -43,4 +43,10 @@ data class GuideUser(
 
     override val email: String?
         get() = webUser?.userEmail
+
+    override fun toString(): String {
+        return "GuideUser(displayName='$displayName')"
+    }
+
+
 }

@@ -90,6 +90,16 @@ class GuideUserService(
     }
 
     /**
+     * Finds a GuideUser by their web user email.
+     *
+     * @param userEmail the email to search for
+     * @return the GuideUser if found
+     */
+    fun findByWebUserEmail(userEmail: String): Optional<GuideUser> {
+        return guideUserRepository.findByWebUserEmail(userEmail)
+    }
+
+    /**
      * Updates the persona for a user.
      *
      * @param userId  the user's ID

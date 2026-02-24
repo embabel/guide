@@ -17,6 +17,9 @@ interface WelcomeGreeter {
      * Greet a new user by creating a welcome session and sending the message.
      * This is a fire-and-forget operation that runs asynchronously.
      *
+     * WebSocket delivery is handled by [com.embabel.guide.chat.event.MessageEventListener]
+     * when the chatbot persists the response via StoredConversation.
+     *
      * @param guideUserId the GuideUser's core ID (owner of the session)
      * @param webUserId the WebUser's ID (for WebSocket delivery)
      * @param displayName the user's display name for personalized greeting
@@ -38,23 +41,18 @@ class WelcomeGreeterImpl(
     override fun greetNewUser(guideUserId: String, webUserId: String, displayName: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val chatSession = chatSessionService.createWelcomeSession(
+                chatSessionService.createWelcomeSession(
                     ownerId = guideUserId,
                     displayName = displayName
                 )
-                // Send the welcome message to the user via WebSocket
-                val welcomeMessage = chatSession.messages.firstOrNull()
-                if (welcomeMessage != null) {
-                    val delivered = DeliveredMessage.createFrom(welcomeMessage, chatSession.session.sessionId)
-                    chatService.sendToUser(webUserId, delivered)
-                }
+                // WebSocket delivery is handled by MessageEventListener via StoredConversation events
             } catch (e: Exception) {
                 logger.error("Failed to create AI welcome session for user {}, falling back to static message: {}", guideUserId, e.message, e)
                 try {
                     val fallbackSession = chatSessionService.createWelcomeSessionWithMessage(ownerId = guideUserId)
                     val fallbackMessage = fallbackSession.messages.firstOrNull()
                     if (fallbackMessage != null) {
-                        val delivered = DeliveredMessage.createFrom(fallbackMessage, fallbackSession.session.sessionId)
+                        val delivered = DeliveredMessage.createFrom(fallbackMessage, fallbackSession.session.sessionId, fallbackSession.session.title)
                         chatService.sendToUser(webUserId, delivered)
                     }
                 } catch (fallbackError: Exception) {
