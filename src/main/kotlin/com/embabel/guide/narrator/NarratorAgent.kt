@@ -72,7 +72,17 @@ class NarratorAgent(
     }
 
     private fun templateModel(content: String, persona: String?): Map<String, Any> {
-        val model = mutableMapOf<String, Any>("content" to content)
+        val wordCount = content.split("\\s+".toRegex()).filter { it.isNotBlank() }.size
+        val model = mutableMapOf<String, Any>(
+            "content" to content,
+            "wordCount" to wordCount,
+            "targetWords" to when {
+                wordCount <= 350 -> wordCount
+                wordCount <= 700 -> 180
+                wordCount <= 1200 -> 250
+                else -> 300
+            }
+        )
         if (persona != null) {
             model["persona"] = persona
         }
