@@ -18,7 +18,7 @@ plugins {
 group = "com.embabel.guide"
 version = "0.1.0-SNAPSHOT"
 
-val drivineVersion = "0.0.18"
+val drivineVersion = "0.0.28"
 
 repositories {
     mavenCentral()

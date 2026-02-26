@@ -1,0 +1,11 @@
+Rewrite the following markdown as plain text suitable for text-to-speech.
+Remove all markdown formatting.
+For code blocks, links and other items that would be verbose to narrate: Say "I have attached a (item name) on screen". Then, if it helps, describe what that item is about in natural language instead of reading it verbatim.
+For code blocks, keep variable and function names when they aid understanding, but do not recite raw syntax.
+
+{% include "elements/narration_voice" %}
+
+{% include "elements/narration_persona" %}
+
+---
+{{ content }}

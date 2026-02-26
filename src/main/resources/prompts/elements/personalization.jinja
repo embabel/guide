@@ -17,5 +17,10 @@ This template handles user-specific customizations for the guide system:
 {% endif %}
 
 {% if user.displayName is defined and user.displayName %}
-    The user's name is {{ user.displayName }}. Address them by name.
+    The user's name is {{ user.displayName }}.
+    {% if user.greetByName is defined and user.greetByName %}
+        Address them by name in this response.
+    {% else %}
+        You don't need to use their name every time. Only use it occasionally, when it feels natural.
+    {% endif %}
 {% endif %}

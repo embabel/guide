@@ -4,7 +4,7 @@ import com.embabel.guide.chat.service.ChatSessionService
 import com.embabel.guide.domain.GuideUser
 import com.embabel.guide.domain.GuideUserService
 import com.embabel.guide.domain.WebUserData
-import com.embabel.guide.util.UUIDv7
+import com.embabel.chat.store.util.UUIDv7
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Service
 

@@ -15,7 +15,13 @@ guide:
   default-persona: adaptive
 
   chat-llm:
+    model: gpt-4.1
+
+  fast-llm:
     model: gpt-4.1-mini
+
+  narrator-llm:
+    model: gpt-4.1-nano
 
   content-chunker:
     include-section-title-in-chunk: false
@@ -53,6 +59,10 @@ rag:
     type: guide
 
 embabel:
+  chat:
+    store:
+      title-after-message-count: 6
+
   models:
     llms:
       summarizer: gpt-4.1-nano

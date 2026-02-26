@@ -175,6 +175,41 @@ class GuideUserRepositoryDefaultImplTest {
     }
 
     @Test
+    fun `test update persona for web user`() {
+        // Given: We create a GuideUser with a WebUser (same as frontend flow)
+        val guideUserData = GuideUserData(
+            id = UUID.randomUUID().toString(),
+            displayName = "Web Persona Test"
+        )
+
+        val webUserData = WebUserData(
+            "graphobj-web-persona-${UUID.randomUUID()}",
+            "Web Persona Test",
+            "webpersonatest",
+            "persona@example.com",
+            "hashedpassword",
+            null
+        )
+
+        val created = repository.createWithWebUser(guideUserData, webUserData)
+        val userId = created.guideUserData().id
+        assertNull(created.guideUserData().persona)
+
+        // When: We update the persona (same code path as HubService)
+        repository.updatePersona(userId, "expert")
+
+        // Then: The persona is updated when reading by core ID
+        val foundById = repository.findById(userId)
+        assertTrue(foundById.isPresent)
+        assertEquals("expert", foundById.get().guideUserData().persona)
+
+        // And: Also updated when reading by web user ID (the frontend lookup path)
+        val foundByWebId = repository.findByWebUserId(webUserData.id)
+        assertTrue(foundByWebId.isPresent)
+        assertEquals("expert", foundByWebId.get().guideUserData().persona)
+    }
+
+    @Test
     fun `test update custom prompt`() {
         // Given: We create a GuideUser
         val guideUserData = GuideUserData(

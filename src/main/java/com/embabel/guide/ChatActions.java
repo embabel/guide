@@ -16,16 +16,23 @@ import com.embabel.guide.domain.DiscordUserInfoData;
 import com.embabel.guide.domain.GuideUser;
 import com.embabel.guide.domain.GuideUserData;
 import com.embabel.guide.domain.GuideUserRepository;
+import com.embabel.guide.chat.model.StatusMessage;
+import com.embabel.guide.chat.SortedConversation;
+import com.embabel.guide.chat.model.ConversationalCheck;
+import com.embabel.guide.chat.service.ChatService;
+import com.embabel.guide.chat.service.JesseService;
+import com.embabel.guide.narrator.NarrationCache;
+import com.embabel.guide.narrator.NarratorAgent;
 import com.embabel.guide.rag.DataManager;
+import com.embabel.agent.api.common.PromptRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.Nullable;
 
-import com.embabel.agent.api.common.PromptRunner;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Actions to respond to user messages and system-initiated triggers in the Guide application.
@@ -39,16 +46,25 @@ public class ChatActions {
     private final Logger logger = LoggerFactory.getLogger(ChatActions.class);
     private final GuideProperties guideProperties;
     private final DrivineStore drivineStore;
+    private final NarrationCache narrationCache;
+    private final NarratorAgent narratorAgent;
+    private final ChatService chatService;
 
     public ChatActions(
             DataManager dataManager,
             GuideUserRepository guideUserRepository,
             DrivineStore drivineStore,
-            GuideProperties guideProperties) {
+            GuideProperties guideProperties,
+            NarrationCache narrationCache,
+            NarratorAgent narratorAgent,
+            ChatService chatService) {
         this.dataManager = dataManager;
         this.guideUserRepository = guideUserRepository;
         this.guideProperties = guideProperties;
         this.drivineStore = drivineStore;
+        this.narrationCache = narrationCache;
+        this.narratorAgent = narratorAgent;
+        this.chatService = chatService;
     }
 
     private GuideUser getGuideUser(@Nullable User user) {
@@ -86,16 +102,9 @@ public class ChatActions {
                         });
             }
             case GuideUser gu -> {
-                // Already a GuideUser, look it up by ID to ensure we have latest data
-                if (gu.getWebUser() != null) {
-                    return guideUserRepository.findByWebUserId(gu.getWebUser().getId())
-                            .orElseThrow(() -> new RuntimeException("Missing user with id: " + gu.getWebUser().getId()));
-                } else if (gu.getDiscordUserInfo() != null) {
-                    return guideUserRepository.findByDiscordUserId(gu.getDiscordUserInfo().getId())
-                            .orElseThrow(() -> new RuntimeException("Missing user with id: " + gu.getDiscordUserInfo().getId()));
-                } else {
-                    return gu;
-                }
+                // Always re-read from DB by core ID to pick up persona/settings changes
+                return guideUserRepository.findById(gu.getCore().getId())
+                        .orElseThrow(() -> new RuntimeException("Missing GuideUser with id: " + gu.getCore().getId()));
             }
             default -> {
                 throw new RuntimeException("Unknown user type: " + user);
@@ -119,10 +128,11 @@ public class ChatActions {
                 .withTemplate("guide_system");
     }
 
-    private Map<String, Object> buildTemplateModel(GuideUser guideUser) {
+    private Map<String, Object> buildTemplateModel(GuideUser guideUser, Conversation conversation) {
         var persona = guideUser.getCore().getPersona() != null
                 ? guideUser.getCore().getPersona()
                 : guideProperties.defaultPersona();
+        logger.info("[PERSONA] user={} persona={}", guideUser.getCore().getId(), persona);
         var templateModel = new HashMap<String, Object>();
         templateModel.put("persona", persona);
 
@@ -132,8 +142,36 @@ public class ChatActions {
             userMap.put("displayName", displayName);
         }
         userMap.put("customPersona", guideUser.getCore().getCustomPrompt());
+
+        // Greet by name on first message, ~25% of the time after that
+        var isFirstMessage = conversation.getMessages().size() <= 1;
+        userMap.put("greetByName", isFirstMessage || ThreadLocalRandom.current().nextInt(4) == 0);
+
         templateModel.put("user", userMap);
         return templateModel;
+    }
+
+    private void computeAndCacheNarration(AssistantMessage assistantMessage, Conversation conversation, GuideUser guideUser, ActionContext context) {
+        var conversationId = conversation.getId();
+        logger.info("[NARRATION] Starting narration for conversation {}, content length={}", conversationId, assistantMessage.getContent().length());
+        var webUserId = guideUser.getWebUser() != null ? guideUser.getWebUser().getId() : null;
+        if (webUserId != null) {
+            chatService.sendStatusToUser(webUserId, new StatusMessage(
+                    java.util.UUID.randomUUID().toString(),
+                    JesseService.JESSE_USER_ID,
+                    "Narrating...",
+                    java.time.Instant.now()));
+        }
+        try {
+            var persona = guideUser.getCore().getPersona() != null
+                    ? guideUser.getCore().getPersona()
+                    : guideProperties.defaultPersona();
+            var narration = narratorAgent.narrate(assistantMessage.getContent(), persona, context);
+            logger.info("[NARRATION] Narration complete for conversation {}: {} chars", conversationId, narration.getText().length());
+            narrationCache.put(conversationId, narration.getText());
+        } catch (Exception e) {
+            logger.error("[NARRATION] Narration failed for conversation {}: {}", conversationId, e.getMessage(), e);
+        }
     }
 
     private void sendResponse(AssistantMessage assistantMessage, Conversation conversation, ActionContext context) {
@@ -145,6 +183,47 @@ public class ChatActions {
         var errorMessage = new AssistantMessage(
                 "I'm sorry, I'm having trouble connecting to the AI service right now. Please try again in a moment.");
         sendResponse(errorMessage, conversation, context);
+    }
+
+    /**
+     * Classify the latest user message as conversational vs informational using nano.
+     * If conversational, generates a quick response to avoid the full RAG pipeline.
+     */
+    private ConversationalCheck classifyMessage(String userMessage, Conversation conversation, ActionContext context) {
+        var messages = conversation.getMessages();
+        var sb = new StringBuilder();
+        var start = Math.max(0, messages.size() - 6);
+        for (int i = start; i < messages.size(); i++) {
+            var m = messages.get(i);
+            var content = m.getContent().length() > 200
+                    ? m.getContent().substring(0, 200) + "..."
+                    : m.getContent();
+            sb.append(m.getRole().name().toLowerCase()).append(": ").append(content).append("\n");
+        }
+        return context.ai()
+                .withLlm(guideProperties.fastLlm())
+                .createObject(
+                        """
+                        Does this user message need information lookup, or is it just conversational?
+
+                        User message to classify: "%s"
+
+                        conversational = true:
+                        Pure reactions, acknowledgments, greetings, or thanks with no information need.
+                        E.g. "thanks!", "that sounds cool", "yes, that's cool", "got it", "nice", "hello", "awesome"
+
+                        conversational = false:
+                        Any part of the message asks a question, requests info/code, or mentions a topic to explore.
+                        E.g. "how does that work?", "show me an example", "I want to know about X",
+                        "yeah but what about error handling?", "actually, tell me more about Y"
+
+                        Recent conversation for context:
+                        %s
+
+                        If conversational, generate a brief, warm 1-2 sentence response.
+                        """.formatted(userMessage, sb.toString()),
+                        ConversationalCheck.class
+                );
     }
 
     @Action(canRerun = true, trigger = UserMessage.class)
@@ -171,9 +250,35 @@ public class ChatActions {
                 context.user(), snapshot.size(),
                 lastMsg != null ? lastMsg.getRole() : "none",
                 lastMsg != null ? (lastMsg.getContent().length() > 100 ? lastMsg.getContent().substring(0, 100) + "..." : lastMsg.getContent()) : "none");
+
+            // Short-circuit for conversational messages (acknowledgments, greetings, reactions)
+            if (snapshot.size() > 1) {
+                try {
+                    // Use the trigger's lastResult — conversation message ordering is unreliable
+                    var userContent = context.lastResult() instanceof UserMessage um
+                            ? um.getContent()
+                            : "";
+                    var check = classifyMessage(userContent, conversation, context);
+                    logger.info("[CLASSIFY RESULT] input='{}' conversational={} response='{}'",
+                        userContent.length() > 120 ? userContent.substring(0, 120) + "..." : userContent,
+                        check.getConversational(),
+                        check.getResponse() != null ? check.getResponse().substring(0, Math.min(120, check.getResponse().length())) : "null");
+                    if (check.getConversational() && check.getResponse() != null) {
+                        var assistantMessage = new AssistantMessage(check.getResponse());
+                        computeAndCacheNarration(assistantMessage, conversation, guideUser, context);
+                        sendResponse(assistantMessage, conversation, context);
+                        return;
+                    }
+                } catch (Exception e) {
+                    logger.error("[CLASSIFY] Classification FAILED, falling back to full pipeline: {}", e.getMessage(), e);
+                }
+            }
+
+            var sorted = new SortedConversation(conversation);
             var assistantMessage = buildRendering(context)
-                    .respondWithSystemPrompt(conversation, buildTemplateModel(guideUser));
+                    .respondWithSystemPrompt(sorted, buildTemplateModel(guideUser, conversation));
             logger.info("[TRACE] LLM response: '{}'", assistantMessage.getContent().length() > 100 ? assistantMessage.getContent().substring(0, 100) + "..." : assistantMessage.getContent());
+            computeAndCacheNarration(assistantMessage, conversation, guideUser, context);
             sendResponse(assistantMessage, conversation, context);
         } catch (Exception e) {
             logger.error("LLM call failed for user {}: {}", context.user(), e.getMessage(), e);
@@ -194,8 +299,10 @@ public class ChatActions {
             return;
         }
         try {
+            var sorted = new SortedConversation(conversation);
             var assistantMessage = buildRendering(context)
-                    .respondWithTrigger(conversation, trigger.getPrompt(), buildTemplateModel(guideUser));
+                    .respondWithTrigger(sorted, trigger.getPrompt(), buildTemplateModel(guideUser, conversation));
+            computeAndCacheNarration(assistantMessage, conversation, guideUser, context);
             sendResponse(assistantMessage, conversation, context);
         } catch (Exception e) {
             logger.error("Trigger LLM call failed: {}", e.getMessage(), e);

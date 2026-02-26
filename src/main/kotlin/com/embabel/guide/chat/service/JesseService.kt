@@ -6,7 +6,7 @@ import com.embabel.guide.chat.model.DeliveredMessage
 import com.embabel.guide.domain.GuideUserData
 import com.embabel.guide.domain.GuideUserRepository
 import com.embabel.guide.domain.GuideUserService
-import com.embabel.guide.util.UUIDv7
+import com.embabel.chat.store.util.UUIDv7
 import java.time.Instant
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

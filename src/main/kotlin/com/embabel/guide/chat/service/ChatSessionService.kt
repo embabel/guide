@@ -7,7 +7,7 @@ import com.embabel.chat.store.model.MessageData
 import com.embabel.chat.store.model.StoredSession
 import com.embabel.chat.store.repository.ChatSessionRepository
 import com.embabel.guide.domain.GuideUserRepository
-import com.embabel.guide.util.UUIDv7
+import com.embabel.chat.store.util.UUIDv7
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.springframework.context.ApplicationEventPublisher

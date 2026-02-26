@@ -19,7 +19,8 @@ import java.util.Set;
  *
  * @param reloadContentOnStartup whether to reload RAG content on startup
  * @param defaultPersona         name of the default persona to use
- * @param chatLlm                LLM options for chat
+ * @param chatLlm                LLM options for RAG chat (beefy model)
+ * @param fastLlm                LLM options for classification and quick responses (lightweight model)
  * @param projectsPath           path under user's home directory where projects are created
  * @param chunkerConfig          chunker configuration for RAG ingestion
  * @param referencesFile         YML files containing LLM references such as GitHub repositories and classpath info
@@ -33,6 +34,7 @@ public record GuideProperties(
         @NotBlank(message = "defaultPersona must not be blank")
         String defaultPersona,
         LlmOptions chatLlm,
+        LlmOptions fastLlm,
         @NotNull
         @NotBlank(message = "projectsPath must not be blank")
         String projectsPath,
@@ -43,7 +45,8 @@ public record GuideProperties(
         List<String> urls,
         @DefaultValue("")
         String toolPrefix,
-        Set<String> toolGroups
+        Set<String> toolGroups,
+        LlmOptions narratorLlm
 ) {
 
     public StringTransformer toolNamingStrategy() {
