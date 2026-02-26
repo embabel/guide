@@ -204,24 +204,30 @@ public class ChatActions {
                 .withLlm(guideProperties.fastLlm())
                 .createObject(
                         """
-                        Does this user message need information lookup, or is it just conversational?
+                        Classify the latest user message in this conversation exchange.
 
-                        User message to classify: "%s"
-
-                        conversational = true:
-                        Pure reactions, acknowledgments, greetings, or thanks with no information need.
-                        E.g. "thanks!", "that sounds cool", "yes, that's cool", "got it", "nice", "hello", "awesome"
-
-                        conversational = false:
-                        Any part of the message asks a question, requests info/code, or mentions a topic to explore.
-                        E.g. "how does that work?", "show me an example", "I want to know about X",
-                        "yeah but what about error handling?", "actually, tell me more about Y"
-
-                        Recent conversation for context:
+                        Conversation (most recent messages):
                         %s
 
-                        If conversational, generate a brief, warm 1-2 sentence response.
-                        """.formatted(userMessage, sb.toString()),
+                        The latest user message is: "%s"
+
+                        conversational = true:
+                        The message is ONLY a reaction, greeting, thanks, or small talk with no action needed.
+                        Examples: "thanks!", "nice", "hello", "haha", "goodbye"
+
+                        conversational = false:
+                        The message needs information lookup, code generation, or the assistant to DO something.
+                        This includes:
+                        - Direct questions or requests ("how does X work?", "show me an example")
+                        - User AGREEING to something the assistant offered or proposed
+                          ("yeah that would be cool", "sure go ahead", "yes please", "do it")
+                        - Continuing or deepening a topic ("what about error handling?", "tell me more")
+
+                        IMPORTANT: If the assistant just offered, proposed, or suggested doing something,
+                        and the user is affirming or accepting — classify as conversational = false.
+
+                        If conversational = true, generate a brief, warm 1-2 sentence response.
+                        """.formatted(sb.toString(), userMessage),
                         ConversationalCheck.class
                 );
     }
