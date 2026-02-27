@@ -17,7 +17,6 @@ import com.embabel.guide.domain.GuideUser;
 import com.embabel.guide.domain.GuideUserData;
 import com.embabel.guide.domain.GuideUserRepository;
 import com.embabel.guide.chat.model.StatusMessage;
-import com.embabel.guide.chat.SortedConversation;
 import com.embabel.guide.chat.model.ConversationalCheck;
 import com.embabel.guide.chat.service.ChatService;
 import com.embabel.guide.chat.service.JesseService;
@@ -29,9 +28,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.Nullable;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -81,7 +82,7 @@ public class ChatActions {
                                     ? discordInfo.getDisplayName()
                                     : discordInfo.getUsername();
                             var guideUserData = new GuideUserData(
-                                    java.util.UUID.randomUUID().toString(),
+                                    UUID.randomUUID().toString(),
                                     displayName != null ? displayName : "",
                                     discordInfo.getUsername() != null ? discordInfo.getUsername() : "",
                                     null,  // email
@@ -157,10 +158,10 @@ public class ChatActions {
         var webUserId = guideUser.getWebUser() != null ? guideUser.getWebUser().getId() : null;
         if (webUserId != null) {
             chatService.sendStatusToUser(webUserId, new StatusMessage(
-                    java.util.UUID.randomUUID().toString(),
+                    UUID.randomUUID().toString(),
                     JesseService.JESSE_USER_ID,
                     "Narrating...",
-                    java.time.Instant.now()));
+                    Instant.now()));
         }
         try {
             var persona = guideUser.getCore().getPersona() != null
@@ -171,6 +172,17 @@ public class ChatActions {
             narrationCache.put(conversationId, narration.getText());
         } catch (Exception e) {
             logger.error("[NARRATION] Narration failed for conversation {}: {}", conversationId, e.getMessage(), e);
+        } finally {
+            // Clear the "Narrating..." status. The ADDED event listener also tries to clear,
+            // but its clear depends on fromUserId being non-null (which fails for the trigger
+            // path where agent is null on the loaded conversation).
+            if (webUserId != null) {
+                chatService.sendStatusToUser(webUserId, new StatusMessage(
+                        UUID.randomUUID().toString(),
+                        JesseService.JESSE_USER_ID,
+                        null,
+                        Instant.now()));
+            }
         }
     }
 
@@ -280,9 +292,8 @@ public class ChatActions {
                 }
             }
 
-            var sorted = new SortedConversation(conversation);
             var assistantMessage = buildRendering(context)
-                    .respondWithSystemPrompt(sorted, buildTemplateModel(guideUser, conversation));
+                    .respondWithSystemPrompt(conversation, buildTemplateModel(guideUser, conversation));
             logger.info("[TRACE] LLM response: '{}'", assistantMessage.getContent().length() > 100 ? assistantMessage.getContent().substring(0, 100) + "..." : assistantMessage.getContent());
             computeAndCacheNarration(assistantMessage, conversation, guideUser, context);
             sendResponse(assistantMessage, conversation, context);
@@ -305,9 +316,8 @@ public class ChatActions {
             return;
         }
         try {
-            var sorted = new SortedConversation(conversation);
             var assistantMessage = buildRendering(context)
-                    .respondWithTrigger(sorted, trigger.getPrompt(), buildTemplateModel(guideUser, conversation));
+                    .respondWithTrigger(conversation, trigger.getPrompt(), buildTemplateModel(guideUser, conversation));
             computeAndCacheNarration(assistantMessage, conversation, guideUser, context);
             sendResponse(assistantMessage, conversation, context);
         } catch (Exception e) {

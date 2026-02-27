@@ -21,7 +21,7 @@ guide:
     model: gpt-4.1-mini
 
   narrator-llm:
-    model: gpt-4.1-nano
+    model: gpt-4.1-mini
 
   content-chunker:
     include-section-title-in-chunk: false
@@ -65,7 +65,7 @@ embabel:
 
   models:
     llms:
-      summarizer: gpt-4.1-nano
+      summarizer: gpt-4.1-mini
 
     # Change this if you wish to use a non Open AI default embedding model
     default-embedding-model: text-embedding-3-small
@@ -102,8 +102,10 @@ logging:
     com.embabel.agent.rag.pipeline: DEBUG
     # Drivine logging
     org.drivine: WARN
-    org.drivine.manager: WARN
+    org.drivine.manager: DEBUG
     org.drivine.transaction: WARN
+    # Chat store debugging
+    com.embabel.chat.store: DEBUG
     # WebSocket and Chat logging
     org.springframework.web.socket: INFO
     org.springframework.messaging: INFO

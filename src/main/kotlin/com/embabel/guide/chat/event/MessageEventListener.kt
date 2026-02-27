@@ -97,6 +97,19 @@ class MessageEventListener(
 
     @EventListener(condition = "#event.status.name() == 'PERSISTED'")
     fun onMessagePersisted(event: MessageEvent) {
+        // If the PERSISTED event has a title (e.g. LLM just generated one),
+        // push a session event so the frontend dropdown updates immediately.
+        if (event.title != null && event.toUserId != null) {
+            val guideUser = guideUserRepository.findById(event.toUserId!!).orElse(null)
+            val webUserId = guideUser?.webUser?.id
+            if (webUserId != null) {
+                chatService.sendSessionToUser(webUserId, SessionEvent(
+                    sessionId = event.conversationId,
+                    title = event.title,
+                ))
+            }
+        }
+
         val narration = narrationCache.consumeForPersistence(event.conversationId)
         if (narration == null) {
             logger.debug("No narration to persist for session {}", event.conversationId)
