@@ -1,6 +1,7 @@
 # Gradle
 .gradle/
 **/build/
+**/bin/
 
 # MCP resources
 embabel-agent-api/src/main/resources/mcp/**
@@ -32,6 +33,11 @@ embabel-agent-api/src/main/resources/mcp/**
 # Environment files
 .env
 .envrc
+
+# Personal application overrides (set GUIDE_PROFILE in .env; default profile is "user")
+# Ignore all personal profile files except the checked-in example
+scripts/user-config/application-*.yml
+!scripts/user-config/application-*.yml.example
 
 # Temporary files
 *.tmp

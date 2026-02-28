@@ -3,10 +3,10 @@ server:
 
 guide:
 
-  # If true, the Guide chatbot will load content from the projects path on startup
-  # Snapshots will always be reloaded: other URLs will not
+  # If true, the Guide chatbot will load content from URLs and directories on startup
   reload-content-on-startup: false
 
+  # Projects root: absolute path, or relative to process working directory (e.g. ./embabel-projects)
   projects-path: ./embabel-projects
 
   # Change to any filename from /src/main/resources/prompts/persona,
@@ -27,12 +27,18 @@ guide:
     include-section-title-in-chunk: false
     max-chunk-size: 4000
     overlap-size: 200
+    # Chunks per embedding API call. 50 is safe; increase for speed if no timeouts (max 2048 for OpenAI).
+    embedding-batch-size: 50
 
+  # Ingested via load-references (or on startup if reload-content-on-startup is true)
   urls:
     - https://docs.embabel.com/embabel-agent/guide/0.3.5-SNAPSHOT/
     - https://medium.com/@springrod/build-better-agents-in-java-vs-python-embabel-vs-langgraph-f7951a0d855c
     - https://medium.com/@springrod/context-engineering-needs-domain-understanding-b4387e8e4bf8
-    - https://github.com/embabel/embabel-agent/blob/main/README.md?plain=1
+
+  # Local directories to ingest (full tree). Paths are absolute or relative to working directory.
+  # Example: clone repos then list them here for full-repo RAG.
+  directories: []
 
   tool-groups:
 

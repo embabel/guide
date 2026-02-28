@@ -1,0 +1,28 @@
+# Example personal config. Copy to application-user.yml (gitignored) and customize.
+# Or set GUIDE_PROFILE=yourname in .env and name it application-yourname.yml.
+#
+#   cp scripts/user-config/application-user.yml.example scripts/user-config/application-user.yml
+
+guide:
+  # Set to true to ingest URLs/directories on startup and print a summary
+  reload-content-on-startup: true
+  projects-path: ./embabel-projects
+  default-persona: adaptive
+  chat-llm:
+    model: gpt-4.1-mini
+  content-chunker:
+    include-section-title-in-chunk: false
+    max-chunk-size: 4000
+    overlap-size: 200
+    embedding-batch-size: 50
+  urls:
+    - https://docs.embabel.com/embabel-agent/guide/0.3.5-SNAPSHOT/
+    - https://github.com/embabel/embabel-agent
+    - https://github.com/embabel/embabel-agent-examples
+    - https://github.com/embabel/dice
+  # Ingest full local repos (paths relative to working dir or absolute)
+  directories:
+    - ./embabel-projects/dice
+    - ./embabel-projects/embabel-agent
+    - ./embabel-projects/embabel-agent-examples
+  tool-groups:

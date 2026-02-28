@@ -1,5 +1,6 @@
 package com.embabel.guide.rag;
 
+import com.embabel.agent.rag.store.ContentElementRepositoryInfo;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,13 +20,12 @@ public class DataManagerController {
     }
 
     @GetMapping("/stats")
-    public DataManager.Stats getStats() {
+    public ContentElementRepositoryInfo getStats() {
         return dataManager.getStats();
     }
 
     @PostMapping("/load-references")
-    public String loadReferences() {
-        dataManager.loadReferences();
-        return "References loaded successfully";
+    public IngestionResult loadReferences() {
+        return dataManager.loadReferences();
     }
 }

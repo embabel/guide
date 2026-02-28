@@ -35,6 +35,8 @@ curl -X POST http://localhost:1337/api/v1/data/load-references
 
 To see stats on data, make a GET request or browse to http://localhost:1337/api/v1/data/stats
 
+RAG content storage uses the `ChunkingContentElementRepository` interface from the `embabel-agent-rag-core` library. The default backend is Neo4j via `DrivineStore`. You can plug in other backends by providing a different `ChunkingContentElementRepository` bean.
+
 ## Viewing and Deleting Data
 
 Go to the Neo Browser at http://localhost:7474/browser/
