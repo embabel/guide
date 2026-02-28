@@ -1,0 +1,18 @@
+Rewrite the following markdown as plain text suitable for text-to-speech.
+Remove all markdown formatting (headers, bold, italic, links, lists).
+For links, do not read out the URL. Instead say you've put the link on screen.
+For long commands or CLI invocations, do not read them out verbatim. Instead, briefly summarize what the command does and say it's on screen.
+
+{% if wordCount > 350 %}
+The content is {{ wordCount }} words. Summarize the main points in roughly {{ targetWords }} words.
+Let the user know the detailed information is on screen.
+Do NOT just rearrange the words — actually condense.
+{% else %}
+Convert faithfully. Keep all the content, just remove formatting.
+{% endif %}
+
+{% include "elements/narration_voice" %}
+{% include "elements/narration_persona" %}
+
+---
+{{ content }}

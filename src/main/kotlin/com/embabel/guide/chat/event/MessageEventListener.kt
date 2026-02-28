@@ -1,11 +1,15 @@
 package com.embabel.guide.chat.event
 
 import com.embabel.chat.event.MessageEvent
+import com.embabel.chat.store.repository.ChatSessionRepository
 import com.embabel.guide.chat.model.DeliveredMessage
+import com.embabel.guide.chat.model.SessionEvent
 import com.embabel.guide.chat.model.StatusMessage
 import com.embabel.guide.chat.service.ChatService
+import com.embabel.guide.chat.service.MessageDeliveryService
 import com.embabel.guide.domain.GuideUserRepository
-import com.embabel.guide.util.UUIDv7
+import com.embabel.guide.narrator.NarrationCache
+import com.embabel.chat.store.util.UUIDv7
 import org.slf4j.LoggerFactory
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
@@ -14,13 +18,17 @@ import org.springframework.stereotype.Component
  * Listens for MessageEvents and delivers messages to users via WebSocket.
  *
  * This decouples message persistence from WebSocket delivery:
- * - ADDED: Message was added to conversation - send to recipient immediately
+ * - ADDED: Message was added to conversation — deliver with retry until acknowledged
+ * - PERSISTED: Message was saved to DB — persist narration alongside it
  * - PERSISTENCE_FAILED: Log error for monitoring
  */
 @Component
 class MessageEventListener(
     private val chatService: ChatService,
-    private val guideUserRepository: GuideUserRepository
+    private val messageDeliveryService: MessageDeliveryService,
+    private val guideUserRepository: GuideUserRepository,
+    private val narrationCache: NarrationCache,
+    private val chatSessionRepository: ChatSessionRepository
 ) {
     private val logger = LoggerFactory.getLogger(MessageEventListener::class.java)
 
@@ -54,6 +62,11 @@ class MessageEventListener(
         logger.debug("Delivering message to webUser {} (guideUser {}) for session {}",
             webUserId, toGuideUserId, event.conversationId)
 
+        // Include narration from cache if available (computed by ChatActions)
+        val narration = narrationCache.consumeForDelivery(event.conversationId)
+        logger.info("[NARRATION] ADDED event for session {}, role={}, narration={}",
+            event.conversationId, message.role, if (narration != null) "${narration.length} chars" else "NULL")
+
         val delivered = DeliveredMessage(
             id = UUIDv7.generateString(),
             sessionId = event.conversationId,
@@ -61,14 +74,52 @@ class MessageEventListener(
             body = message.content,
             ts = event.timestamp,
             authorId = event.fromUserId,
-            title = event.title
+            title = event.title,
+            narration = narration
         )
+        logger.info("[NARRATION] DeliveredMessage narration={}", if (delivered.narration != null) "${delivered.narration.length} chars" else "NULL")
 
-        chatService.sendToUser(webUserId, delivered)
+        // Push session event so the frontend can update its session list
+        if (event.title != null) {
+            chatService.sendSessionToUser(webUserId, SessionEvent(
+                sessionId = event.conversationId,
+                title = event.title,
+            ))
+        }
+
+        messageDeliveryService.deliverWithRetry(webUserId, delivered)
 
         // Send status update to clear typing indicator
         event.fromUserId?.let { fromUserId ->
             chatService.sendStatusToUser(webUserId, StatusMessage(fromUserId = fromUserId))
+        }
+    }
+
+    @EventListener(condition = "#event.status.name() == 'PERSISTED'")
+    fun onMessagePersisted(event: MessageEvent) {
+        // If the PERSISTED event has a title (e.g. LLM just generated one),
+        // push a session event so the frontend dropdown updates immediately.
+        if (event.title != null && event.toUserId != null) {
+            val guideUser = guideUserRepository.findById(event.toUserId!!).orElse(null)
+            val webUserId = guideUser?.webUser?.id
+            if (webUserId != null) {
+                chatService.sendSessionToUser(webUserId, SessionEvent(
+                    sessionId = event.conversationId,
+                    title = event.title,
+                ))
+            }
+        }
+
+        val narration = narrationCache.consumeForPersistence(event.conversationId)
+        if (narration == null) {
+            logger.debug("No narration to persist for session {}", event.conversationId)
+            return
+        }
+        try {
+            chatSessionRepository.updateMessageNarration(event.conversationId, narration)
+            logger.debug("Persisted narration for session {}", event.conversationId)
+        } catch (e: Exception) {
+            logger.error("Failed to persist narration for session {}: {}", event.conversationId, e.message, e)
         }
     }
 
@@ -81,6 +132,7 @@ class MessageEventListener(
             event.error?.message,
             event.error
         )
-        // Could notify user of failure, implement retry logic, etc.
+        // Clean up any cached narration for this conversation
+        narrationCache.consumeForPersistence(event.conversationId)
     }
 }

@@ -13,10 +13,16 @@ data class DeliveredMessage(
     val body: String,
     val ts: Instant,
     val authorId: String? = null,
-    val title: String? = null
+    val title: String? = null,
+    val narration: String? = null
 ) {
     companion object {
-        fun createFrom(msg: SimpleStoredMessage, sessionId: String, title: String? = null): DeliveredMessage {
+        fun createFrom(
+            msg: SimpleStoredMessage,
+            sessionId: String,
+            title: String? = null,
+            narration: String? = null
+        ): DeliveredMessage {
             return DeliveredMessage(
                 id = msg.messageId,
                 sessionId = sessionId,
@@ -24,7 +30,8 @@ data class DeliveredMessage(
                 body = msg.content,
                 ts = msg.message.createdAt,
                 authorId = msg.author?.id,
-                title = title
+                title = title,
+                narration = narration ?: msg.narration
             )
         }
     }

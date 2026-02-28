@@ -1,0 +1,20 @@
+Rewrite the following markdown as plain text suitable for text-to-speech.
+Remove all markdown formatting.
+For code blocks, say "I have attached a code-sample on screen". Then, describe what that item is about in natural language instead of reading it verbatim.
+Keep variable and function names when they aid understanding, but do not recite raw syntax.
+For long commands or CLI invocations, do not read them out verbatim. Instead, briefly summarize what the command does and say it's on screen.
+For links and other items that would be too verbose to narrate, say "I've put the (item name) on screen for you".
+
+{% if wordCount > 350 %}
+The content is {{ wordCount }} words. Summarize the main points in roughly {{ targetWords }} words.
+Let the user know the detailed information is on screen.
+Do NOT just rearrange the words — actually condense.
+{% else %}
+Convert faithfully. Keep all the content, just remove formatting and handle code/links as described above.
+{% endif %}
+
+{% include "elements/narration_voice" %}
+{% include "elements/narration_persona" %}
+
+---
+{{ content }}

@@ -1,5 +1,7 @@
 package com.embabel.guide.chat.service
 
+import com.embabel.chat.ChatTrigger
+
 /**
  * Interface for integrating with RAG (Retrieval-Augmented Generation) systems.
  *
@@ -10,11 +12,6 @@ package com.embabel.guide.chat.service
  * persistent conversation storage - callers don't need to track prior messages.
  */
 interface RagServiceAdapter {
-
-    companion object {
-        const val TITLE_PROMPT = "Generate a short title (max 6 words) for this message. " +
-            "Reply with ONLY the title, no quotes or punctuation: "
-    }
 
     /**
      * Sends a message to the RAG system and returns the response.
@@ -38,12 +35,18 @@ interface RagServiceAdapter {
     ): String
 
     /**
-     * Generates a short title from message content.
-     * Uses a one-shot context (no thread association).
+     * Sends a system-initiated trigger to the RAG system and returns the response.
+     * The trigger prompt reaches the LLM but is NOT stored as a visible message in the conversation.
+     * Only the chatbot's response is stored.
      *
-     * @param content The message content to generate a title from
-     * @param fromUserId The ID of the user (for session context)
-     * @return A short title (typically 3-6 words)
+     * @param threadId The thread/conversation ID
+     * @param trigger The event trigger containing the prompt and target users
+     * @param onEvent Callback for real-time status updates
+     * @return The RAG system's response message
      */
-    suspend fun generateTitle(content: String, fromUserId: String): String
+    suspend fun sendTrigger(
+        threadId: String,
+        trigger: ChatTrigger,
+        onEvent: (String) -> Unit = {}
+    ): String
 }

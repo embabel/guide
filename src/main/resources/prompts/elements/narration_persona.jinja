@@ -1,0 +1,10 @@
+{#
+  Narration persona: reuses the same persona templates as the chat system.
+  Narration should preserve the personality of the original message while making it TTS-friendly.
+#}
+
+{% if persona is defined and persona %}
+    Narrate in the following voice and personality:
+    {% set persona_template = "persona/" + persona %}
+    {% include persona_template %}
+{% endif %}

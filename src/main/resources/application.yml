@@ -15,6 +15,12 @@ guide:
   default-persona: adaptive
 
   chat-llm:
+    model: gpt-4.1
+
+  fast-llm:
+    model: gpt-4.1-mini
+
+  narrator-llm:
     model: gpt-4.1-mini
 
   content-chunker:
@@ -59,9 +65,13 @@ rag:
     type: guide
 
 embabel:
+  chat:
+    store:
+      title-after-message-count: 6
+
   models:
     llms:
-      summarizer: gpt-4.1-nano
+      summarizer: gpt-4.1-mini
 
     # Change this if you wish to use a non Open AI default embedding model
     default-embedding-model: text-embedding-3-small
@@ -97,9 +107,11 @@ logging:
     com.embabel.agent.rag.tools: DEBUG
     com.embabel.agent.rag.pipeline: DEBUG
     # Drivine logging
-    org.drivine: TRACE
-    org.drivine.manager: TRACE
-    org.drivine.transaction: TRACE
+    org.drivine: WARN
+    org.drivine.manager: DEBUG
+    org.drivine.transaction: WARN
+    # Chat store debugging
+    com.embabel.chat.store: DEBUG
     # WebSocket and Chat logging
     org.springframework.web.socket: INFO
     org.springframework.messaging: INFO

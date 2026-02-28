@@ -1,7 +1,7 @@
 package com.embabel.guide.domain
 
 import org.drivine.manager.GraphObjectManager
-import org.drivine.query.dsl.*
+import org.drivine.manager.load
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
@@ -20,7 +20,7 @@ class GuideUserRepositoryDefaultImpl(
     override fun findByDiscordUserId(discordUserId: String): Optional<GuideUser> {
         val results = graphObjectManager.loadAll<GuideUser> {
             where {
-                query.discordUserInfo.id eq discordUserId
+                discordUserInfo.id eq discordUserId
             }
         }
         return Optional.ofNullable(results.firstOrNull())
@@ -30,7 +30,7 @@ class GuideUserRepositoryDefaultImpl(
     override fun findByWebUserId(webUserId: String): Optional<GuideUser> {
         val results = graphObjectManager.loadAll<GuideUser> {
             where {
-                query.webUser.id eq webUserId
+                webUser.id eq webUserId
             }
         }
         return Optional.ofNullable(results.firstOrNull())
@@ -39,7 +39,7 @@ class GuideUserRepositoryDefaultImpl(
     @Transactional(readOnly = true)
     override fun findAnonymousWebUser(): Optional<GuideUser> {
         // Use AnonymousGuideUser GraphView which only matches users with Anonymous label
-        val results = graphObjectManager.loadAll(AnonymousGuideUser::class.java)
+        val results = graphObjectManager.loadAll<AnonymousGuideUser> { }
         return Optional.ofNullable(results.firstOrNull()?.toGuideUser())
     }
 
@@ -47,7 +47,17 @@ class GuideUserRepositoryDefaultImpl(
     override fun findByWebUserName(userName: String): Optional<GuideUser> {
         val results = graphObjectManager.loadAll<GuideUser> {
             where {
-                query.webUser.userName eq userName
+                webUser.userName eq userName
+            }
+        }
+        return Optional.ofNullable(results.firstOrNull())
+    }
+
+    @Transactional(readOnly = true)
+    override fun findByWebUserEmail(userEmail: String): Optional<GuideUser> {
+        val results = graphObjectManager.loadAll<GuideUser> {
+            where {
+                webUser.userEmail eq userEmail
             }
         }
         return Optional.ofNullable(results.firstOrNull())
@@ -55,12 +65,7 @@ class GuideUserRepositoryDefaultImpl(
 
     @Transactional(readOnly = true)
     override fun findById(id: String): Optional<GuideUser> {
-        val results = graphObjectManager.loadAll<GuideUser> {
-            where {
-                query.core.id eq id
-            }
-        }
-        return Optional.ofNullable(results.firstOrNull())
+        return Optional.ofNullable(graphObjectManager.load<GuideUser>(id))
     }
 
     @Transactional
@@ -124,7 +129,7 @@ class GuideUserRepositoryDefaultImpl(
     override fun deleteByUsernameStartingWith(prefix: String) {
         graphObjectManager.deleteAll<GuideUser> {
             where {
-                query.webUser.userName startsWith prefix
+                webUser.userName startsWith prefix
             }
         }
     }

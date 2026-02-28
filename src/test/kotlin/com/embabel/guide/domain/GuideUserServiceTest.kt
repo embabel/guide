@@ -37,12 +37,12 @@ class GuideUserServiceTest {
     private lateinit var guideUserService: GuideUserService
 
     @Autowired
-    private lateinit var drivineGuideUserRepository: DrivineGuideUserRepository
+    private lateinit var guideUserRepository: GuideUserRepository
 
     @Test
     fun `test getOrCreateAnonymousWebUser creates new user when none exists`() {
         // Given: No anonymous web user exists
-        drivineGuideUserRepository.deleteAllGuideUsers()
+        guideUserRepository.deleteAll()
 
         // When: We request the anonymous web user
         val anonymousUser = guideUserService.findOrCreateAnonymousWebUser()
@@ -52,14 +52,14 @@ class GuideUserServiceTest {
         assertNotNull(anonymousUser.guideUserData().id)
 
         // Verify it was persisted
-        val found = drivineGuideUserRepository.findById(anonymousUser.guideUserData().id)
+        val found = guideUserRepository.findById(anonymousUser.guideUserData().id)
         assertTrue(found.isPresent)
     }
 
     @Test
     fun `test getOrCreateAnonymousWebUser returns existing user when one exists`() {
         // Given: An anonymous web user already exists
-        drivineGuideUserRepository.deleteAllGuideUsers()
+        guideUserRepository.deleteAll()
         val firstCall = guideUserService.findOrCreateAnonymousWebUser()
         val firstUserId = firstCall.guideUserData().id
 
@@ -70,20 +70,20 @@ class GuideUserServiceTest {
         assertEquals(firstUserId, secondCall.guideUserData().id)
 
         // Verify only one GuideUser exists in the database
-        val allUsers = drivineGuideUserRepository.findAllGuideUsers()
+        val allUsers = guideUserRepository.findAll()
         assertEquals(1, allUsers.size)
     }
 
     @Test
     fun `test anonymous web user has correct display name`() {
         // Given: We create an anonymous web user
-        drivineGuideUserRepository.deleteAllGuideUsers()
+        guideUserRepository.deleteAll()
 
         // When: We request the anonymous web user
         val anonymousUser = guideUserService.findOrCreateAnonymousWebUser()
 
         // Then: The display name should be "Friend"
-        val found = drivineGuideUserRepository.findAnonymousWebUser().orElseThrow()
-        assertEquals("Friend", found.displayName)
+        val found = guideUserRepository.findAnonymousWebUser().orElseThrow()
+        assertEquals("Friend", found.core.displayName)
     }
 }

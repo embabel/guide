@@ -1,14 +1,19 @@
 package com.embabel.guide.chat.controller
 
 import com.embabel.guide.chat.model.ChatMessage
+import com.embabel.guide.chat.model.MessageAck
 import com.embabel.guide.chat.service.JesseService
+import com.embabel.guide.chat.service.MessageDeliveryService
 import org.slf4j.LoggerFactory
 import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.stereotype.Controller
 import java.security.Principal
 
 @Controller
-class ChatController(private val jesseService: JesseService) {
+class ChatController(
+    private val jesseService: JesseService,
+    private val messageDeliveryService: MessageDeliveryService,
+) {
 
     private val logger = LoggerFactory.getLogger(ChatController::class.java)
 
@@ -25,5 +30,14 @@ class ChatController(private val jesseService: JesseService) {
             fromWebUserId = principal.name,
             message = payload.body
         )
+    }
+
+    /**
+     * Client acknowledges receipt of a message, canceling delivery retries.
+     */
+    @MessageMapping("message.ack")
+    fun acknowledgeMessage(principal: Principal, payload: MessageAck) {
+        logger.debug("Message {} acknowledged by webUser {}", payload.messageId, principal.name)
+        messageDeliveryService.acknowledge(payload.messageId)
     }
 }
