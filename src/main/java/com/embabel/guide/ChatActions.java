@@ -201,7 +201,8 @@ public class ChatActions {
      * Classify the latest user message as conversational vs informational using nano.
      * If conversational, generates a quick response to avoid the full RAG pipeline.
      */
-    private ConversationalCheck classifyMessage(String userMessage, Conversation conversation, ActionContext context) {
+    private ConversationalCheck classifyMessage(String userMessage, Conversation conversation,
+                                                 ActionContext context, Map<String, Object> templateModel) {
         var messages = conversation.getMessages();
         var sb = new StringBuilder();
         var start = Math.max(0, messages.size() - 6);
@@ -212,36 +213,13 @@ public class ChatActions {
                     : m.getContent();
             sb.append(m.getRole().name().toLowerCase()).append(": ").append(content).append("\n");
         }
+        var model = new HashMap<>(templateModel);
+        model.put("conversationContext", sb.toString());
+        model.put("userMessage", userMessage);
         return context.ai()
                 .withLlm(guideProperties.fastLlm())
-                .createObject(
-                        """
-                        Classify the latest user message in this conversation exchange.
-
-                        Conversation (most recent messages):
-                        %s
-
-                        The latest user message is: "%s"
-
-                        conversational = true:
-                        The message is ONLY a reaction, greeting, thanks, or small talk with no action needed.
-                        Examples: "thanks!", "nice", "hello", "haha", "goodbye"
-
-                        conversational = false:
-                        The message needs information lookup, code generation, or the assistant to DO something.
-                        This includes:
-                        - Direct questions or requests ("how does X work?", "show me an example")
-                        - User AGREEING to something the assistant offered or proposed
-                          ("yeah that would be cool", "sure go ahead", "yes please", "do it")
-                        - Continuing or deepening a topic ("what about error handling?", "tell me more")
-
-                        IMPORTANT: If the assistant just offered, proposed, or suggested doing something,
-                        and the user is affirming or accepting — classify as conversational = false.
-
-                        If conversational = true, generate a brief, warm 1-2 sentence response.
-                        """.formatted(sb.toString(), userMessage),
-                        ConversationalCheck.class
-                );
+                .withTemplate("classifier")
+                .createObject(ConversationalCheck.class, model);
     }
 
     @Action(canRerun = true, trigger = UserMessage.class)
@@ -269,6 +247,8 @@ public class ChatActions {
                 lastMsg != null ? lastMsg.getRole() : "none",
                 lastMsg != null ? (lastMsg.getContent().length() > 100 ? lastMsg.getContent().substring(0, 100) + "..." : lastMsg.getContent()) : "none");
 
+            var templateModel = buildTemplateModel(guideUser, conversation);
+
             // Short-circuit for conversational messages (acknowledgments, greetings, reactions)
             if (snapshot.size() > 1) {
                 try {
@@ -276,7 +256,7 @@ public class ChatActions {
                     var userContent = context.lastResult() instanceof UserMessage um
                             ? um.getContent()
                             : "";
-                    var check = classifyMessage(userContent, conversation, context);
+                    var check = classifyMessage(userContent, conversation, context, templateModel);
                     logger.info("[CLASSIFY RESULT] input='{}' conversational={} response='{}'",
                         userContent.length() > 120 ? userContent.substring(0, 120) + "..." : userContent,
                         check.getConversational(),
@@ -293,7 +273,7 @@ public class ChatActions {
             }
 
             var assistantMessage = buildRendering(context)
-                    .respondWithSystemPrompt(conversation, buildTemplateModel(guideUser, conversation));
+                    .respondWithSystemPrompt(conversation, templateModel);
             logger.info("[TRACE] LLM response: '{}'", assistantMessage.getContent().length() > 100 ? assistantMessage.getContent().substring(0, 100) + "..." : assistantMessage.getContent());
             computeAndCacheNarration(assistantMessage, conversation, guideUser, context);
             sendResponse(assistantMessage, conversation, context);

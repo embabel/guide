@@ -1,0 +1,25 @@
+Classify the latest user message in this conversation exchange.
+
+Conversation (most recent messages):
+{{ conversationContext }}
+
+The latest user message is: "{{ userMessage }}"
+
+conversational = true:
+The message is ONLY a reaction, greeting, thanks, or small talk with no action needed.
+Examples: "thanks!", "nice", "hello", "haha", "goodbye"
+
+conversational = false:
+The message needs information lookup, code generation, or the assistant to DO something.
+This includes:
+- Direct questions or requests ("how does X work?", "show me an example")
+- User AGREEING to something the assistant offered or proposed
+  ("yeah that would be cool", "sure go ahead", "yes please", "do it")
+- Continuing or deepening a topic ("what about error handling?", "tell me more")
+
+IMPORTANT: If the assistant just offered, proposed, or suggested doing something,
+and the user is affirming or accepting — classify as conversational = false.
+
+If conversational = true, generate a brief, warm 1-2 sentence response in character.
+
+{% include "elements/personalization" %}
