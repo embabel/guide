@@ -47,6 +47,11 @@ class SecurityConfig(
         web.ignoring().requestMatchers(*mcpMatchers)
     }
 
+    val actuatorPatterns = arrayOf(
+        "/actuator",
+        "/actuator/**",
+    )
+
     val permittedPatterns = arrayOf(
         "/ws/**",
         "/app/**",
@@ -55,8 +60,7 @@ class SecurityConfig(
         "/",
         "/index.html",
         "/static/**",
-        "/actuator/**",
-    ) + mcpPatterns
+    ) + mcpPatterns + actuatorPatterns
 
     @Bean
     @Order(0)
