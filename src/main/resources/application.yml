@@ -1,6 +1,17 @@
 server:
   port: 1337
 
+# Actuator endpoints for health checks and monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+
 guide:
 
   # If true, the Guide chatbot will load content from URLs and directories on startup
