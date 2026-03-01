@@ -17,13 +17,14 @@ import com.embabel.guide.chat.model.ConversationalCheck
 import com.embabel.guide.chat.model.StatusMessage
 import com.embabel.guide.chat.service.ChatService
 import com.embabel.guide.chat.service.JesseService
-import com.embabel.guide.domain.DiscordUserInfoData
 import com.embabel.guide.domain.GuideUser
-import com.embabel.guide.domain.GuideUserData
 import com.embabel.guide.domain.GuideUserRepository
+import com.embabel.guide.util.toDiscordUserInfoData
+import com.embabel.guide.util.toGuideUserData
 import com.embabel.guide.narrator.NarrationCache
 import com.embabel.guide.narrator.NarratorAgent
 import com.embabel.guide.rag.DataManager
+import com.embabel.guide.util.truncate
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.util.UUID
@@ -45,47 +46,94 @@ class ChatActions(
 
     private val logger = LoggerFactory.getLogger(ChatActions::class.java)
 
-    private fun getGuideUser(user: User?): GuideUser? {
-        return when (user) {
-            null -> {
-                logger.warn("user is null: Cannot create or fetch GuideUser")
-                null
-            }
-            is DiscordUser -> {
-                guideUserRepository.findByDiscordUserId(user.id)
-                    .orElseGet {
-                        val discordInfo = user.discordUser
-                        val displayName = discordInfo.displayName ?: discordInfo.username
-                        val guideUserData = GuideUserData(
-                            UUID.randomUUID().toString(),
-                            displayName ?: "",
-                            discordInfo.username ?: "",
-                            null,  // email
-                            null,  // persona
-                            null,  // customPrompt
-                        )
-                        val discordUserInfo = DiscordUserInfoData(
-                            discordInfo.id,
-                            discordInfo.username,
-                            discordInfo.discriminator,
-                            discordInfo.displayName,
-                            discordInfo.isBot,
-                            discordInfo.avatarUrl,
-                        )
-                        val created = guideUserRepository.createWithDiscord(guideUserData, discordUserInfo)
-                        logger.info("Created new Discord user: {}", created)
-                        created
-                    }
-            }
-            is GuideUser -> {
-                // Always re-read from DB by core ID to pick up persona/settings changes
-                guideUserRepository.findById(user.core.id)
-                    .orElseThrow { RuntimeException("Missing GuideUser with id: ${user.core.id}") }
-            }
-            else -> {
-                throw RuntimeException("Unknown user type: $user")
-            }
+    @Action(canRerun = true, trigger = UserMessage::class)
+    fun respond(conversation: Conversation, context: ActionContext) {
+        logger.info("[TRACE] ChatActions.respond: user={}, conversationId={}", context.user(), conversation.id)
+        val messages = conversation.messages
+        logger.info("[TRACE] Conversation has {} messages", messages.size)
+        for (i in messages.indices) {
+            val msg = messages[i]
+            logger.info("[TRACE]   msg[{}]: role={}, content='{}'", i, msg.role,
+                msg.content.truncate(80))
         }
+        logger.info("[TRACE] lastResult type={}, value={}",
+            context.lastResult()?.javaClass?.simpleName ?: "null", context.lastResult())
+        val guideUser = getGuideUser(context.user())
+        if (guideUser == null) {
+            logger.error("Cannot respond: guideUser is null for context user {}", context.user())
+            return
+        }
+        try {
+            val snapshot = messages.toList()
+            val lastMsg = snapshot.lastOrNull()
+            logger.info("[TRACE] User turn: {} with {} conversation messages, last: role={}, content='{}'",
+                context.user(), snapshot.size,
+                lastMsg?.role ?: "none",
+                lastMsg?.content?.truncate(100) ?: "none")
+
+            val templateModel = buildTemplateModel(guideUser, conversation)
+
+            // Short-circuit for conversational messages (acknowledgments, greetings, reactions)
+            if (snapshot.size > 1) {
+                try {
+                    val userContent = (snapshot.last() as? UserMessage)?.content ?: ""
+                    val check = classifyMessage(userContent, conversation, context, templateModel)
+                    logger.info("[CLASSIFY RESULT] input='{}' conversational={}",
+                        userContent.truncate(), check.conversational)
+                } catch (e: Exception) {
+                    logger.error("[CLASSIFY] Classification FAILED, falling back to full pipeline: {}", e.message, e)
+                }
+            }
+
+            val assistantMessage = buildRendering(context)
+                .respondWithSystemPrompt(conversation, templateModel)
+            logger.info("[TRACE] LLM response: '{}'",
+                assistantMessage.content.truncate(100))
+            computeAndCacheNarration(assistantMessage, conversation, guideUser, context)
+            sendResponse(assistantMessage, conversation, context)
+        } catch (e: Exception) {
+            logger.error("LLM call failed for user {}: {}", context.user(), e.message, e)
+            sendErrorResponse(conversation, context)
+        }
+    }
+
+    @Action(canRerun = true, trigger = ChatTrigger::class)
+    fun respondToTrigger(conversation: Conversation, context: ActionContext) {
+        val trigger = context.lastResult() as ChatTrigger
+        val user = trigger.onBehalfOf.firstOrNull()
+        logger.info("Incoming trigger for user {}", user)
+        val guideUser = getGuideUser(user ?: context.user())
+        if (guideUser == null) {
+            logger.error("Cannot respond to trigger: guideUser is null")
+            return
+        }
+        try {
+            val assistantMessage = buildRendering(context)
+                .respondWithTrigger(conversation, trigger.prompt, buildTemplateModel(guideUser, conversation))
+            computeAndCacheNarration(assistantMessage, conversation, guideUser, context)
+            sendResponse(assistantMessage, conversation, context)
+        } catch (e: Exception) {
+            logger.error("Trigger LLM call failed: {}", e.message, e)
+            sendErrorResponse(conversation, context)
+        }
+    }
+
+    private fun getGuideUser(user: User?): GuideUser? = when (user) {
+        null -> {
+            logger.warn("user is null: Cannot create or fetch GuideUser")
+            null
+        }
+        is DiscordUser -> guideUserRepository.findByDiscordUserId(user.id)
+            .orElseGet {
+                val created = guideUserRepository.createWithDiscord(
+                    user.toGuideUserData(), user.toDiscordUserInfoData()
+                )
+                logger.info("Created new Discord user: {}", created)
+                created
+            }
+        is GuideUser -> guideUserRepository.findById(user.core.id)
+            .orElseThrow { RuntimeException("Missing GuideUser with id: ${user.core.id}") }
+        else -> throw RuntimeException("Unknown user type: $user")
     }
 
     private fun buildRendering(context: ActionContext): PromptRunner.Rendering {
@@ -102,7 +150,7 @@ class ChatActions(
                     drivineStore,
                 ).withHint(TryHyDE.usingConversationContext())
             )
-            .withTemplate("guide_system")
+            .rendering("guide_system")
     }
 
     private fun buildTemplateModel(guideUser: GuideUser, conversation: Conversation): MutableMap<String, Any> {
@@ -192,7 +240,7 @@ class ChatActions(
             val start = maxOf(0, messages.size - 6)
             for (i in start until messages.size) {
                 val m = messages[i]
-                val content = if (m.content.length > 200) m.content.substring(0, 200) + "..." else m.content
+                val content = m.content.truncate(200)
                 append(m.role.name.lowercase()).append(": ").append(content).append("\n")
             }
         }
@@ -203,92 +251,8 @@ class ChatActions(
         }
         return context.ai()
             .withLlm(guideProperties.classifierLlm)
-            .withTemplate("classifier")
+            .rendering("classifier")
             .createObject(ConversationalCheck::class.java, model)
     }
 
-    @Action(canRerun = true, trigger = UserMessage::class)
-    fun respond(conversation: Conversation, context: ActionContext) {
-        logger.info("[TRACE] ChatActions.respond: user={}, conversationId={}", context.user(), conversation.id)
-        val messages = conversation.messages
-        logger.info("[TRACE] Conversation has {} messages", messages.size)
-        for (i in messages.indices) {
-            val msg = messages[i]
-            logger.info("[TRACE]   msg[{}]: role={}, content='{}'", i, msg.role,
-                if (msg.content.length > 80) msg.content.substring(0, 80) + "..." else msg.content)
-        }
-        logger.info("[TRACE] lastResult type={}, value={}",
-            context.lastResult()?.javaClass?.simpleName ?: "null", context.lastResult())
-        val guideUser = getGuideUser(context.user())
-        if (guideUser == null) {
-            logger.error("Cannot respond: guideUser is null for context user {}", context.user())
-            return
-        }
-        try {
-            val snapshot = messages.toList()
-            val lastMsg = snapshot.lastOrNull()
-            logger.info("[TRACE] User turn: {} with {} conversation messages, last: role={}, content='{}'",
-                context.user(), snapshot.size,
-                lastMsg?.role ?: "none",
-                lastMsg?.let { if (it.content.length > 100) it.content.substring(0, 100) + "..." else it.content } ?: "none")
-
-            val templateModel = buildTemplateModel(guideUser, conversation)
-
-            // Short-circuit for conversational messages (acknowledgments, greetings, reactions)
-            if (snapshot.size > 1) {
-                try {
-                    // Use the trigger's lastResult — conversation message ordering is unreliable
-                    val userContent = if (context.lastResult() is UserMessage) {
-                        (context.lastResult() as UserMessage).content
-                    } else {
-                        ""
-                    }
-                    val check = classifyMessage(userContent, conversation, context, templateModel)
-                    logger.info("[CLASSIFY RESULT] input='{}' conversational={} response='{}'",
-                        if (userContent.length > 120) userContent.substring(0, 120) + "..." else userContent,
-                        check.conversational,
-                        check.response?.substring(0, minOf(120, check.response.length ?: 0)) ?: "null")
-                    if (check.conversational && check.response != null) {
-                        val assistantMessage = AssistantMessage(check.response)
-                        computeAndCacheNarration(assistantMessage, conversation, guideUser, context)
-                        sendResponse(assistantMessage, conversation, context)
-                        return
-                    }
-                } catch (e: Exception) {
-                    logger.error("[CLASSIFY] Classification FAILED, falling back to full pipeline: {}", e.message, e)
-                }
-            }
-
-            val assistantMessage = buildRendering(context)
-                .respondWithSystemPrompt(conversation, templateModel)
-            logger.info("[TRACE] LLM response: '{}'",
-                if (assistantMessage.content.length > 100) assistantMessage.content.substring(0, 100) + "..." else assistantMessage.content)
-            computeAndCacheNarration(assistantMessage, conversation, guideUser, context)
-            sendResponse(assistantMessage, conversation, context)
-        } catch (e: Exception) {
-            logger.error("LLM call failed for user {}: {}", context.user(), e.message, e)
-            sendErrorResponse(conversation, context)
-        }
-    }
-
-    @Action(canRerun = true, trigger = ChatTrigger::class)
-    fun respondToTrigger(conversation: Conversation, context: ActionContext) {
-        val trigger = context.lastResult() as ChatTrigger
-        val user = trigger.onBehalfOf.firstOrNull()
-        logger.info("Incoming trigger for user {}", user)
-        val guideUser = getGuideUser(user ?: context.user())
-        if (guideUser == null) {
-            logger.error("Cannot respond to trigger: guideUser is null")
-            return
-        }
-        try {
-            val assistantMessage = buildRendering(context)
-                .respondWithTrigger(conversation, trigger.prompt, buildTemplateModel(guideUser, conversation))
-            computeAndCacheNarration(assistantMessage, conversation, guideUser, context)
-            sendResponse(assistantMessage, conversation, context)
-        } catch (e: Exception) {
-            logger.error("Trigger LLM call failed: {}", e.message, e)
-            sendErrorResponse(conversation, context)
-        }
-    }
 }
