@@ -62,8 +62,8 @@ class RagConfiguration {
             ChunkTransformer chunkTransformer,
             NeoRagServiceProperties neoRagProperties,
             GuideProperties guideProperties) {
-        var chunkerConfig = guideProperties.chunkerConfig() != null
-                ? guideProperties.chunkerConfig()
+        var chunkerConfig = guideProperties.getChunkerConfig() != null
+                ? guideProperties.getChunkerConfig()
                 : new ContentChunker.Config();
         return new DrivineStore(
                 persistenceManager,

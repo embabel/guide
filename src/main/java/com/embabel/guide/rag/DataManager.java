@@ -50,7 +50,7 @@ public class DataManager {
     ) {
         this.store = store;
         this.guideProperties = guideProperties;
-        this.references = LlmReferenceProviders.fromYmlFile(guideProperties.referencesFile());
+        this.references = LlmReferenceProviders.fromYmlFile(guideProperties.getReferencesFile());
         store.provision();
         // Ingestion on startup is now handled by IngestionRunner (ApplicationRunner)
         // which is activated by guide.reload-content-on-startup=true
@@ -148,7 +148,7 @@ public class DataManager {
         var failedDirs = new ArrayList<IngestionFailure>();
         var failedDocuments = new ArrayList<IngestionFailure>();
 
-        for (var url : guideProperties.urls()) {
+        for (var url : guideProperties.getUrls()) {
             try {
                 logger.info("⏳ Loading URL: {}...", url);
                 ingestPage(url);
@@ -160,9 +160,9 @@ public class DataManager {
             }
         }
         logger.info("Loaded {}/{} URLs successfully ({} failed)",
-                loadedUrls.size(), guideProperties.urls().size(), failedUrls.size());
+                loadedUrls.size(), guideProperties.getUrls().size(), failedUrls.size());
 
-        List<String> dirs = guideProperties.directories();
+        List<String> dirs = guideProperties.getDirectories();
         if (dirs != null && !dirs.isEmpty()) {
             for (String dir : dirs) {
                 try {

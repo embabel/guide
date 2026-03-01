@@ -109,7 +109,7 @@ class NarratorAgent(
             templateModel(c.content, persona)
         )
         return ctx.ai()
-            .withLlm(guideProperties.fastLlm())
+            .withLlm(guideProperties.narratorLlm)
             .createObject(prompt, Narration::class.java)
     }
 
@@ -124,7 +124,7 @@ class NarratorAgent(
             templateModel(c.content, persona)
         )
         return ctx.ai()
-            .withLlm(guideProperties.fastLlm())
+            .withLlm(guideProperties.narratorLlm)
             .createObject(prompt, Narration::class.java)
     }
 }

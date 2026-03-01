@@ -17,7 +17,7 @@ guide:
   chat-llm:
     model: gpt-4.1
 
-  fast-llm:
+  classifier-llm:
     model: gpt-4.1-mini
 
   narrator-llm:
@@ -71,7 +71,7 @@ embabel:
 
   models:
     llms:
-      summarizer: gpt-4.1-mini
+      summarizer: gpt-4.1-nano
 
     # Change this if you wish to use a non Open AI default embedding model
     default-embedding-model: text-embedding-3-small
