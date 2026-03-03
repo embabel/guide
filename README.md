@@ -24,6 +24,8 @@ This is exposed in two ways:
 - Via an MCP server for integration with Claude Desktop, Claude Code and
   other MCP clients
 
+**Blog:** [The Voice, The Word, and The Wheel](https://medium.com/embabel/the-voice-the-word-and-the-wheel-d6e2ef2ab26e) — adding voice interaction (TTS/STT) to the Guide with Deepgram, a narrator agent, and natural-language commands.
+
 > **Note:** The chat server and Spring Shell conflict with each other. By default, the chat server is enabled. To use
 > Spring Shell instead, uncomment the relevant lines in `pom.xml`.
 
