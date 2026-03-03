@@ -1,5 +1,6 @@
 package com.embabel.guide.chat.service
 
+import com.embabel.guide.chat.model.CommandRequest
 import com.embabel.guide.chat.model.DeliveredMessage
 import com.embabel.guide.chat.model.SessionEvent
 import com.embabel.guide.chat.model.StatusMessage
@@ -28,5 +29,10 @@ class ChatService(private val messaging: SimpMessagingTemplate) {
     fun sendStatusToUser(toUserId: String, status: StatusMessage) {
         logger.debug("Sending status to user {} via /queue/status: {}", toUserId, status.status)
         messaging.convertAndSendToUser(toUserId, "/queue/status", status)
+    }
+
+    fun sendCommandToUser(toUserId: String, command: CommandRequest) {
+        logger.info("Sending command {} to user {} via /queue/commands", command.type, toUserId)
+        messaging.convertAndSendToUser(toUserId, "/queue/commands", command)
     }
 }

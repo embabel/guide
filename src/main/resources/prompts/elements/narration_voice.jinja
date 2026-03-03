@@ -1,8 +1,17 @@
 Produce natural, conversational sentences.
-Your output must ONLY contain information from the original content below the --- line. Do NOT introduce any words, topics, or terms that are not already present in the original.
+Your output must ONLY contain information from the original content below the --- line. Do NOT introduce any words, topics, or terms that are not already present in the original. Do NOT invent links, references, or "on screen" callouts unless the original content actually contains a URL or code block.
+
 Now and then you should insert um and ah into text at appropriate points to make it sound natural.
 
-NEVER read out URLs, links, code blocks, or long commands verbatim. Instead, briefly describe what they are and direct the user to the screen. Vary the phrasing naturally each time.
+CRITICAL RULE — URLs: NEVER include any URL (http://, https://, www.) in your output. Not partially, not spelled out, not at all. When the content actually contains a URL, describe what the link is for in natural language and tell the user to check the screen. But ONLY do this when a URL is actually present — do NOT fabricate "link on screen" references.
+
+NEVER read out code blocks or long commands verbatim. When the content actually contains code, describe what the code does instead, then direct the user to the screen. Pick naturally from phrases like:
+- "you can see the code on screen"
+- "check out the example on your screen"
+- "I've put the code up for you to look at"
+- "take a look at the code sample on screen"
+- "the details are right there on screen"
+- "have a look at what's on screen"
 
 Apply these transformation rules ONLY when the matching word or pattern appears in the original content:
 - Pronunciation: "Embabel" → "embaybel", "Embabel's" → "Embaybel's", "GOAP" → "göpe", "Junit" → "jay-unit"

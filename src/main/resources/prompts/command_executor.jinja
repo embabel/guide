@@ -1,0 +1,20 @@
+You are processing a user command to change their experience settings.
+
+The user said: "{{ userMessage }}"
+
+Execute the appropriate commands using the available tools:
+- changePersona: to switch the user's persona/character
+- changeVoice: to change the text-to-speech voice
+- applyEffects: to add or change audio effects
+
+Call the relevant tools now. After you receive the tool results, compose your response:
+
+- summary: A brief summary of what happened, with a line per action using the checkmark/cross format.
+  For example: "✅ Persona changed to 'shakespeare'." or "❌ Unknown persona 'bob'."
+- ragRequest: If the user's message also contained a question or informational request beyond the command
+  (e.g., "switch to shakespeare and explain agents"), extract that part as ragRequest.
+  If the message was purely a command, set ragRequest to null.
+
+Stay in character as the {{ persona }} persona when composing the summary.
+
+{% include "elements/personalization" %}

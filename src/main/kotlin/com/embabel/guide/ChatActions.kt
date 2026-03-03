@@ -13,10 +13,14 @@ import com.embabel.chat.AssistantMessage
 import com.embabel.chat.ChatTrigger
 import com.embabel.chat.Conversation
 import com.embabel.chat.UserMessage
-import com.embabel.guide.chat.model.ConversationalCheck
+import com.embabel.guide.chat.model.CategoryCheck
+import com.embabel.guide.chat.model.MessageCategory
 import com.embabel.guide.chat.model.StatusMessage
 import com.embabel.guide.chat.service.ChatService
 import com.embabel.guide.chat.service.JesseService
+import com.embabel.guide.command.CommandExecutor
+import com.embabel.guide.command.CommandResult
+import com.embabel.guide.command.CommandTools
 import com.embabel.guide.domain.GuideUser
 import com.embabel.guide.domain.GuideUserRepository
 import com.embabel.guide.util.toDiscordUserInfoData
@@ -25,6 +29,7 @@ import com.embabel.guide.narrator.NarrationCache
 import com.embabel.guide.narrator.NarratorAgent
 import com.embabel.guide.rag.DataManager
 import com.embabel.guide.util.truncate
+import com.embabel.hub.PersonaService
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.util.UUID
@@ -42,6 +47,8 @@ class ChatActions(
     private val narrationCache: NarrationCache,
     private val narratorAgent: NarratorAgent,
     private val chatService: ChatService,
+    private val personaService: PersonaService,
+    private val commandExecutor: CommandExecutor,
 ) {
 
     private val logger = LoggerFactory.getLogger(ChatActions::class.java)
@@ -73,15 +80,64 @@ class ChatActions(
 
             val templateModel = buildTemplateModel(guideUser, conversation)
 
-            // Short-circuit for conversational messages (acknowledgments, greetings, reactions)
+            // Pass 1: Classify message category (nano)
+            var category = MessageCategory.INFORMATIONAL
+            var quickResponse: String? = null
             if (snapshot.size > 1) {
                 try {
                     val userContent = (snapshot.last() as? UserMessage)?.content ?: ""
                     val check = classifyMessage(userContent, conversation, context, templateModel)
-                    logger.info("[CLASSIFY RESULT] input='{}' conversational={}",
-                        userContent.truncate(), check.conversational)
+                    category = check.category
+                    quickResponse = check.response
+                    logger.info("[CLASSIFY RESULT] input='{}' category={}",
+                        userContent.truncate(), category)
                 } catch (e: Exception) {
                     logger.error("[CLASSIFY] Classification FAILED, falling back to full pipeline: {}", e.message, e)
+                }
+            }
+
+            when (category) {
+                MessageCategory.CONVERSATIONAL -> {
+                    val response = quickResponse ?: "Hey there!"
+                    val assistantMessage = AssistantMessage(response)
+                    computeAndCacheNarration(assistantMessage, conversation, guideUser, context)
+                    sendResponse(assistantMessage, conversation, context)
+                    return
+                }
+
+                MessageCategory.COMMAND -> {
+                    val userContent = (snapshot.last() as? UserMessage)?.content ?: ""
+                    try {
+                        val commandResult = executeCommands(userContent, guideUser, context, templateModel)
+                        logger.info("[COMMAND] summary='{}', ragRequest='{}'",
+                            commandResult.summary.truncate(100), commandResult.ragRequest?.truncate(100))
+
+                        // Send the command summary as a message (with narration for voice mode)
+                        val summaryMessage = AssistantMessage(commandResult.summary)
+                        computeAndCacheNarration(summaryMessage, conversation, guideUser, context)
+                        sendResponse(summaryMessage, conversation, context)
+
+                        // If there's a leftover informational request, fall through to RAG
+                        if (commandResult.ragRequest != null) {
+                            logger.info("[COMMAND] Falling through to RAG for: {}", commandResult.ragRequest)
+                            // Replace the user message with the extracted rag request for the RAG pipeline
+                            val ragMessage = AssistantMessage(
+                                buildRendering(context)
+                                    .respondWithSystemPrompt(conversation, templateModel)
+                                    .content
+                            )
+                            computeAndCacheNarration(ragMessage, conversation, guideUser, context)
+                            sendResponse(ragMessage, conversation, context)
+                        }
+                    } catch (e: Exception) {
+                        logger.error("[COMMAND] Command execution FAILED: {}", e.message, e)
+                        // Fall through to regular RAG pipeline on command failure
+                    }
+                    return
+                }
+
+                MessageCategory.INFORMATIONAL -> {
+                    // Fall through to RAG pipeline below
                 }
             }
 
@@ -226,15 +282,15 @@ class ChatActions(
     }
 
     /**
-     * Classify the latest user message as conversational vs informational using nano.
-     * If conversational, generates a quick response to avoid the full RAG pipeline.
+     * Pass 1: Classify the latest user message into CONVERSATIONAL, COMMAND, or INFORMATIONAL using nano.
+     * If conversational, includes a quick response to avoid the full RAG pipeline.
      */
     private fun classifyMessage(
         userMessage: String,
         conversation: Conversation,
         context: ActionContext,
         templateModel: Map<String, Any>,
-    ): ConversationalCheck {
+    ): CategoryCheck {
         val messages = conversation.messages
         val conversationContext = buildString {
             val start = maxOf(0, messages.size - 6)
@@ -244,15 +300,43 @@ class ChatActions(
                 append(m.role.name.lowercase()).append(": ").append(content).append("\n")
             }
         }
+        val personaNames = personaService.listPersonas().joinToString(", ") { it.name }
         val model = mutableMapOf<String, Any>().apply {
             putAll(templateModel)
             put("conversationContext", conversationContext)
             put("userMessage", userMessage)
+            put("personaNames", personaNames)
         }
         return context.ai()
             .withLlm(guideProperties.classifierLlm)
             .rendering("classifier")
-            .createObject(ConversationalCheck::class.java, model)
+            .createObject(CategoryCheck::class.java, model)
+    }
+
+    /**
+     * Pass 2: Execute commands via LLM tool calling (mini).
+     * The LLM calls tools, the framework executes them, then the LLM composes a summary.
+     */
+    private fun executeCommands(
+        userMessage: String,
+        guideUser: GuideUser,
+        context: ActionContext,
+        templateModel: Map<String, Any>,
+    ): CommandResult {
+        val tools = CommandTools(
+            webUserId = guideUser.webUser?.id,
+            personaService = personaService,
+            commandExecutor = commandExecutor,
+        )
+        val model = mutableMapOf<String, Any>().apply {
+            putAll(templateModel)
+            put("userMessage", userMessage)
+        }
+        return context.ai()
+            .withLlm(guideProperties.classifierLlm)
+            .withToolObject(tools)
+            .rendering("command_executor")
+            .createObject(CommandResult::class.java, model)
     }
 
 }

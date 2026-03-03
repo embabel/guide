@@ -5,21 +5,33 @@ Conversation (most recent messages):
 
 The latest user message is: "{{ userMessage }}"
 
-conversational = true:
+Classify as one of these categories:
+
+category = CONVERSATIONAL:
 The message is ONLY a reaction, greeting, thanks, or small talk with no action needed.
 Examples: "thanks!", "nice", "hello", "haha", "goodbye"
 
-conversational = false:
-The message needs information lookup, code generation, or the assistant to DO something.
+category = COMMAND:
+The message is asking to change a setting or control the experience.
+This includes changing persona/character, voice, or audio effects.
+Available personas: {{ personaNames }}
+Examples: "switch to shakespeare", "change my voice to jupiter", "add echo effect", "use the rod persona"
+
+category = INFORMATIONAL:
+The message needs information lookup, code generation, or the assistant to DO something substantive.
 This includes:
 - Direct questions or requests ("how does X work?", "show me an example")
 - User AGREEING to something the assistant offered or proposed
   ("yeah that would be cool", "sure go ahead", "yes please", "do it")
 - Continuing or deepening a topic ("what about error handling?", "tell me more")
 
-IMPORTANT: If the assistant just offered, proposed, or suggested doing something,
-and the user is affirming or accepting — classify as conversational = false.
+A message can be BOTH a command and informational (e.g., "switch to shakespeare and explain agents").
+In that case, classify as COMMAND — the command pipeline will handle the informational part.
 
-If conversational = true, generate a brief, warm 1-2 sentence response in character.
+IMPORTANT: If the assistant just offered, proposed, or suggested doing something,
+and the user is affirming or accepting — classify as INFORMATIONAL.
+
+If category = CONVERSATIONAL, generate a brief, warm 1-2 sentence response in character.
+For COMMAND and INFORMATIONAL, response should be null.
 
 {% include "elements/personalization" %}

@@ -26,6 +26,23 @@ class NarratorAgent(
         private const val SIMPLE_MAX_LENGTH = 300
         private val TRIPLE_BACKTICK = Regex("```")
         private val MARKDOWN_INDICATORS = Regex("(^#{1,6}\\s|\\*\\*|\\*|^-\\s|^\\d+\\.\\s|^>\\s|\\[.*]\\(.*\\))", RegexOption.MULTILINE)
+
+        // Unicode emoji ranges: emoticons, symbols, dingbats, transport, misc, flags, etc.
+        private val EMOJI_PATTERN = Regex("[\\x{2600}-\\x{27BF}\\x{FE00}-\\x{FE0F}\\x{1F000}-\\x{1FAFF}\\x{200D}\\x{20E3}\\x{E0020}-\\x{E007F}]+")
+
+        // URLs: http(s)://... and markdown links [text](url)
+        private val MARKDOWN_LINK_PATTERN = Regex("\\[([^]]+)]\\([^)]+\\)")
+        private val BARE_URL_PATTERN = Regex("https?://\\S+")
+
+        fun stripEmojis(text: String): String =
+            EMOJI_PATTERN.replace(text, "").trim()
+
+        /**
+         * Replace markdown links with just their display text.
+         * Bare URLs are left for the LLM to describe contextually.
+         */
+        fun stripMarkdownLinks(text: String): String =
+            MARKDOWN_LINK_PATTERN.replace(text, "$1")
     }
 
     /**
@@ -65,16 +82,17 @@ class NarratorAgent(
     fun narrate(content: String, persona: String?, ctx: OperationContext): Narration {
         val classified = classify(NarrationInput(content))
         return when (classified.category) {
-            NarrationCategory.SIMPLE -> Narration(classified.content)
+            NarrationCategory.SIMPLE -> Narration(stripMarkdownLinks(stripEmojis(classified.content)))
             NarrationCategory.COMPLEX -> narrateComplex(classified, persona, ctx)
             NarrationCategory.COMPLEX_WITH_CODE -> narrateWithCode(classified, persona, ctx)
         }
     }
 
     private fun templateModel(content: String, persona: String?): Map<String, Any> {
-        val wordCount = content.split("\\s+".toRegex()).filter { it.isNotBlank() }.size
+        val cleaned = stripMarkdownLinks(content)
+        val wordCount = cleaned.split("\\s+".toRegex()).filter { it.isNotBlank() }.size
         val model = mutableMapOf<String, Any>(
-            "content" to content,
+            "content" to cleaned,
             "wordCount" to wordCount,
             "targetWords" to when {
                 wordCount <= 350 -> wordCount
@@ -96,7 +114,7 @@ class NarratorAgent(
      */
     @AchievesGoal(description = "Markdown narrated for text-to-speech")
     @Action(pre = ["isSimple"], readOnly = true)
-    fun narrateSimple(c: ClassifiedNarration): Narration = Narration(c.content)
+    fun narrateSimple(c: ClassifiedNarration): Narration = Narration(stripMarkdownLinks(stripEmojis(c.content)))
 
     /**
      * Complex markdown (no code): LLM summarization into speech-friendly text.
