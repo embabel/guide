@@ -21,14 +21,11 @@ import com.embabel.agent.rag.neo.drivine.DrivineCypherSearch;
 import com.embabel.agent.rag.neo.drivine.DrivineStore;
 import com.embabel.agent.rag.neo.drivine.NeoRagServiceProperties;
 import com.embabel.common.ai.model.EmbeddingService;
-import com.embabel.common.ai.model.ModelProvider;
-import com.embabel.common.ai.model.ModelSelectionCriteria;
 import com.embabel.guide.GuideProperties;
 import org.drivine.manager.PersistenceManager;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -36,17 +33,13 @@ import org.springframework.transaction.PlatformTransactionManager;
 /**
  * Configuration for RAG (Retrieval Augmented Generation) components.
  * Creates the DrivineStore and related beans for Neo4j-based RAG operations.
+ *
+ * The EmbeddingService is provided by the ONNX embeddings auto-configuration
+ * (embabel-agent-embeddings-onnx) and injected directly into DrivineStore.
  */
 @Configuration
 @EnableConfigurationProperties(NeoRagServiceProperties.class)
 class RagConfiguration {
-
-    @Bean
-    @Primary
-    @ConditionalOnMissingBean
-    EmbeddingService embeddingService(ModelProvider modelProvider) {
-        return modelProvider.getEmbeddingService(ModelSelectionCriteria.getPlatformDefault());
-    }
 
     @Bean
     ChunkTransformer chunkTransformer() {

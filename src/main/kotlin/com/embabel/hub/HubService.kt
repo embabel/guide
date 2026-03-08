@@ -110,7 +110,9 @@ class HubService(
         }
 
         // Welcome new users on first login
-        if (chatSessionService.findByOwnerId(guideUser.core.id).isEmpty()) {
+        if (!guideUser.core.welcomed) {
+            guideUser.core.welcomed = true
+            guideUserService.saveUser(guideUser)
             welcomeGreeter.greetNewUser(
                 guideUserId = guideUser.core.id,
                 webUserId = webUser.id,

@@ -30,6 +30,9 @@ import com.embabel.guide.narrator.NarratorAgent
 import com.embabel.guide.rag.DataManager
 import com.embabel.guide.util.truncate
 import com.embabel.hub.PersonaService
+import com.embabel.hub.integrations.SetupRequiredChatModel
+import com.embabel.hub.integrations.LlmRole
+import com.embabel.hub.integrations.UserLlmResolver
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.util.UUID
@@ -49,6 +52,7 @@ class ChatActions(
     private val chatService: ChatService,
     private val personaService: PersonaService,
     private val commandExecutor: CommandExecutor,
+    private val userLlmResolver: UserLlmResolver,
 ) {
 
     private val logger = LoggerFactory.getLogger(ChatActions::class.java)
@@ -70,6 +74,10 @@ class ChatActions(
             logger.error("Cannot respond: guideUser is null for context user {}", context.user())
             return
         }
+        if (!userLlmResolver.hasLlm(guideUser.id)) {
+            sendResponse(AssistantMessage(SetupRequiredChatModel.SETUP_MESSAGE), conversation, context)
+            return
+        }
         try {
             val snapshot = messages.toList()
             val lastMsg = snapshot.lastOrNull()
@@ -86,7 +94,7 @@ class ChatActions(
             if (snapshot.size > 1) {
                 try {
                     val userContent = (snapshot.last() as? UserMessage)?.content ?: ""
-                    val check = classifyMessage(userContent, conversation, context, templateModel)
+                    val check = classifyMessage(userContent, conversation, context, guideUser, templateModel)
                     category = check.category
                     quickResponse = check.response
                     logger.info("[CLASSIFY RESULT] input='{}' category={}",
@@ -122,7 +130,7 @@ class ChatActions(
                             logger.info("[COMMAND] Falling through to RAG for: {}", commandResult.ragRequest)
                             // Replace the user message with the extracted rag request for the RAG pipeline
                             val ragMessage = AssistantMessage(
-                                buildRendering(context)
+                                buildRendering(context, guideUser)
                                     .respondWithSystemPrompt(conversation, templateModel)
                                     .content
                             )
@@ -141,7 +149,7 @@ class ChatActions(
                 }
             }
 
-            val assistantMessage = buildRendering(context)
+            val assistantMessage = buildRendering(context, guideUser)
                 .respondWithSystemPrompt(conversation, templateModel)
             logger.info("[TRACE] LLM response: '{}'",
                 assistantMessage.content.truncate(100))
@@ -149,7 +157,7 @@ class ChatActions(
             sendResponse(assistantMessage, conversation, context)
         } catch (e: Exception) {
             logger.error("LLM call failed for user {}: {}", context.user(), e.message, e)
-            sendErrorResponse(conversation, context)
+            sendErrorResponse(conversation, context, e)
         }
     }
 
@@ -163,8 +171,12 @@ class ChatActions(
             logger.error("Cannot respond to trigger: guideUser is null")
             return
         }
+        if (!userLlmResolver.hasLlm(guideUser.id)) {
+            logger.info("[TRIGGER] Silently aborting trigger for user {} — no LLM configured", guideUser.id)
+            return
+        }
         try {
-            val assistantMessage = buildRendering(context)
+            val assistantMessage = buildRendering(context, guideUser)
                 .respondWithTrigger(conversation, trigger.prompt, buildTemplateModel(guideUser, conversation))
             computeAndCacheNarration(assistantMessage, conversation, guideUser, context)
             sendResponse(assistantMessage, conversation, context)
@@ -192,10 +204,8 @@ class ChatActions(
         else -> throw RuntimeException("Unknown user type: $user")
     }
 
-    private fun buildRendering(context: ActionContext): PromptRunner.Rendering {
-        return context
-            .ai()
-            .withLlm(guideProperties.chatLlm)
+    private fun buildRendering(context: ActionContext, guideUser: GuideUser): PromptRunner.Rendering {
+        return userLlmResolver.resolve(context, guideUser.id, LlmRole.CHAT)
             .withId("chat_response")
             .withReferences(dataManager.referencesForUser(context.user()))
             .withToolGroups(guideProperties.toolGroups)
@@ -249,7 +259,7 @@ class ChatActions(
         }
         try {
             val persona = guideUser.core.persona ?: guideProperties.defaultPersona
-            val narration = narratorAgent.narrate(assistantMessage.content, persona, context)
+            val narration = narratorAgent.narrate(assistantMessage.content, persona, context, guideUser.id)
             logger.info("[NARRATION] Narration complete for conversation {}: {} chars", conversationId, narration.text.length)
             narrationCache.put(conversationId, narration.text)
         } catch (e: Exception) {
@@ -274,11 +284,37 @@ class ChatActions(
         context.sendMessage(assistantMessage)
     }
 
-    private fun sendErrorResponse(conversation: Conversation, context: ActionContext) {
+    private fun sendErrorResponse(conversation: Conversation, context: ActionContext, cause: Exception? = null) {
+        val detail = cause?.let { userFacingErrorDetail(it) } ?: ""
         val errorMessage = AssistantMessage(
-            "I'm sorry, I'm having trouble connecting to the AI service right now. Please try again in a moment."
+            "I'm sorry, I'm having trouble connecting to the AI service right now. $detail".trimEnd() +
+                "\n\nPlease try again in a moment."
         )
         sendResponse(errorMessage, conversation, context)
+    }
+
+    companion object {
+        /**
+         * Extracts a user-friendly error detail from an LLM exception.
+         * Safe to show — no internal details, just actionable info.
+         */
+        fun userFacingErrorDetail(e: Exception): String {
+            val msg = e.message ?: return ""
+            return when {
+                msg.contains("401") || msg.contains("unauthorized", ignoreCase = true) ->
+                    "Your API key appears to be invalid or expired. Please check your key in Settings."
+                msg.contains("402") || msg.contains("billing", ignoreCase = true) ||
+                    msg.contains("quota", ignoreCase = true) || msg.contains("insufficient", ignoreCase = true) ->
+                    "Your API account may have run out of credits or exceeded its quota. Please check your billing."
+                msg.contains("429") || msg.contains("rate", ignoreCase = true) ->
+                    "The AI provider is rate-limiting requests. Please wait a moment."
+                msg.contains("404") || msg.contains("not_found", ignoreCase = true) ->
+                    "The configured AI model could not be found. Please check your settings."
+                msg.contains("500") || msg.contains("502") || msg.contains("503") ->
+                    "The AI provider is experiencing an outage."
+                else -> ""
+            }
+        }
     }
 
     /**
@@ -289,6 +325,7 @@ class ChatActions(
         userMessage: String,
         conversation: Conversation,
         context: ActionContext,
+        guideUser: GuideUser,
         templateModel: Map<String, Any>,
     ): CategoryCheck {
         val messages = conversation.messages
@@ -307,8 +344,7 @@ class ChatActions(
             put("userMessage", userMessage)
             put("personaNames", personaNames)
         }
-        return context.ai()
-            .withLlm(guideProperties.classifierLlm)
+        return userLlmResolver.resolve(context, guideUser.id, LlmRole.CLASSIFIER)
             .rendering("classifier")
             .createObject(CategoryCheck::class.java, model)
     }
@@ -332,8 +368,7 @@ class ChatActions(
             putAll(templateModel)
             put("userMessage", userMessage)
         }
-        return context.ai()
-            .withLlm(guideProperties.classifierLlm)
+        return userLlmResolver.resolve(context, guideUser.id, LlmRole.CLASSIFIER)
             .withToolObject(tools)
             .rendering("command_executor")
             .createObject(CommandResult::class.java, model)

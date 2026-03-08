@@ -1,8 +1,8 @@
 package com.embabel.guide
 
 import com.embabel.agent.rag.ingestion.ContentChunker
-import com.embabel.common.ai.model.LlmOptions
 import com.embabel.common.util.StringTransformer
+import com.embabel.hub.integrations.LlmProvider
 import jakarta.validation.constraints.NotBlank
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.NestedConfigurationProperty
@@ -15,8 +15,7 @@ import java.nio.file.Path
  *
  * @param reloadContentOnStartup whether to reload RAG content on startup
  * @param defaultPersona         name of the default persona to use
- * @param chatLlm                LLM options for RAG chat (beefy model)
- * @param classifierLlm          LLM options for message classification (lightweight model)
+ * @param defaultProvider        which LLM provider to use for server-side defaults; auto-detected from env vars if not set
  * @param projectsPath           path to projects root: absolute, or relative to the process working directory (user.dir)
  * @param chunkerConfig          chunker configuration for RAG ingestion
  * @param referencesFile         YML files containing LLM references such as GitHub repositories and classpath info
@@ -30,8 +29,7 @@ data class GuideProperties(
     val reloadContentOnStartup: Boolean,
     @field:NotBlank(message = "defaultPersona must not be blank")
     val defaultPersona: String,
-    val chatLlm: LlmOptions,
-    val classifierLlm: LlmOptions,
+    val defaultProvider: LlmProvider? = null,
     @field:NotBlank(message = "projectsPath must not be blank")
     val projectsPath: String,
     @NestedConfigurationProperty val chunkerConfig: ContentChunker.Config?,
@@ -43,7 +41,6 @@ data class GuideProperties(
     val toolPrefix: String,
     val directories: List<String>?,
     val toolGroups: Set<String>,
-    val narratorLlm: LlmOptions,
 ) {
 
     fun toolNamingStrategy(): StringTransformer = StringTransformer { name -> toolPrefix + name }

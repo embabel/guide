@@ -17,6 +17,12 @@
 Guide exposes resources relating to the Embabel Agent Framework, such
 as documentation, relevant blogs and other content, and up-to-the-minute API information.
 
+<p align="center">
+  <img src="guide-demo.png" alt="Guide Demo" width="700">
+</p>
+
+[![The Voice, The Word, and The Wheel](https://img.youtube.com/vi/hY6ZFMIJdd4/maxresdefault.jpg)](https://www.youtube.com/watch?v=hY6ZFMIJdd4)
+
 This is exposed in two ways:
 
 - Via a chat server (WebSocket/STOMP) for custom front-ends
@@ -437,9 +443,11 @@ Docker Compose supports environment variable overrides. You can set them inline 
 - **`NEO4J_VERSION` / `NEO4J_USERNAME` / `NEO4J_PASSWORD`**: Neo4j settings (optional)
 - **`DISCORD_TOKEN`**: optional, to enable the Discord bot
 
-#### OpenAI API key
+#### LLM API key
 
-The `guide` container needs `OPENAI_API_KEY`. You can:
+For local/MCP use, the `guide` container needs at least one LLM provider key. Supported providers (in auto-detection order): `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `MISTRAL_API_KEY`, `DEEPSEEK_API_KEY`.
+
+For hub/web deployments, no server-side key is needed — users bring their own via **Settings → Integrations**.
 
 1. **Create a `.env` file** next to `compose.yaml`:
 
@@ -479,7 +487,11 @@ docker compose --profile java down --remove-orphans
 | `NEO4J_HTTP_PORT`  | `7474`                         | Neo4j HTTP port                                  |
 | `NEO4J_BOLT_PORT`  | `7687`                         | Neo4j Bolt port                                  |
 | `NEO4J_HTTPS_PORT` | `7473`                         | Neo4j HTTPS port                                 |
-| `OPENAI_API_KEY`   | (required)                     | OpenAI API key                                   |
+| `OPENAI_API_KEY`   | (optional)                     | OpenAI API key (or any one provider key below)   |
+| `ANTHROPIC_API_KEY`| (optional)                     | Anthropic API key                                |
+| `MISTRAL_API_KEY`  | (optional)                     | Mistral API key                                  |
+| `DEEPSEEK_API_KEY` | (optional)                     | DeepSeek API key                                 |
+| `EMBABEL_KEY_SECRET`| (recommended)                 | AES key for BYOK key encryption (`openssl rand -base64 32`) |
 | `DISCORD_TOKEN`    | (optional)                     | Discord bot token                                |
 
 Example:
@@ -494,7 +506,7 @@ NEO4J_PASSWORD=mysecretpassword OPENAI_API_KEY=sk-... GUIDE_PORT=1338 docker com
 
 Tests require the following:
 
-1. **OpenAI API Key**: Set `OPENAI_API_KEY` in your environment before running tests:
+1. **LLM API Key**: Set at least one provider key in your environment before running tests:
 
 ```bash
 export OPENAI_API_KEY=sk-your-key-here
