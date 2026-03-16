@@ -14,14 +14,7 @@ guide:
   # You can add your own persona files to that directory
   default-persona: adaptive
 
-  chat-llm:
-    model: gpt-4.1
-
-  classifier-llm:
-    model: gpt-4.1-mini
-
-  narrator-llm:
-    model: gpt-4.1-mini
+  # default-provider: OPENAI  # Auto-detected from env vars (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
 
   content-chunker:
     include-section-title-in-chunk: false
@@ -70,14 +63,11 @@ embabel:
       title-after-message-count: 6
 
   models:
-    llms:
-      summarizer: gpt-4.1-nano
+    # Local ONNX embedding model (no API key needed)
+    default-embedding-model: all-MiniLM-L6-v2
 
-    # Change this if you wish to use a non Open AI default embedding model
-    default-embedding-model: text-embedding-3-small
-
-    # Change this to use a non Open AI default LLM
-    default-llm: gpt-4.1-mini
+    # Fake LLM — real models are resolved per-user via BYOK (UserLlmResolver)
+    default-llm: setup-required
 
   agent:
 

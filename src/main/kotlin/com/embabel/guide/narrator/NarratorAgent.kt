@@ -6,7 +6,8 @@ import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Condition
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.common.textio.template.TemplateRenderer
-import com.embabel.guide.GuideProperties
+import com.embabel.hub.integrations.LlmRole
+import com.embabel.hub.integrations.UserLlmResolver
 
 /**
  * Embabel agent that converts markdown assistant messages into TTS-friendly narration.
@@ -18,8 +19,8 @@ import com.embabel.guide.GuideProperties
  */
 @Agent(description = "Convert markdown to TTS-friendly narration")
 class NarratorAgent(
-    private val guideProperties: GuideProperties,
-    private val templateRenderer: TemplateRenderer
+    private val templateRenderer: TemplateRenderer,
+    private val userLlmResolver: UserLlmResolver,
 ) {
 
     companion object {
@@ -79,12 +80,12 @@ class NarratorAgent(
      *
      * @param persona the persona name to use for narration voice (e.g. "jesse", "adaptive")
      */
-    fun narrate(content: String, persona: String?, ctx: OperationContext): Narration {
+    fun narrate(content: String, persona: String?, ctx: OperationContext, userId: String): Narration {
         val classified = classify(NarrationInput(content))
         return when (classified.category) {
             NarrationCategory.SIMPLE -> Narration(stripMarkdownLinks(stripEmojis(classified.content)))
-            NarrationCategory.COMPLEX -> narrateComplex(classified, persona, ctx)
-            NarrationCategory.COMPLEX_WITH_CODE -> narrateWithCode(classified, persona, ctx)
+            NarrationCategory.COMPLEX -> narrateComplex(classified, persona, ctx, userId)
+            NarrationCategory.COMPLEX_WITH_CODE -> narrateWithCode(classified, persona, ctx, userId)
         }
     }
 
@@ -121,13 +122,12 @@ class NarratorAgent(
      */
     @AchievesGoal(description = "Markdown narrated for text-to-speech")
     @Action(pre = ["isComplex"])
-    fun narrateComplex(c: ClassifiedNarration, persona: String?, ctx: OperationContext): Narration {
+    fun narrateComplex(c: ClassifiedNarration, persona: String?, ctx: OperationContext, userId: String): Narration {
         val prompt = templateRenderer.renderLoadedTemplate(
             "narration_complex",
             templateModel(c.content, persona)
         )
-        return ctx.ai()
-            .withLlm(guideProperties.narratorLlm)
+        return userLlmResolver.resolve(ctx, userId, LlmRole.NARRATOR)
             .createObject(prompt, Narration::class.java)
     }
 
@@ -136,13 +136,12 @@ class NarratorAgent(
      */
     @AchievesGoal(description = "Markdown narrated for text-to-speech")
     @Action(pre = ["hasCode"])
-    fun narrateWithCode(c: ClassifiedNarration, persona: String?, ctx: OperationContext): Narration {
+    fun narrateWithCode(c: ClassifiedNarration, persona: String?, ctx: OperationContext, userId: String): Narration {
         val prompt = templateRenderer.renderLoadedTemplate(
             "narration_code",
             templateModel(c.content, persona)
         )
-        return ctx.ai()
-            .withLlm(guideProperties.narratorLlm)
+        return userLlmResolver.resolve(ctx, userId, LlmRole.NARRATOR)
             .createObject(prompt, Narration::class.java)
     }
 }
