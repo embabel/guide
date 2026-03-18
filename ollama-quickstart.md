@@ -60,29 +60,7 @@ curl -X POST http://localhost:1337/api/v1/data/load-references
 
 ## MCP
 
-MCP is exposed via SSE at `http://localhost:1337/sse`. Configure your client:
-
-**Claude Desktop** (`claude_desktop_config.json`):
-```json
-{
-  "mcpServers": {
-    "embabel-guide": {
-      "url": "http://localhost:1337/sse"
-    }
-  }
-}
-```
-
-**Claude Code:**
-```bash
-claude mcp add embabel-guide --transport sse http://localhost:1337/sse
-```
-
-**MCP Inspector** (to verify tools are working):
-```bash
-npx @modelcontextprotocol/inspector
-```
-Then connect to `http://localhost:1337/sse`.
+MCP is exposed via SSE at `http://localhost:1337/sse`. See [README.md](README.md) for integration instructions for Claude Desktop, Claude Code, Cursor, and others.
 
 ## Switching Models
 
