@@ -15,13 +15,13 @@ guide:
   default-persona: adaptive
 
   chat-llm:
-    model: gpt-4.1
+    model: llama3.2:latest
 
   classifier-llm:
-    model: gpt-4.1-mini
+    model: llama3.2:latest
 
   narrator-llm:
-    model: gpt-4.1-mini
+    model: llama3.2:latest
 
   content-chunker:
     include-section-title-in-chunk: false
@@ -71,13 +71,13 @@ embabel:
 
   models:
     llms:
-      summarizer: gpt-4.1-nano
+      summarizer: llama3.2:latest
 
     # Change this if you wish to use a non Open AI default embedding model
-    default-embedding-model: text-embedding-3-small
+    default-embedding-model: nomic-embed-text:latest
 
     # Change this to use a non Open AI default LLM
-    default-llm: gpt-4.1-mini
+    default-llm: llama3.2:latest
 
   agent:
 

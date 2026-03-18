@@ -29,6 +29,36 @@ This is exposed in two ways:
 > **Note:** The chat server and Spring Shell conflict with each other. By default, the chat server is enabled. To use
 > Spring Shell instead, uncomment the relevant lines in `pom.xml`.
 
+## Running with Ollama (local, no API key required)
+
+This branch is configured to run with [Ollama](https://ollama.com) instead of OpenAI.
+
+**1. Install Ollama and pull models:**
+
+```bash
+brew install ollama
+brew services start ollama
+ollama pull llama3.2
+ollama pull nomic-embed-text
+```
+
+**2. Start Neo4j:**
+
+```bash
+docker run -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/brahmsian neo4j:latest
+```
+
+**3. Run the app:**
+
+```bash
+mvn spring-boot:run
+```
+
+No API key needed. MCP is available at `http://localhost:1337/sse` — configure your MCP client to connect via SSE (not stdio).
+
+> To switch to a different model, update the model names in `application.yml` (e.g. `qwen2.5` for better tool-calling).
+> To switch back to OpenAI, re-enable the `embabel-agent-starter-openai` dependency in `pom.xml` and update the model names.
+
 ## Loading data
 
 ```bash
