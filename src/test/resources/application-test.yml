@@ -38,7 +38,7 @@ spring:
         enabled: false
   autoconfigure:
     exclude:
-      - com.embabel.agent.embeddings.onnx.OnnxEmbeddingAutoConfiguration
+      - com.embabel.agent.autoconfigure.models.onnx.AgentOnnxAutoConfiguration
 
 embabel:
   agent-platform:
