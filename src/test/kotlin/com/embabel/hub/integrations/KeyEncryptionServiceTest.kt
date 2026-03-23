@@ -2,10 +2,12 @@ package com.embabel.hub.integrations
 
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import java.security.SecureRandom
+import javax.crypto.spec.SecretKeySpec
 
 class KeyEncryptionServiceTest {
 
-    private val service = KeyEncryptionService()
+    private val service = KeyEncryptionService(randomKey())
 
     @Test
     fun `encrypt and decrypt round-trips successfully`() {
@@ -37,7 +39,7 @@ class KeyEncryptionServiceTest {
 
     @Test
     fun `decrypt returns null for blob from different key`() {
-        val other = KeyEncryptionService()
+        val other = KeyEncryptionService(randomKey())
         val encrypted = other.encrypt("sk-secret")
         assertNull(service.decrypt(encrypted))
     }
@@ -53,5 +55,13 @@ class KeyEncryptionServiceTest {
         val longKey = "sk-proj-" + "a".repeat(500)
         val encrypted = service.encrypt(longKey)
         assertEquals(longKey, service.decrypt(encrypted))
+    }
+
+    companion object {
+        private fun randomKey(): SecretKeySpec {
+            val keyBytes = ByteArray(32)
+            SecureRandom().nextBytes(keyBytes)
+            return SecretKeySpec(keyBytes, "AES")
+        }
     }
 }

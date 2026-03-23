@@ -17,23 +17,27 @@ import javax.crypto.spec.SecretKeySpec
  * but encrypted blobs from the client will simply fail to decrypt and the user re-enters).
  */
 @Service
-class KeyEncryptionService {
+class KeyEncryptionService(explicitKey: SecretKey? = null) {
 
     private val logger = LoggerFactory.getLogger(KeyEncryptionService::class.java)
     private val secretKey: SecretKey
     private val random = SecureRandom()
 
     init {
-        val envKey = System.getenv("EMBABEL_KEY_SECRET")
-        secretKey = if (!envKey.isNullOrBlank()) {
-            val decoded = Base64.getDecoder().decode(envKey)
-            require(decoded.size == 32) { "EMBABEL_KEY_SECRET must be 32 bytes (base64-encoded)" }
-            SecretKeySpec(decoded, "AES")
+        secretKey = if (explicitKey != null) {
+            explicitKey
         } else {
-            logger.warn("EMBABEL_KEY_SECRET not set — generating ephemeral key (encrypted blobs won't survive restart)")
-            val keyBytes = ByteArray(32)
-            random.nextBytes(keyBytes)
-            SecretKeySpec(keyBytes, "AES")
+            val envKey = System.getenv("EMBABEL_KEY_SECRET")
+            if (!envKey.isNullOrBlank()) {
+                val decoded = Base64.getDecoder().decode(envKey)
+                require(decoded.size == 32) { "EMBABEL_KEY_SECRET must be 32 bytes (base64-encoded)" }
+                SecretKeySpec(decoded, "AES")
+            } else {
+                logger.warn("EMBABEL_KEY_SECRET not set — generating ephemeral key (encrypted blobs won't survive restart)")
+                val keyBytes = ByteArray(32)
+                random.nextBytes(keyBytes)
+                SecretKeySpec(keyBytes, "AES")
+            }
         }
     }
 
