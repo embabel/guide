@@ -42,7 +42,17 @@ export NEO4J_USERNAME=neo4j
 export NEO4J_PASSWORD=your-password
 ```
 
-**3. Run the app:**
+**3. (Optional) Ollama on a remote machine:**
+
+If Ollama is running on another machine, use an SSH tunnel so the app sees it as localhost:
+
+```bash
+ssh -L 11434:localhost:11434 your-remote-host
+```
+
+Then leave the Ollama base URL as the default (`http://localhost:11434`) and everything works as normal.
+
+**4. Run the app:**
 
 ```bash
 mvn spring-boot:run
@@ -57,6 +67,7 @@ Once running, load the documentation into the RAG store:
 ```bash
 curl -X POST http://localhost:1337/api/v1/data/load-references
 ```
+
 
 ## MCP
 
