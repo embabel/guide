@@ -15,6 +15,7 @@
  */
 package com.embabel.guide
 
+import com.embabel.common.ai.autoconfig.ProviderInitialization
 import com.embabel.agent.spi.LlmService
 import com.embabel.agent.spi.support.springai.SpringAiLlmService
 import com.embabel.common.ai.model.DefaultOptionsConverter
@@ -63,6 +64,17 @@ class GuideTestConfig {
         name = "test",
         model = FakeEmbeddingModel(),
         provider = "test"
+    )
+
+    /**
+     * Stub onnxEmbeddingInitializer so that @DependsOn("onnxEmbeddingInitializer")
+     * in RagConfiguration is satisfied when ONNX auto-configuration is excluded.
+     */
+    @Bean(name = ["onnxEmbeddingInitializer"])
+    fun onnxEmbeddingInitializer(): ProviderInitialization = ProviderInitialization(
+        provider = "test-onnx",
+        registeredLlms = emptyList(),
+        registeredEmbeddings = emptyList()
     )
 
     /**
