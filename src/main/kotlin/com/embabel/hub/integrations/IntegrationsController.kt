@@ -16,6 +16,14 @@ data class RestoreKeyRequest(val provider: LlmProvider, val encryptedKey: String
 
 data class SetActiveProviderRequest(val provider: LlmProvider)
 
+data class ValidateKeyRequest(val provider: LlmProvider, val key: String)
+
+data class ValidateKeyResponse(
+    val valid: Boolean,
+    val provider: LlmProvider,
+    val error: String? = null,
+)
+
 @RestController
 @RequestMapping("/api/hub/integrations")
 class IntegrationsController(
@@ -115,6 +123,18 @@ class IntegrationsController(
             )
         } catch (e: Exception) {
             logger.error("Failed to fire welcome greeting for user {}: {}", webUserId, e.message, e)
+        }
+    }
+
+    @PostMapping("/keys/validate")
+    fun validateKey(
+        @RequestBody request: ValidateKeyRequest,
+    ): ResponseEntity<ValidateKeyResponse> {
+        val error = userModelFactory.validateKey(request.provider, request.key)
+        return if (error == null) {
+            ResponseEntity.ok(ValidateKeyResponse(valid = true, provider = request.provider))
+        } else {
+            ResponseEntity.ok(ValidateKeyResponse(valid = false, provider = request.provider, error = error))
         }
     }
 

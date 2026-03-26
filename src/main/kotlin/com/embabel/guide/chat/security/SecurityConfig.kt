@@ -87,7 +87,8 @@ class SecurityConfig(
                     "/api/hub/register",
                     "/api/hub/login",
                     "/api/hub/refresh",
-                    "/api/v1/data/load-references"
+                    "/api/v1/data/load-references",
+                    "/api/hub/integrations/keys/validate",
                 ).permitAll()
                 it.requestMatchers(
                     HttpMethod.GET,
