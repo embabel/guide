@@ -3,6 +3,9 @@ server:
 
 guide:
 
+  cors:
+    allowed-origins: ${GUIDE_CORS_ALLOWED_ORIGINS:}
+
   # If true, the Guide chatbot will load content from URLs and directories on startup
   reload-content-on-startup: false
 

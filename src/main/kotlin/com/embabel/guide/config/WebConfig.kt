@@ -1,5 +1,6 @@
 package com.embabel.guide.config
 
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.web.cors.CorsConfiguration
@@ -9,7 +10,24 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 
 @Configuration
-class WebConfig : WebMvcConfigurer {
+class WebConfig(
+    @Value("\${guide.cors.allowed-origins:}") private val extraOrigins: String
+) : WebMvcConfigurer {
+
+    private val defaultOrigins = listOf(
+        "http://localhost:3000",      // Next.js dev server
+        "http://localhost:3001",      // Alternative dev port
+        "http://localhost:8042",      // Docker frontend
+        "http://localhost:5173",      // MCP Inspector (Vite)
+        "http://localhost:6274",      // MCP Inspector (npx)
+        "https://embabel.com",        // Production domain
+        "https://www.embabel.com",    // Production domain with www
+        "app://-"                     // Electron/Tauri app
+    )
+
+    private val allOrigins: List<String>
+        get() = defaultOrigins + extraOrigins.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+
     override fun addCorsMappings(registry: CorsRegistry) {
         // MCP endpoints - allow all origins for CLI tools like Claude Code
         registry.addMapping("/sse/**")
@@ -25,16 +43,7 @@ class WebConfig : WebMvcConfigurer {
 
         // Other endpoints - specific origins
         registry.addMapping("/**")
-            .allowedOrigins(
-                "http://localhost:3000",      // Next.js dev server
-                "http://localhost:3001",      // Alternative dev port
-                "http://localhost:8042",      // Docker frontend
-                "http://localhost:5173",      // MCP Inspector (Vite)
-                "http://localhost:6274",      // MCP Inspector (npx)
-                "https://embabel.com",        // Production domain
-                "https://www.embabel.com",    // Production domain with www
-                "app://-"                     // Electron/Tauri app
-            )
+            .allowedOrigins(*allOrigins.toTypedArray())
             .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
             .allowedHeaders("*")
             .allowCredentials(true)
@@ -55,16 +64,7 @@ class WebConfig : WebMvcConfigurer {
 
         // Other endpoints - specific origins
         val defaultConfig = CorsConfiguration()
-        defaultConfig.allowedOrigins = listOf(
-            "http://localhost:3000",      // Next.js dev server
-            "http://localhost:3001",      // Alternative dev port
-            "http://localhost:8042",      // Docker frontend
-            "http://localhost:5173",      // MCP Inspector (Vite)
-            "http://localhost:6274",      // MCP Inspector (npx)
-            "https://embabel.com",        // Production domain
-            "https://www.embabel.com",    // Production domain with www
-            "app://-"                     // Electron/Tauri app
-        )
+        defaultConfig.allowedOrigins = allOrigins
         defaultConfig.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
         defaultConfig.allowedHeaders = listOf("*")
         defaultConfig.allowCredentials = true
