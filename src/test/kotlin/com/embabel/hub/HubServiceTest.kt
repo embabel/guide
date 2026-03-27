@@ -177,9 +177,9 @@ class HubServiceTest {
         val registeredUser = service.registerUser(request)
         val webUserId = registeredUser.webUser!!.id
 
-        // Verify initial persona is null
+        // Verify initial persona is the default
         val before = guideUserRepository.findByWebUserId(webUserId).orElseThrow()
-        assertNull(before.core.persona)
+        assertEquals("adaptive", before.core.persona)
 
         // When: Update persona via the same path the frontend uses
         val updatedUser = service.updatePersona(webUserId, "expert")
