@@ -9,6 +9,10 @@ class GuideUserService(
     private val guideUserRepository: GuideUserRepository
 ) {
 
+    companion object {
+        const val DEFAULT_PERSONA = "adaptive"
+    }
+
     /**
      * Returns the anonymous web user for non-authenticated sessions.
      * If the user doesn't exist yet, creates it with a random UUID and displayName "Friend".
@@ -74,7 +78,8 @@ class GuideUserService(
     fun saveFromWebUser(webUser: WebUserData): GuideUser {
         val guideUser = GuideUserData(
             id = UUID.randomUUID().toString(),
-            displayName = webUser.displayName
+            displayName = webUser.displayName,
+            persona = DEFAULT_PERSONA,
         )
         return guideUserRepository.createWithWebUser(guideUser, webUser)
     }
