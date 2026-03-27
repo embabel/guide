@@ -109,16 +109,8 @@ class HubService(
             throw LoginException("Invalid username or password")
         }
 
-        // Welcome new users on first login
-        if (!guideUser.core.welcomed) {
-            guideUser.core.welcomed = true
-            guideUserService.saveUser(guideUser)
-            welcomeGreeter.greetNewUser(
-                guideUserId = guideUser.core.id,
-                webUserId = webUser.id,
-                displayName = webUser.displayName
-            )
-        }
+        // Welcome is deferred to first BYOK key set (see IntegrationsController.fireWelcome)
+        // so the AI greeting has an LLM available to generate the message.
 
         // Generate a fresh token on login for accurate expiration
         val token = jwtTokenService.generateRefreshToken(webUser.id)
