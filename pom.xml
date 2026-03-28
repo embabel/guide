@@ -57,11 +57,16 @@
             <version>0.2.1-SNAPSHOT</version>
         </dependency>
 
-        <!-- Spring AI client libraries for BYOK — OpenAI (no starter, which requires API key at startup) -->
+        <!-- Embabel BYOK factory classes (bring-your-own-key, no Spring Boot starters) -->
         <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-openai</artifactId>
-            <version>${spring-ai.version}</version>
+            <groupId>com.embabel.agent</groupId>
+            <artifactId>embabel-agent-openai</artifactId>
+            <version>${embabel-agent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.embabel.agent</groupId>
+            <artifactId>embabel-agent-anthropic-autoconfigure</artifactId>
+            <version>${embabel-agent.version}</version>
         </dependency>
 
         <!-- Local ONNX embedding model -->
@@ -69,23 +74,6 @@
             <groupId>com.embabel.agent</groupId>
             <artifactId>embabel-agent-starter-onnx</artifactId>
             <version>${embabel-agent.version}</version>
-        </dependency>
-
-        <!-- Spring AI client libraries for BYOK (no embabel starters — those require API keys at startup) -->
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-anthropic</artifactId>
-            <version>${spring-ai.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-mistral-ai</artifactId>
-            <version>${spring-ai.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-deepseek</artifactId>
-            <version>${spring-ai.version}</version>
         </dependency>
 
         <dependency>
