@@ -1,21 +1,14 @@
 package com.embabel.hub.integrations
 
+import com.embabel.agent.api.models.DeepSeekModels
+import com.embabel.agent.api.models.MistralAiModels
+import com.embabel.agent.api.models.OpenAiModels
+import com.embabel.agent.config.models.anthropic.AnthropicModelFactory
+import com.embabel.agent.openai.OpenAiCompatibleModelFactory
+import com.embabel.agent.spi.InvalidApiKeyException
 import com.embabel.agent.spi.LlmService
-import com.embabel.agent.spi.support.springai.SpringAiLlmService
+import com.embabel.common.ai.model.PricingModel
 import org.slf4j.LoggerFactory
-import org.springframework.ai.anthropic.AnthropicChatModel
-import org.springframework.ai.anthropic.AnthropicChatOptions
-import org.springframework.ai.anthropic.api.AnthropicApi
-import org.springframework.ai.deepseek.DeepSeekChatModel
-import org.springframework.ai.deepseek.DeepSeekChatOptions
-import org.springframework.ai.deepseek.api.DeepSeekApi
-import org.springframework.ai.mistralai.MistralAiChatModel
-import org.springframework.ai.mistralai.MistralAiChatOptions
-import org.springframework.ai.mistralai.api.MistralAiApi
-import org.springframework.ai.model.tool.ToolCallingManager
-import org.springframework.ai.openai.OpenAiChatModel
-import org.springframework.ai.openai.OpenAiChatOptions
-import org.springframework.ai.openai.api.OpenAiApi
 import org.springframework.stereotype.Service
 import java.time.Duration
 import java.time.Instant
@@ -63,22 +56,19 @@ class UserModelFactory(
      */
     fun validateKey(provider: LlmProvider, apiKey: String): String? {
         return try {
-            val model = provider.validationModel
-            val service = createLlmService(provider, model, apiKey)
-            val chatModel = (service as SpringAiLlmService).chatModel
-            chatModel.call("Hi")
-            null
-        } catch (e: Exception) {
-            val message = e.cause?.message ?: e.message ?: "Unknown error"
-            logger.debug("API key validation failed for {}: {}", provider, message)
-            when {
-                message.contains("401") || message.contains("unauthorized", ignoreCase = true) ||
-                    message.contains("invalid", ignoreCase = true) && message.contains("key", ignoreCase = true) ->
-                    "Invalid API key"
-                message.contains("403") || message.contains("forbidden", ignoreCase = true) ->
-                    "API key lacks required permissions"
-                else -> "Could not validate key: $message"
+            when (provider) {
+                LlmProvider.OPENAI -> OpenAiCompatibleModelFactory.openAi(apiKey).buildValidated()
+                LlmProvider.ANTHROPIC -> AnthropicModelFactory(apiKey = apiKey).buildValidated()
+                LlmProvider.MISTRAL -> OpenAiCompatibleModelFactory.mistral(apiKey).buildValidated()
+                LlmProvider.DEEPSEEK -> OpenAiCompatibleModelFactory.deepSeek(apiKey).buildValidated()
             }
+            null
+        } catch (e: InvalidApiKeyException) {
+            logger.debug("API key validation failed for {}: {}", provider, e.message)
+            "Invalid API key"
+        } catch (e: Exception) {
+            logger.debug("API key validation failed for {}: {}", provider, e.message)
+            "Could not validate key: ${e.message}"
         }
     }
 
@@ -100,92 +90,14 @@ class UserModelFactory(
 
     private fun createLlmService(provider: LlmProvider, model: String, apiKey: String): LlmService<*> {
         return when (provider) {
-            LlmProvider.OPENAI -> createOpenAiService(model, apiKey)
-            LlmProvider.ANTHROPIC -> createAnthropicService(model, apiKey)
-            LlmProvider.MISTRAL -> createMistralService(model, apiKey)
-            LlmProvider.DEEPSEEK -> createDeepSeekService(model, apiKey)
+            LlmProvider.OPENAI -> OpenAiCompatibleModelFactory(null, apiKey, null, null)
+                .openAiCompatibleLlm(model, PricingModel.ALL_YOU_CAN_EAT, OpenAiModels.PROVIDER, null)
+            LlmProvider.ANTHROPIC -> AnthropicModelFactory(apiKey = apiKey).build(model)
+            LlmProvider.MISTRAL -> OpenAiCompatibleModelFactory("https://api.mistral.ai/v1", apiKey, null, null)
+                .openAiCompatibleLlm(model, PricingModel.ALL_YOU_CAN_EAT, MistralAiModels.PROVIDER, null)
+            LlmProvider.DEEPSEEK -> OpenAiCompatibleModelFactory("https://api.deepseek.com", apiKey, null, null)
+                .openAiCompatibleLlm(model, PricingModel.ALL_YOU_CAN_EAT, DeepSeekModels.PROVIDER, null)
         }
-    }
-
-    private fun createOpenAiService(model: String, apiKey: String): SpringAiLlmService {
-        val api = OpenAiApi.Builder()
-            .apiKey(apiKey)
-            .build()
-        val chatModel = OpenAiChatModel.builder()
-            .openAiApi(api)
-            .toolCallingManager(ToolCallingManager.builder().build())
-            .defaultOptions(
-                OpenAiChatOptions.builder()
-                    .model(model)
-                    .build()
-            )
-            .build()
-        return SpringAiLlmService(
-            name = model,
-            provider = "openai",
-            chatModel = chatModel,
-        )
-    }
-
-    private fun createAnthropicService(model: String, apiKey: String): SpringAiLlmService {
-        val api = AnthropicApi.builder()
-            .apiKey(apiKey)
-            .build()
-        val chatModel = AnthropicChatModel.builder()
-            .anthropicApi(api)
-            .toolCallingManager(ToolCallingManager.builder().build())
-            .defaultOptions(
-                AnthropicChatOptions.builder()
-                    .model(model)
-                    .maxTokens(4096)
-                    .build()
-            )
-            .build()
-        return SpringAiLlmService(
-            name = model,
-            provider = "anthropic",
-            chatModel = chatModel,
-        )
-    }
-
-    private fun createMistralService(model: String, apiKey: String): SpringAiLlmService {
-        val api = MistralAiApi.builder()
-            .apiKey(apiKey)
-            .build()
-        val chatModel = MistralAiChatModel.builder()
-            .mistralAiApi(api)
-            .toolCallingManager(ToolCallingManager.builder().build())
-            .defaultOptions(
-                MistralAiChatOptions.builder()
-                    .model(model)
-                    .build()
-            )
-            .build()
-        return SpringAiLlmService(
-            name = model,
-            provider = "mistralai",
-            chatModel = chatModel,
-        )
-    }
-
-    private fun createDeepSeekService(model: String, apiKey: String): SpringAiLlmService {
-        val api = DeepSeekApi.builder()
-            .apiKey(apiKey)
-            .build()
-        val chatModel = DeepSeekChatModel.builder()
-            .deepSeekApi(api)
-            .toolCallingManager(ToolCallingManager.builder().build())
-            .defaultOptions(
-                DeepSeekChatOptions.builder()
-                    .model(model)
-                    .build()
-            )
-            .build()
-        return SpringAiLlmService(
-            name = model,
-            provider = "deepseek",
-            chatModel = chatModel,
-        )
     }
 
 }

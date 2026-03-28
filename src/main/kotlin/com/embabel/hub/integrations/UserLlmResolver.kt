@@ -48,7 +48,7 @@ class UserLlmResolver(
      * The server-wide default provider, or null for pure BYOK deployments.
      * Priority: explicit config > auto-detect from env vars > null (no keys).
      */
-    val serverProvider: LlmProvider? = guideProperties.defaultProvider ?: detectProvider()
+    val serverProvider: LlmProvider? = guideProperties.defaultProvider ?: detectServerProvider()
 
     init {
         if (serverProvider != null) {
@@ -100,7 +100,7 @@ class UserLlmResolver(
          * Auto-detect which provider to use based on which API key env vars are set.
          * Returns the first provider whose key is present, or null if none found.
          */
-        fun detectProvider(): LlmProvider? {
+        fun detectServerProvider(): LlmProvider? {
             for ((provider, envKey) in PROVIDER_ENV_KEYS) {
                 if (!System.getenv(envKey).isNullOrBlank()) {
                     return provider
