@@ -1,12 +1,19 @@
 package com.embabel.guide.config
 
+import com.embabel.agent.spi.support.springai.SpringAiLlmService
+import com.embabel.chat.store.adapter.LlmTitleGenerator
+import com.embabel.chat.store.adapter.TitleGenerator
 import com.embabel.chat.store.model.StoredUser
 import com.embabel.chat.store.repository.ChatSessionRepository
 import com.embabel.chat.store.repository.ChatSessionRepositoryImpl
 import com.embabel.guide.domain.GuideUserData
+import com.embabel.hub.integrations.UserKeyStore
+import com.embabel.hub.integrations.UserModelFactory
 import org.drivine.manager.GraphObjectManager
 import org.drivine.manager.PersistenceManager
 import org.drivine.manager.PersistenceManagerFactory
+import org.springframework.ai.chat.messages.UserMessage
+import org.springframework.ai.chat.prompt.Prompt
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.annotation.Bean
@@ -20,6 +27,17 @@ import org.springframework.context.annotation.Primary
  */
 @Configuration
 class ChatStoreConfig {
+
+    @Bean
+    fun titleGenerator(userKeyStore: UserKeyStore, userModelFactory: UserModelFactory): TitleGenerator =
+        LlmTitleGenerator { prompt, userId ->
+            val activeKey = userId?.let { userKeyStore.getActiveKey(it) }
+                ?: return@LlmTitleGenerator TitleGenerator.DEFAULT_FALLBACK
+            val (provider, apiKey) = activeKey
+            val service = userModelFactory.getLlmService(provider, provider.summarizerModel, apiKey) as SpringAiLlmService
+            service.chatModel.call(Prompt(UserMessage(prompt))).result.output.text
+                ?: TitleGenerator.DEFAULT_FALLBACK
+        }
 
     @Bean
     @Primary

@@ -8,6 +8,7 @@ import io.jsonwebtoken.JwtException
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
 import java.time.Instant
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -61,8 +62,43 @@ class HubApiController(
     }
 
     @GetMapping("/personas")
-    fun listPersonas(): List<PersonaService.Persona> {
-        return personaService.listPersonas()
+    fun listPersonas(authentication: Authentication?): List<PersonaDto> {
+        val userId = authentication?.principal as? String
+        return personaService.listPersonasForUser(userId)
+    }
+
+    data class CreatePersonaRequest(
+        val name: String,
+        val prompt: String,
+        val voice: String? = null,
+        val effects: List<AudioEffect>? = null,
+    )
+
+    @PostMapping("/personas")
+    fun createPersona(
+        @RequestBody request: CreatePersonaRequest,
+        authentication: Authentication?,
+    ): PersonaDto {
+        val userId = authentication?.principal as? String ?: throw UnauthorizedException()
+        return personaService.createPersona(userId, request.name, request.prompt, request.voice, request.effects)
+    }
+
+    @PostMapping("/personas/{id}/copy")
+    fun copyPersona(
+        @PathVariable id: String,
+        authentication: Authentication?,
+    ): PersonaDto {
+        val userId = authentication?.principal as? String ?: throw UnauthorizedException()
+        return personaService.copyPersona(userId, id)
+    }
+
+    @DeleteMapping("/personas/{id}")
+    fun deletePersona(
+        @PathVariable id: String,
+        authentication: Authentication?,
+    ) {
+        val userId = authentication?.principal as? String ?: throw UnauthorizedException()
+        personaService.deletePersona(userId, id)
     }
 
     data class UpdatePersonaRequest(val persona: String)

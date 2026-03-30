@@ -94,6 +94,7 @@ class UserLlmResolver(
             LlmProvider.ANTHROPIC to "ANTHROPIC_API_KEY",
             LlmProvider.MISTRAL to "MISTRAL_API_KEY",
             LlmProvider.DEEPSEEK to "DEEPSEEK_API_KEY",
+
         )
 
         /**

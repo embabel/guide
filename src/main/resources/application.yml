@@ -29,6 +29,7 @@ guide:
   # Ingested via load-references (or on startup if reload-content-on-startup is true)
   urls:
     - https://docs.embabel.com/embabel-agent/guide/0.3.5-SNAPSHOT/
+    - https://raw.githubusercontent.com/liberation-data/drivine4j/refs/heads/main/README.md
     # @springrod blog posts
     - https://medium.com/@springrod/embabel-a-new-agent-platform-for-the-jvm-1c83402e0014
     - https://medium.com/@springrod/production-ready-gen-ai-beyond-the-python-prototype-439bf213a8c0

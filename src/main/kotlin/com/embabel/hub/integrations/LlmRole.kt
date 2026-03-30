@@ -10,4 +10,5 @@ enum class LlmRole(
     CHAT({ it.chatModel }),
     CLASSIFIER({ it.classifierModel }),
     NARRATOR({ it.narratorModel }),
+    TITLE({ it.summarizerModel }),
 }

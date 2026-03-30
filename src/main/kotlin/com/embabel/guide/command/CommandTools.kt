@@ -22,7 +22,7 @@ class CommandTools(
     fun changePersona(
         @ToolParam(description = "Name of the persona to switch to") name: String,
     ): String {
-        val personas = personaService.listPersonas()
+        val personas = personaService.listPersonasForUser(webUserId)
         val match = personas.find { it.name.equals(name, ignoreCase = true) }
             ?: return "Unknown persona '$name'. Available personas: ${personas.joinToString { it.name }}"
 

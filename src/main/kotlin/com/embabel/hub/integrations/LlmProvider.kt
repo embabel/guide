@@ -38,4 +38,5 @@ enum class LlmProvider(
         narratorModel = "deepseek-chat",
         summarizerModel = "deepseek-chat",
     ),
+
 }

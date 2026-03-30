@@ -309,6 +309,12 @@ class ChatActions(
         sendResponse(errorMessage, conversation, context)
     }
 
+    private fun formatPersonaList(userId: String): String =
+        personaService.listPersonasForUser(userId)
+            .joinToString("\n") { p ->
+                if (p.description != null) "- ${p.name}: ${p.description}" else "- ${p.name}"
+            }
+
     companion object {
         /**
          * Extracts a user-friendly error detail from an LLM exception.
@@ -352,12 +358,11 @@ class ChatActions(
                 append(m.role.name.lowercase()).append(": ").append(content).append("\n")
             }
         }
-        val personaNames = personaService.listPersonas().joinToString(", ") { it.name }
         val model = mutableMapOf<String, Any>().apply {
             putAll(templateModel)
             put("conversationContext", conversationContext)
             put("userMessage", userMessage)
-            put("personaNames", personaNames)
+            put("personaList", formatPersonaList(guideUser.core.id))
         }
         return userLlmResolver.resolve(context, guideUser.id, LlmRole.CLASSIFIER)
             .rendering("classifier")
@@ -382,6 +387,7 @@ class ChatActions(
         val model = mutableMapOf<String, Any>().apply {
             putAll(templateModel)
             put("userMessage", userMessage)
+            put("personaList", formatPersonaList(guideUser.core.id))
         }
         return userLlmResolver.resolve(context, guideUser.id, LlmRole.CLASSIFIER)
             .withToolObject(tools)

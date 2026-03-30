@@ -1,0 +1,5 @@
+# Minimal references for tests — one small repo to avoid slow clone times
+- fqn: com.embabel.coding.tools.git.GitHubRepository
+  url: https://github.com/embabel/embabel-agent-examples.git
+  description: >
+    Embabel examples Repository
