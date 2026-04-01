@@ -60,6 +60,7 @@ jobs:
       - name: Start guide with auto-seed
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: dummy-key
         run: |
           java \
             -DNEO4J_URI=bolt://localhost:7687 \
