@@ -19,7 +19,7 @@ as documentation, relevant blogs and other content, and up-to-the-minute API inf
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=hY6ZFMIJdd4">
-    <img src="https://img.youtube.com/vi/hY6ZFMIJdd4/hqdefault.jpg" alt="The Voice, The Word, and The Wheel" width="700">
+    <img src="./guide-demo.png" alt="The Voice, The Word, and The Wheel" width="700">
   </a>
 </p>
 
