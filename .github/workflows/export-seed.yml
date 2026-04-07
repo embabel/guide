@@ -57,7 +57,7 @@ jobs:
           echo "model.onnx: $(du -h "$MODEL_DIR/model.onnx" | cut -f1)"
           echo "tokenizer.json: $(du -h "$MODEL_DIR/tokenizer.json" | cut -f1)"
 
-      - name: Start guide with auto-seed
+      - name: Start guide
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: dummy-key
@@ -66,28 +66,39 @@ jobs:
             -DNEO4J_URI=bolt://localhost:7687 \
             -DNEO4J_USERNAME=neo4j \
             -DNEO4J_PASSWORD=testpassword \
-            -Dguide.reload-content-on-startup=true \
             -jar target/*.jar > /tmp/guide.log 2>&1 &
           echo "GUIDE_PID=$!" >> $GITHUB_ENV
 
-      - name: Wait for guide to be ready (ingestion completes in constructor)
+      - name: Wait for guide to be ready
         run: |
-          echo "Waiting for guide to start and finish ingestion..."
-          for i in $(seq 1 120); do
+          echo "Waiting for guide to start..."
+          for i in $(seq 1 60); do
             HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:1337/api/v1/data/stats 2>/dev/null || echo "000")
             if [ "$HTTP_CODE" = "200" ]; then
-              echo "Guide is ready after ~${i}0 seconds (HTTP $HTTP_CODE)"
+              echo "Guide is ready after ~${i}0 seconds"
               exit 0
             fi
-            # Show recent log output for progress
             echo "--- Attempt $i (${i}0s elapsed) HTTP=$HTTP_CODE ---"
             tail -5 /tmp/guide.log 2>/dev/null || true
             sleep 10
           done
-          echo "ERROR: Guide did not become ready within 20 minutes"
-          echo "=== Full guide log ==="
+          echo "ERROR: Guide did not start within 10 minutes"
           cat /tmp/guide.log
           exit 1
+        timeout-minutes: 12
+
+      - name: Trigger ingestion and wait for completion
+        run: |
+          echo "Triggering ingestion via load-references endpoint..."
+          HTTP_CODE=$(curl -s -o /tmp/ingestion-response.txt -w "%{http_code}" \
+            -X POST http://localhost:1337/api/v1/data/load-references)
+          echo "Ingestion completed with HTTP $HTTP_CODE"
+          cat /tmp/ingestion-response.txt
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "ERROR: Ingestion failed"
+            tail -100 /tmp/guide.log
+            exit 1
+          fi
         timeout-minutes: 25
 
       - name: Tag all nodes with managedBy
