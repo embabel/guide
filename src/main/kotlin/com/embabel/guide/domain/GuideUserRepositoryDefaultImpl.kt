@@ -64,6 +64,27 @@ class GuideUserRepositoryDefaultImpl(
     }
 
     @Transactional(readOnly = true)
+    override fun findByOAuthProvider(provider: String, providerUserId: String): Optional<GuideUser> {
+        val results = graphObjectManager.loadAll<GuideUser> {
+            where {
+                oauthProviders.provider eq provider
+                oauthProviders.providerUserId eq providerUserId
+            }
+        }
+        return Optional.ofNullable(results.firstOrNull())
+    }
+
+    @Transactional(readOnly = true)
+    override fun findByEmailVerificationToken(token: String): Optional<GuideUser> {
+        val results = graphObjectManager.loadAll<GuideUser> {
+            where {
+                webUser.emailVerificationToken eq token
+            }
+        }
+        return Optional.ofNullable(results.firstOrNull())
+    }
+
+    @Transactional(readOnly = true)
     override fun findById(id: String): Optional<GuideUser> {
         return Optional.ofNullable(graphObjectManager.load<GuideUser>(id))
     }

@@ -123,6 +123,14 @@ class GuideUserService(
         return guideUserRepository.findByWebUserEmail(userEmail)
     }
 
+    fun findByOAuthProvider(provider: String, providerUserId: String): Optional<GuideUser> {
+        return guideUserRepository.findByOAuthProvider(provider, providerUserId)
+    }
+
+    fun findByEmailVerificationToken(token: String): Optional<GuideUser> {
+        return guideUserRepository.findByEmailVerificationToken(token)
+    }
+
     /**
      * Updates the persona for a user.
      *

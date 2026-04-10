@@ -93,6 +93,7 @@ class SecurityConfig(
                     "/api/hub/refresh",
                     "/api/v1/data/load-references",
                     "/api/hub/integrations/keys/validate",
+                    "/api/hub/oauth/*/callback",
                 ).permitAll()
                 it.requestMatchers(
                     HttpMethod.GET,
@@ -100,7 +101,9 @@ class SecurityConfig(
                     "/api/hub/personas",
                     "/api/hub/sessions",
                     "/api/v1/data/stats",
-                    "/api/v1/deepgram/models"
+                    "/api/v1/deepgram/models",
+                    "/api/hub/oauth/*/authorize",
+                    "/api/hub/email/verify",
                 ).permitAll()
                 it.anyRequest().authenticated()
             }

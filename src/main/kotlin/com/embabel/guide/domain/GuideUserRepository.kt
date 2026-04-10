@@ -34,6 +34,16 @@ interface GuideUserRepository {
     fun findByWebUserEmail(userEmail: String): Optional<GuideUser>
 
     /**
+     * Find a GuideUser by OAuth provider and provider user ID
+     */
+    fun findByOAuthProvider(provider: String, providerUserId: String): Optional<GuideUser>
+
+    /**
+     * Find a GuideUser by email verification token
+     */
+    fun findByEmailVerificationToken(token: String): Optional<GuideUser>
+
+    /**
      * Find a GuideUser by ID
      */
     fun findById(id: String): Optional<GuideUser>

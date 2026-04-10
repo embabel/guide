@@ -1,5 +1,6 @@
 package com.embabel.hub
 
+import com.embabel.hub.oauth.OAuthException
 import jakarta.servlet.http.HttpServletRequest
 import org.drivine.DrivineException
 import org.springframework.core.annotation.Order
@@ -37,6 +38,10 @@ class HubExceptionHandler {
     @ExceptionHandler(ForbiddenException::class)
     fun handleForbiddenException(ex: ForbiddenException, request: HttpServletRequest) =
         buildResponse(HttpStatus.FORBIDDEN, ex.message, request)
+
+    @ExceptionHandler(OAuthException::class)
+    fun handleOAuthException(ex: OAuthException, request: HttpServletRequest) =
+        buildResponse(HttpStatus.BAD_REQUEST, ex.message, request)
 
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgumentException(ex: IllegalArgumentException, request: HttpServletRequest) =

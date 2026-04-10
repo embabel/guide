@@ -21,4 +21,5 @@ data class LoginResponse(
     val displayName: String,
     val email: String,
     val persona: String,
+    val emailVerified: Boolean = false,
 )

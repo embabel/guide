@@ -6,6 +6,7 @@ import com.embabel.guide.domain.GuideUserCache
 import com.embabel.guide.domain.GuideUserService
 import com.embabel.guide.domain.WebUserData
 import com.embabel.chat.store.util.UUIDv7
+import com.embabel.hub.email.EmailService
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Service
 
@@ -16,6 +17,7 @@ class HubService(
     private val welcomeGreeter: WelcomeGreeter,
     private val chatSessionService: ChatSessionService,
     private val guideUserCache: GuideUserCache,
+    private val emailService: EmailService,
 ) {
 
     private val passwordEncoder = BCryptPasswordEncoder()
@@ -79,7 +81,12 @@ class HubService(
         )
 
         // Save the user through GuideUserService
-        return guideUserService.saveFromWebUser(webUser)
+        val savedUser = guideUserService.saveFromWebUser(webUser)
+
+        // Send verification email (non-blocking, failure doesn't prevent registration)
+        emailService.sendVerificationEmail(webUser.id, request.userEmail)
+
+        return savedUser
     }
 
     /**
@@ -125,7 +132,8 @@ class HubService(
             username = webUser.userName,
             displayName = webUser.displayName,
             email = webUser.userEmail ?: "",
-            persona = guideUser.persona.id
+            persona = guideUser.persona.id,
+            emailVerified = webUser.emailVerified,
         )
     }
 

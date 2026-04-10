@@ -22,6 +22,9 @@ data class GuideUser(
     @GraphRelationship(type = "IS_DISCORD_USER", direction = Direction.OUTGOING)
     val discordUserInfo: DiscordUserInfoData? = null,
 
+    @GraphRelationship(type = "HAS_OAUTH_PROVIDER", direction = Direction.OUTGOING)
+    val oauthProviders: List<OAuthProviderData> = emptyList(),
+
     @GraphRelationship(type = "USES_PERSONA", direction = Direction.OUTGOING)
     val persona: PersonaData,
 ) : User, HasGuideUserData {

@@ -16,7 +16,10 @@ open class WebUserData(
     var userName: String,
     var userEmail: String?,
     var passwordHash: String?,
-    var refreshToken: String?
+    var refreshToken: String?,
+    var emailVerified: Boolean = false,
+    var emailVerificationToken: String? = null,
+    var emailVerificationExpiry: java.time.Instant? = null,
 ) {
     override fun toString(): String =
         "WebUserData{userId='$id', userDisplayName='$displayName', userUsername='$userName'}"
