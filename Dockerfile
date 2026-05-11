@@ -19,4 +19,9 @@ COPY guide-app.jar app.jar
 
 EXPOSE 1337
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", \
+  "-XX:+UseContainerSupport", \
+  "-XX:MaxRAMPercentage=75.0", \
+  "-XX:+UseG1GC", \
+  "-XX:+ParallelRefProcEnabled", \
+  "-jar", "app.jar"]

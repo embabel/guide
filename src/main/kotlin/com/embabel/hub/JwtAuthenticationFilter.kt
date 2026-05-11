@@ -27,6 +27,16 @@ class JwtAuthenticationFilter(
     private val objectMapper: ObjectMapper
 ) : OncePerRequestFilter() {
 
+    override fun shouldNotFilter(request: HttpServletRequest): Boolean {
+        // SockJS/WebSocket paths handle JWT validation themselves in
+        // AnonymousPrincipalHandshakeHandler (token in query param or header).
+        // Running the filter here would 401 the /ws/info poll on an expired
+        // token and break the SockJS handshake before it can fall back to
+        // anonymous.
+        val uri = request.requestURI
+        return uri == "/ws" || uri.startsWith("/ws/")
+    }
+
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
