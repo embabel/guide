@@ -22,6 +22,7 @@ class WebConfig(
         "http://localhost:6274",      // MCP Inspector (npx)
         "https://embabel.com",        // Production domain
         "https://www.embabel.com",    // Production domain with www
+        "https://hub.embabel.com",    // Embabel Hub
         "app://-"                     // Electron/Tauri app
     )
 
