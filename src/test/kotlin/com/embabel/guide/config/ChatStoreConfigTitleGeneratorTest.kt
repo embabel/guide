@@ -28,7 +28,7 @@ class ChatStoreConfigTitleGeneratorTest {
 
     private val userKeyStore = mock(UserKeyStore::class.java)
     private val userModelFactory = mock(UserModelFactory::class.java)
-    private val guideUserCache = GuideUserCache()
+    private val guideUserCache = GuideUserCache(ttlSeconds = 300L)
     private val guideUserService = mock(GuideUserService::class.java)
 
     private val titleGenerator = ChatStoreConfig().titleGenerator(
