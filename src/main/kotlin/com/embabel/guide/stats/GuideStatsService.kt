@@ -78,7 +78,8 @@ class GuideStatsService(
                     WITH u, count(m) AS messageCount
                     ORDER BY messageCount DESC
                     LIMIT $TOP_USERS_LIMIT
-                    RETURN coalesce(u.username, u.id) AS displayName, messageCount
+                    // Single-map projection: .transform<T>() maps one map/scalar per row, not multiple columns.
+                    RETURN { displayName: coalesce(u.username, u.id), messageCount: messageCount } AS user
                     """.trimIndent()
                 )
                 .bind(mapOf("since" to since)) // Instant -> ZonedDateTime, matching how createdAt is stored
