@@ -71,7 +71,10 @@ class GuideStatsService(
                 .withStatement(
                     """
                     MATCH (u:GuideUser)<-[:OWNED_BY]-(:ChatSession)-[:HAS_MESSAGE]->(m:StoredMessage)
-                    WHERE m.role = 'USER' AND m.createdAt >= ${'$'}since
+                    // datetime() parses createdAt: drivine currently persists Instant as an ISO
+                    // STRING, so a bare `>=` against a temporal param silently matches nothing.
+                    // Idempotent if drivine is later fixed to store native temporals.
+                    WHERE m.role = 'USER' AND datetime(m.createdAt) >= ${'$'}since
                     WITH u, count(m) AS messageCount
                     ORDER BY messageCount DESC
                     LIMIT $TOP_USERS_LIMIT
