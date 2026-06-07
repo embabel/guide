@@ -71,9 +71,11 @@ class GuideStatsService(
                 .withStatement(
                     """
                     MATCH (u:GuideUser)<-[:OWNED_BY]-(:ChatSession)-[:HAS_MESSAGE]->(m:StoredMessage)
-                    // datetime() parses createdAt: drivine currently persists Instant as an ISO
-                    // STRING, so a bare `>=` against a temporal param silently matches nothing.
-                    // Idempotent if drivine is later fixed to store native temporals.
+                    // datetime() wrap tolerates legacy rows where createdAt was persisted as an ISO
+                    // STRING (drivine <= 0.0.44). drivine 0.0.45 writes native temporals, and the
+                    // 06-migrate-string-dates.cypher seed converts old rows — once that has run in all
+                    // environments this wrap is redundant (idempotent on a native datetime) and may be
+                    // dropped, ideally alongside a range index on StoredMessage.createdAt.
                     WHERE m.role = 'USER' AND datetime(m.createdAt) >= ${'$'}since
                     WITH u, count(m) AS messageCount
                     ORDER BY messageCount DESC
