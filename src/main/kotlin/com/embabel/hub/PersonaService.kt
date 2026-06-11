@@ -2,6 +2,7 @@ package com.embabel.hub
 
 import com.embabel.guide.domain.GuideUserCache
 import com.embabel.guide.domain.GuideUserRepository
+import com.embabel.guide.domain.GuideUserService
 import com.embabel.guide.domain.PersonaRepository
 import com.embabel.guide.domain.PersonaRepository.Companion.SYSTEM_OWNER_ID
 import com.embabel.guide.domain.PersonaView
@@ -38,13 +39,22 @@ class PersonaService(
 
     /**
      * Looks up the prompt text for a persona by ID. Cache-first.
+     *
+     * If the persona can't be resolved — e.g. it points at a retired persona that has since been
+     * deleted (see the `07-retire-personas` migration) — falls back to the system "adaptive"
+     * persona so chat doesn't break.
      */
     fun findPrompt(personaId: String): String? {
         personaPromptCache.get(personaId)?.let { return it }
-        val prompt = personaRepository.findById(personaId)?.persona?.prompt ?: return null
+        val prompt = personaRepository.findById(personaId)?.persona?.prompt
+            ?: adaptivePrompt()
+            ?: return null
         personaPromptCache.put(personaId, prompt)
         return prompt
     }
+
+    private fun adaptivePrompt(): String? =
+        personaRepository.findByNameAndOwner(GuideUserService.DEFAULT_PERSONA_NAME, SYSTEM_OWNER_ID)?.persona?.prompt
 
     /**
      * Resolves a web user ID to the internal GuideUser ID.
