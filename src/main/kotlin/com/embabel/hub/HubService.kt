@@ -114,7 +114,13 @@ class HubService(
         val webUser = guideUser.webUser
             ?: throw LoginException("Invalid username or password")
 
-        if (!passwordEncoder.matches(request.password, webUser.passwordHash)) {
+        // OAuth-only accounts have no password and must not be reachable via password login —
+        // reject explicitly rather than relying on the encoder returning false for a null hash.
+        // Generic message to avoid revealing that the account exists / is OAuth-only.
+        val passwordHash = webUser.passwordHash
+            ?: throw LoginException("Invalid username or password")
+
+        if (!passwordEncoder.matches(request.password, passwordHash)) {
             throw LoginException("Invalid username or password")
         }
 
@@ -134,6 +140,7 @@ class HubService(
             email = webUser.userEmail ?: "",
             persona = guideUser.persona.id,
             emailVerified = webUser.emailVerified,
+            hasPassword = webUser.passwordHash != null,
         )
     }
 
@@ -154,19 +161,18 @@ class HubService(
     }
 
     /**
-     * Changes the password for a user.
+     * Sets or changes the password for a user.
      *
-     * Validates the current password, ensures the new password meets requirements,
-     * and updates the password hash.
+     * For an account that already has a password, the current password is verified and the new
+     * password must differ. For an OAuth-only account (no password yet), this sets the first
+     * password — no current password is required, since the active authenticated session is the
+     * authorization.
      *
      * @param userId the user's ID (from authentication)
      * @param request the change password request
      * @throws ChangePasswordException if validation fails
      */
     fun changePassword(userId: String, request: ChangePasswordRequest) {
-        if (request.currentPassword.isBlank()) {
-            throw ChangePasswordException("Current password is required")
-        }
         if (request.newPassword.isBlank()) {
             throw ChangePasswordException("New password is required")
         }
@@ -185,21 +191,24 @@ class HubService(
         val webUser = guideUser.webUser
             ?: throw ChangePasswordException("User not found")
 
-        if (!passwordEncoder.matches(request.currentPassword, webUser.passwordHash)) {
-            throw ChangePasswordException("Current password is incorrect")
+        // Changing an existing password requires verifying the current one; setting the first
+        // password (OAuth-only account) does not.
+        if (webUser.passwordHash != null) {
+            val currentPassword = request.currentPassword
+            if (currentPassword.isNullOrBlank()) {
+                throw ChangePasswordException("Current password is required")
+            }
+            if (!passwordEncoder.matches(currentPassword, webUser.passwordHash)) {
+                throw ChangePasswordException("Current password is incorrect")
+            }
+            if (passwordEncoder.matches(request.newPassword, webUser.passwordHash)) {
+                throw ChangePasswordException("New password must be different from current password")
+            }
         }
 
-        // Check that new password is different from current
-        if (passwordEncoder.matches(request.newPassword, webUser.passwordHash)) {
-            throw ChangePasswordException("New password must be different from current password")
-        }
-
-        val newPasswordHash = passwordEncoder.encode(request.newPassword)
-        webUser.passwordHash = newPasswordHash
-
-        // TODO: We need a method to update the WebUserData in the repository
-        // For now, this is a limitation we'll address
-        throw ChangePasswordException("Password change not yet implemented with new data model")
+        webUser.passwordHash = passwordEncoder.encode(request.newPassword)
+        guideUserService.saveUser(guideUser)
+        guideUserCache.invalidate(userId)
     }
 
 }

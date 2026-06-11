@@ -12,6 +12,7 @@ import java.time.Instant
  * @property displayName The user's display name
  * @property email The user's email address
  * @property persona The user's selected persona ID
+ * @property hasPassword Whether the account has a password set (false for OAuth-only users)
  */
 data class LoginResponse(
     val token: String,
@@ -22,4 +23,5 @@ data class LoginResponse(
     val email: String,
     val persona: String,
     val emailVerified: Boolean = false,
+    val hasPassword: Boolean = false,
 )

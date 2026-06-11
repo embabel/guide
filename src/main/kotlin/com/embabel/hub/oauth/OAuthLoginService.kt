@@ -103,6 +103,7 @@ class OAuthLoginService(
             email = webUser.userEmail ?: "",
             persona = personaId,
             emailVerified = webUser.emailVerified,
+            hasPassword = webUser.passwordHash != null,
         )
     }
 
