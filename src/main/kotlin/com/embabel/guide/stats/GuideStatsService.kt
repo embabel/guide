@@ -43,11 +43,20 @@ class GuideStatsService(
     @Transactional(readOnly = true)
     fun stats(webUserId: String?): GuideStats {
         val content = dataManager.stats
+        // Page rankings are public: split the eligible pages so the weightier side decides the list
+        // (ties land in neither). Both lists go to everyone, admin or not.
+        val ratings = pageRatings()
+        val popularPages = ratings.filter { it.likes > it.dislikes }
+            .sortedByDescending { it.likes }.take(TOP_PAGES_LIMIT)
+        val unpopularPages = ratings.filter { it.dislikes > it.likes }
+            .sortedByDescending { it.dislikes }.take(TOP_PAGES_LIMIT)
         if (!isAdmin(webUserId)) {
-            return GuideStats(content = content)
+            return GuideStats(content = content, popularPages = popularPages, unpopularPages = unpopularPages)
         }
         return GuideStats(
             content = content,
+            popularPages = popularPages,
+            unpopularPages = unpopularPages,
             userCount = graphObjectManager.count(GuideUserData::class.java),
             onlineCount = presenceService.onlineUsers().size,
             messageCount = graphObjectManager.count(MessageData::class.java),
@@ -88,8 +97,33 @@ class GuideStatsService(
                 .transform<TopMessagingUser>()
         )
 
+    /**
+     * Every page with at least [FEEDBACK_MIN_VOTES] total votes, with its like/dislike tallies.
+     * Filtering by total volume here keeps a page with a single vote off the rankings; the caller
+     * decides which side a page falls on and how many to show.
+     */
+    private fun pageRatings(): List<PageRating> =
+        persistenceManager.query(
+            QuerySpecification
+                .withStatement(
+                    """
+                    MATCH (f:Feedback)
+                    WITH f.page AS page,
+                         sum(CASE WHEN f.helpful THEN 1 ELSE 0 END) AS likes,
+                         sum(CASE WHEN f.helpful THEN 0 ELSE 1 END) AS dislikes
+                    WHERE likes + dislikes >= ${'$'}minVotes
+                    // Single-map projection: .transform<T>() maps one map/scalar per row, not multiple columns.
+                    RETURN { page: page, likes: likes, dislikes: dislikes } AS row
+                    """.trimIndent()
+                )
+                .bind(mapOf("minVotes" to FEEDBACK_MIN_VOTES))
+                .transform<PageRating>()
+        )
+
     companion object {
         const val ADMIN_ROLE = "ADMIN"
         const val TOP_USERS_LIMIT = 5
+        const val TOP_PAGES_LIMIT = 5
+        const val FEEDBACK_MIN_VOTES = 5
     }
 }
