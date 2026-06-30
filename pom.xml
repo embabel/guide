@@ -18,7 +18,7 @@
 
     <properties>
         <java.version>21</java.version>
-        <embabel-agent.version>0.4.0-SNAPSHOT</embabel-agent.version>
+        <embabel-agent.version>1.0.0-RC1-SNAPSHOT</embabel-agent.version>
         <spring-ai.version>1.1.1</spring-ai.version>
         <kotlin.version>2.2.0</kotlin.version>
     </properties>
@@ -65,7 +65,7 @@
         </dependency>
         <dependency>
             <groupId>com.embabel.agent</groupId>
-            <artifactId>embabel-agent-anthropic-autoconfigure</artifactId>
+            <artifactId>embabel-agent-anthropic</artifactId>
             <version>${embabel-agent.version}</version>
         </dependency>
 

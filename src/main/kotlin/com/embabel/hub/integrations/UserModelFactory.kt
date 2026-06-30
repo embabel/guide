@@ -3,7 +3,7 @@ package com.embabel.hub.integrations
 import com.embabel.agent.api.models.DeepSeekModels
 import com.embabel.agent.api.models.MistralAiModels
 import com.embabel.agent.api.models.OpenAiModels
-import com.embabel.agent.config.models.anthropic.AnthropicModelFactory
+import com.embabel.agent.anthropic.AnthropicModelFactory
 import com.embabel.agent.openai.OpenAiCompatibleModelFactory
 import com.embabel.common.byok.InvalidApiKeyException
 import com.embabel.agent.spi.LlmService
