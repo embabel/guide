@@ -10,12 +10,23 @@
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 ![IntelliJ IDEA](https://img.shields.io/badge/IntelliJIDEA-000000.svg?style=for-the-badge&logo=intellij-idea&logoColor=white)
 
-# Embabel Guide : Chat and MCP Server
+# [Embabel Guide : Chat and MCP Server](https://hub.embabel.com)
 
-<img src="https://github.com/embabel/embabel-agent/blob/main/embabel-agent-api/images/315px-Meister_der_Weltenchronik_001.jpg?raw=true" width="180">
+<a href="https://hub.embabel.com"><img align="left" src="https://github.com/embabel/embabel-agent/blob/main/embabel-agent-api/images/315px-Meister_der_Weltenchronik_001.jpg?raw=true" width="180"></a>
 
 Guide exposes resources relating to the Embabel Agent Framework, such
 as documentation, relevant blogs and other content, and up-to-the-minute API information.
+
+This repository is the backend for [Embabel Hub](https://hub.embabel.com) — the Guide powers the
+natural-language "Talk to the Docs" experience there.
+
+&nbsp;
+
+## Links
+
+- [Embabel Hub](https://hub.embabel.com) — talk to the docs, powered by this Guide
+- [Embabel Agent Framework](https://github.com/embabel/embabel-agent)
+- [Documentation](https://docs.embabel.com)
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=hY6ZFMIJdd4" target="_blank">
