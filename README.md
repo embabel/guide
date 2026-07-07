@@ -1,26 +1,16 @@
-![Build](https://github.com/embabel/embabel-agent/actions/workflows/maven.yml/badge.svg)
+<a href="https://hub.embabel.com"><img align="left" src="logo.png" width="180"></a>
 
-![Java](https://img.shields.io/badge/java-%23ED8B00.svg?style=for-the-badge&logo=openjdk&logoColor=white)
-![Spring](https://img.shields.io/badge/spring-%236DB33F.svg?style=for-the-badge&logo=spring&logoColor=white)
-![Apache Tomcat](https://img.shields.io/badge/apache%20tomcat-%23F8DC75.svg?style=for-the-badge&logo=apache-tomcat&logoColor=black)
-![Apache Maven](https://img.shields.io/badge/Apache%20Maven-C71A36?style=for-the-badge&logo=Apache%20Maven&logoColor=white)
-![ChatGPT](https://img.shields.io/badge/chatGPT-74aa9c?style=for-the-badge&logo=openai&logoColor=white)
-![JSON](https://img.shields.io/badge/JSON-000?logo=json&logoColor=fff)
-![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)
-![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
-![IntelliJ IDEA](https://img.shields.io/badge/IntelliJIDEA-000000.svg?style=for-the-badge&logo=intellij-idea&logoColor=white)
+### **Embabel Guide : Chat and MCP Server**
 
-# [Embabel Guide : Chat and MCP Server](https://hub.embabel.com)
+![Build](https://github.com/embabel/embabel-agent/actions/workflows/maven.yml/badge.svg) [![Embabel](https://img.shields.io/badge/Embabel-Agent_Framework-6C3483?style=for-the-badge)](https://github.com/embabel/embabel-agent) ![Java](https://img.shields.io/badge/java-%23ED8B00.svg?style=for-the-badge&logo=openjdk&logoColor=white) ![Spring](https://img.shields.io/badge/spring-%236DB33F.svg?style=for-the-badge&logo=spring&logoColor=white) ![Apache Maven](https://img.shields.io/badge/Apache%20Maven-C71A36?style=for-the-badge&logo=Apache%20Maven&logoColor=white) ![ChatGPT](https://img.shields.io/badge/chatGPT-74aa9c?style=for-the-badge&logo=openai&logoColor=white) ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 
-<a href="https://hub.embabel.com"><img align="left" src="https://github.com/embabel/embabel-agent/blob/main/embabel-agent-api/images/315px-Meister_der_Weltenchronik_001.jpg?raw=true" width="180"></a>
+<br clear="left"/>
 
 Guide exposes resources relating to the Embabel Agent Framework, such
 as documentation, relevant blogs and other content, and up-to-the-minute API information.
 
 This repository is the backend for [Embabel Hub](https://hub.embabel.com) — the Guide powers the
 natural-language "Talk to the Docs" experience there.
-
-&nbsp;
 
 ## Links
 
