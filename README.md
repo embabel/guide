@@ -1,4 +1,4 @@
-<a href="https://hub.embabel.com"><img align="left" src="logo.png" width="180"></a>
+<a href="https://hub.embabel.com"><img align="left" src="logo.png" width="240"></a>
 
 ### **Embabel Guide : Chat and MCP Server**
 
