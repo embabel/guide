@@ -16,7 +16,6 @@ natural-language "Talk to the Docs" experience there.
 
 - [Embabel Hub](https://hub.embabel.com) — talk to the docs, powered by this Guide
 - [Embabel Agent Framework](https://github.com/embabel/embabel-agent)
-- [Documentation](https://docs.embabel.com)
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=hY6ZFMIJdd4" target="_blank">
