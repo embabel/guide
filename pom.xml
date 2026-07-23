@@ -17,10 +17,13 @@
     <description>Embabel chatbot</description>
 
     <properties>
+        <!-- Bytecode target, NOT the build JDK. The toolchain (Kotlin 2.3.x, Gradle 9.x,
+             JaCoCo 0.8.15) builds on JDK 21 through 25; keeping the target at 21 means the
+             artifact runs on any JRE 21+. Raise this only when dropping Java 21 support. -->
         <java.version>21</java.version>
         <embabel-agent.version>1.0.0-RC1-SNAPSHOT</embabel-agent.version>
         <spring-ai.version>1.1.1</spring-ai.version>
-        <kotlin.version>2.2.0</kotlin.version>
+        <kotlin.version>2.3.21</kotlin.version>
     </properties>
 
     <dependencies>
@@ -335,7 +338,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.12</version>
+                <version>0.8.15</version>
                 <executions>
                     <execution>
                         <id>prepare-agent</id>

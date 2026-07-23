@@ -20,13 +20,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    # The pom targets Java 21 bytecode but the toolchain builds on 21 through 25.
+    # Testing on both proves that stays true; 25 is the JDK the container image runs.
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['21', '25']
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      - name: Set up JDK ${{ matrix.java }}
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: ${{ matrix.java }}
           distribution: 'temurin'
           cache: maven
 
@@ -58,10 +65,11 @@ jobs:
         run: mvn -U -B jacoco:report
         continue-on-error: true
 
-      # Publish test results as check run annotations
+      # Publish test results as check run annotations.
+      # Only from the 25 leg - two legs would race to create the same check run.
       - name: Publish Test Results
         uses: dorny/test-reporter@v1
-        if: always() && github.ref == 'refs/heads/main'
+        if: always() && github.ref == 'refs/heads/main' && matrix.java == '25'
         with:
           name: Test Results
           path: target/surefire-reports/*.xml
@@ -73,16 +81,17 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-reports
+          name: test-reports-java${{ matrix.java }}
           path: |
             target/surefire-reports/
             target/site/jacoco/
           retention-days: 14
 
-      # Upload coverage to Codecov (optional - requires CODECOV_TOKEN secret)
+      # Upload coverage to Codecov (optional - requires CODECOV_TOKEN secret).
+      # One leg only - both produce identical coverage.
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v4
-        if: always()
+        if: always() && matrix.java == '25'
         continue-on-error: true
         with:
           files: target/site/jacoco/jacoco.xml

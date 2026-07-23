@@ -1,7 +1,8 @@
 // Gradle build for Drivine KSP code generation
 //
 // Why: Maven's third-party KSP plugin (kotlin-maven-symbol-processing) hasn't been
-// updated for Kotlin 2.2.0 yet. This Gradle build is a workaround to generate Drivine DSL code.
+// updated for current Kotlin releases yet. This Gradle build is a workaround to generate Drivine DSL code.
+// Keep the Kotlin version here in sync with ${kotlin.version} in the parent pom.
 //
 // How it works:
 // 1. This Gradle build runs KSP on the domain classes
@@ -11,8 +12,8 @@
 // To run code generation: ./gradlew kspKotlin
 
 plugins {
-    kotlin("jvm") version "2.2.0"
-    id("com.google.devtools.ksp") version "2.2.20-2.0.4"
+    kotlin("jvm") version "2.3.21"
+    id("com.google.devtools.ksp") version "2.3.10"
 }
 
 group = "com.embabel.guide"

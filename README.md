@@ -439,8 +439,8 @@ The Dockerfile uses a multi-stage build that compiles the application from sourc
 - ⚠️ First build takes ~2-3 minutes (Maven compilation inside Docker)
 
 The build process:
-1. Stage 1: Uses `maven:3.9.9-eclipse-temurin-21` to compile the application
-2. Stage 2: Uses lightweight `eclipse-temurin:21-jre-jammy` runtime image with the compiled JAR
+1. Stage 1: Uses `maven:3.9-eclipse-temurin-25` to compile the application
+2. Stage 2: Uses lightweight `eclipse-temurin:25-jre-jammy` runtime image with the compiled JAR
 
 This approach ensures consistency across environments and simplifies onboarding for new contributors.
 
@@ -552,6 +552,11 @@ export OPENAI_API_KEY=sk-your-key-here
 ```
 
 2. **Neo4j**: See the [Local vs CI Testing](#local-vs-ci-testing) section below.
+
+3. **A JDK between 21 and 25**. The build targets Java 21 bytecode, so the resulting jar
+   runs on any JRE 21+, but it builds on anything up to 25 — CI runs the suite on both 21
+   and 25. If you raise `<java.version>` in the pom, note that Kotlin must be 2.3.0+ to
+   target 25 at all, and the `codegen-gradle` Kotlin version has to move with it.
 
 ### Local vs CI Testing
 
