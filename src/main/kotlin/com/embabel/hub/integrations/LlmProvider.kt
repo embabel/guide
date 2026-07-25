@@ -1,5 +1,7 @@
 package com.embabel.hub.integrations
 
+import com.embabel.agent.api.models.DeepSeekModels
+
 /**
  * Supported LLM providers for BYOK (Bring Your Own Key).
  * Each provider defines default models for each role in the Guide app.
@@ -33,10 +35,10 @@ enum class LlmProvider(
         validationModel = "mistral-small-latest",
     ),
     DEEPSEEK(
-        chatModel = "deepseek-chat",
-        classifierModel = "deepseek-chat",
-        narratorModel = "deepseek-chat",
-        summarizerModel = "deepseek-chat",
+        chatModel = DeepSeekModels.DEEPSEEK_V4_PRO,
+        classifierModel = DeepSeekModels.DEEPSEEK_V4_FLASH,
+        narratorModel = DeepSeekModels.DEEPSEEK_V4_FLASH,
+        summarizerModel = DeepSeekModels.DEEPSEEK_V4_FLASH,
     ),
 
 }
