@@ -21,10 +21,33 @@
              JaCoCo 0.8.15) builds on JDK 21 through 25; keeping the target at 21 means the
              artifact runs on any JRE 21+. Raise this only when dropping Java 21 support. -->
         <java.version>21</java.version>
-        <embabel-agent.version>1.0.0-RC1-SNAPSHOT</embabel-agent.version>
+        <embabel-agent.version>1.5.0-SNAPSHOT</embabel-agent.version>
         <spring-ai.version>1.1.1</spring-ai.version>
         <kotlin.version>2.3.21</kotlin.version>
     </properties>
+
+    <!-- Drivine 0.0.73 uses Jackson 2.21 APIs (e.g. com.fasterxml.jackson.annotation.JsonSerializeAs), but
+         Spring Boot 4 defaults to Jackson 3 and pins the Jackson 2.x line to 2.19.4. Bump Jackson 2 to 2.21
+         so drivine's self-owned Jackson 2 mapper resolves; it coexists with Boot 4's Jackson 3 (tools.jackson). -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>2.21.4</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>2.21.4</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>2.21</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
 
@@ -38,7 +61,7 @@
         <dependency>
             <groupId>com.embabel.agent</groupId>
             <artifactId>embabel-agent-rag-graph</artifactId>
-            <version>0.2.0-SNAPSHOT</version>
+            <version>0.3.0-SNAPSHOT</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.drivine</groupId>
@@ -50,14 +73,40 @@
         <dependency>
             <groupId>org.drivine</groupId>
             <artifactId>drivine4j-spring-boot-starter</artifactId>
-            <version>0.0.59</version>
+            <!-- 0.0.76 to match embabel-chat-store, which is built against it and references
+                 org.drivine.query.dsl.SeekBuilder — absent from 0.0.73, so an older pin here
+                 fails at bean introspection rather than at compile. -->
+            <version>0.0.76</version>
+        </dependency>
+
+        <!-- Jackson 2 Kotlin module. Spring Boot 4 brings Jackson 3 (tools.jackson namespace); drivine
+             and some of this app's own code use Jackson 2 (com.fasterxml). The two coexist by design, so
+             pin the v2 Kotlin module explicitly on the compile classpath. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.module</groupId>
+            <artifactId>jackson-module-kotlin</artifactId>
+            <version>2.21.4</version>
+        </dependency>
+
+        <!-- Spring AI 2.0 tool-calling autoconfig lives in its own module now; something imports
+             ToolCallingAutoConfiguration, so pull the module that provides it. -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-autoconfigure-model-tool</artifactId>
+            <version>2.0.0</version>
         </dependency>
 
         <!-- Chat session storage with autoconfiguration -->
         <dependency>
             <groupId>com.embabel.agent</groupId>
             <artifactId>embabel-agent-starter-chat-store</artifactId>
-            <version>0.2.1-SNAPSHOT</version>
+            <!-- 0.5.0 is the first build compiled against Drivine 0.0.73. Drivine added a nullPolicy
+                 parameter to GraphObjectManager.save, which changes the synthetic Kotlin default-args
+                 bridge (save$default) — a BINARY break, not a source one. Anything compiled against
+                 an older Drivine still compiles cleanly against the new jar and then throws
+                 NoSuchMethodError the first time a defaulted save() runs, which is what
+                 ChatSessionRepositoryImpl did on every session creation. -->
+            <version>0.5.0-SNAPSHOT</version>
         </dependency>
 
         <!-- Embabel BYOK factory classes (bring-your-own-key, no Spring Boot starters) -->
