@@ -114,7 +114,7 @@ spring:
     ansi:
       enabled: always
   profiles:
-    active: neo4j  # Change to 'neo4j', 'falkordb', 'memgraph', or 'default' for TestContainers
+    active: neo4j  # Change to 'neo4j', 'falkordb', 'memgraph', 'oracle', or 'default' for TestContainers
     config:
       activate:
         on-profile: neo4j
@@ -225,3 +225,23 @@ database:
       userName: ""
       password: ""
       databaseName: memgraph
+
+---
+# Oracle profile — activate with: spring.profiles.active=oracle
+# Oracle Database 23ai or later (docker compose --profile oracle up). Drivine reads the graph with
+# SQL/PGQ and makes its tables in this user's schema. The datasource keeps the name 'neo', which
+# the beans are qualified by.
+spring:
+  config:
+    activate:
+      on-profile: oracle
+
+database:
+  dataSources:
+    neo:
+      type: ORACLE
+      host: ${ORACLE_HOST:localhost}
+      port: ${ORACLE_PORT:1521}
+      userName: ${ORACLE_USERNAME:guide}
+      password: ${ORACLE_PASSWORD:brahmsian}
+      databaseName: ${ORACLE_SERVICE:FREEPDB1}
