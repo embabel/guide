@@ -159,7 +159,7 @@ class PersonaIngestionService(
                 )
             )
         )
-        val text = response.result.output.text ?: return ClassifyResponse(safe = false, reason = "Empty response from LLM.")
+        val text = response.result?.output?.text ?: return ClassifyResponse(safe = false, reason = "Empty response from LLM.")
         return try {
             // Strip markdown code fences if present
             val json = text.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()

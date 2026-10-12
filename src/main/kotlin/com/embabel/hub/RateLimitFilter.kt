@@ -5,7 +5,7 @@ import io.github.bucket4j.Bucket
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import org.springframework.boot.autoconfigure.security.SecurityProperties
+import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterProperties
 import org.springframework.core.annotation.Order
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Component
@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap
  * so that 429 responses still carry Access-Control-Allow-Origin headers.
  */
 @Component
-@Order(SecurityProperties.DEFAULT_FILTER_ORDER + 1)
+@Order(SecurityFilterProperties.DEFAULT_FILTER_ORDER + 1)
 class RateLimitFilter : OncePerRequestFilter() {
 
     private val globalBuckets = ConcurrentHashMap<String, Bucket>()

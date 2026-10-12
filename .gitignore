@@ -48,3 +48,9 @@ scripts/user-config/application-*.yml
 # Runtime artifacts
 *.pid
 guide-app.jar
+
+# Jackknife jar index (local tooling cache)
+.jackknife/
+
+# Scratch build output
+rock.out

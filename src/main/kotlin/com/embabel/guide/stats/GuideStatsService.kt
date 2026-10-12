@@ -6,7 +6,7 @@ import com.embabel.guide.domain.GuideUserCache
 import com.embabel.guide.domain.GuideUserData
 import com.embabel.guide.domain.GuideUserRepository
 import com.embabel.guide.rag.DataManager
-import org.drivine.manager.GraphObjectManager
+import org.drivine.manager.StatelessGraphObjectManager
 import org.drivine.manager.PersistenceManager
 import org.drivine.query.QuerySpecification
 import org.drivine.query.transform
@@ -33,7 +33,7 @@ class GuideStatsService(
     private val presenceService: PresenceService,
     private val guideUserCache: GuideUserCache,
     private val guideUserRepository: GuideUserRepository,
-    @param:Qualifier("neoGraphObjectManager") private val graphObjectManager: GraphObjectManager,
+    @param:Qualifier("neoGraphObjectManager") private val graphObjectManager: StatelessGraphObjectManager,
     @param:Qualifier("neo") private val persistenceManager: PersistenceManager,
 ) {
 

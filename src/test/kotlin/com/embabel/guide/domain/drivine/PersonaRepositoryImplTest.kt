@@ -3,7 +3,7 @@ package com.embabel.guide.domain.drivine
 import com.embabel.guide.Neo4jPropertiesInitializer
 import com.embabel.guide.domain.*
 import com.embabel.hub.AudioEffect
-import org.drivine.manager.GraphObjectManager
+import org.drivine.manager.StatelessGraphObjectManager
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -32,7 +32,7 @@ class PersonaRepositoryImplTest {
 
     @Autowired
     @Qualifier("neoGraphObjectManager")
-    private lateinit var graphObjectManager: GraphObjectManager
+    private lateinit var graphObjectManager: StatelessGraphObjectManager
 
     private lateinit var systemOwner: GuideUserData
     private lateinit var testUser: GuideUserData

@@ -17,7 +17,7 @@ package com.embabel;
 
 import org.drivine.autoconfigure.EnableDrivine;
 import org.drivine.autoconfigure.EnableDrivinePropertiesConfig;
-import org.drivine.manager.GraphObjectManager;
+import org.drivine.manager.StatelessGraphObjectManager;
 import org.drivine.manager.GraphObjectManagerFactory;
 import org.drivine.manager.PersistenceManager;
 import org.drivine.manager.PersistenceManagerFactory;
@@ -48,7 +48,7 @@ public class GuideApplication {
     }
 
     @Bean("neoGraphObjectManager")
-    public GraphObjectManager neoGraphObjectManager(GraphObjectManagerFactory factory) {
-        return factory.get("neo");
+    public StatelessGraphObjectManager neoGraphObjectManager(GraphObjectManagerFactory factory) {
+        return factory.stateless("neo");
     }
 }

@@ -84,6 +84,28 @@ services:
       - embabel-network
     restart: unless-stopped
 
+  # Oracle Free 23ai, for the `oracle` Spring profile. The image makes the user in FREEPDB1.
+  oracle:
+    profiles:
+      - oracle
+    image: gvenzl/oracle-free:${ORACLE_VERSION:-23-faststart}
+    container_name: embabel-oracle
+    ports:
+      - "${ORACLE_PORT:-1521}:1521"
+    environment:
+      - ORACLE_PASSWORD=${ORACLE_SYSTEM_PASSWORD:-brahmsian}
+      - APP_USER=${ORACLE_USERNAME:-guide}
+      - APP_USER_PASSWORD=${ORACLE_PASSWORD:-brahmsian}
+    volumes:
+      - oracle_data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      - embabel-network
+
   memgraph:
     profiles:
       - memgraph
@@ -134,6 +156,8 @@ volumes:
   neo4j_plugins:
     driver: local
   falkordb_data:
+    driver: local
+  oracle_data:
     driver: local
   memgraph_data:
     driver: local

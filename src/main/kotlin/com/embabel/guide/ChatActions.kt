@@ -5,7 +5,7 @@ import com.embabel.agent.api.annotation.EmbabelComponent
 import com.embabel.agent.api.common.ActionContext
 import com.embabel.agent.api.common.PromptRunner
 import com.embabel.agent.api.identity.User
-import com.embabel.agent.rag.graph.DrivineStore
+import com.embabel.agent.rag.graph.GraphRagStore
 import com.embabel.agent.filter.PropertyFilter
 import com.embabel.agent.rag.tools.ToolishRag
 import com.embabel.agent.rag.tools.TryHyDE
@@ -52,7 +52,7 @@ class ChatActions(
     private val guideUserRepository: GuideUserRepository,
     private val guideUserService: GuideUserService,
     private val guideUserCache: GuideUserCache,
-    private val drivineStore: DrivineStore,
+    private val drivineStore: GraphRagStore,
     private val guideProperties: GuideProperties,
     private val narrationCache: NarrationCache,
     private val narratorAgent: NarratorAgent,

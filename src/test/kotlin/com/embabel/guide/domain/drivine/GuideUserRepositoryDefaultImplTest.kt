@@ -17,7 +17,7 @@ package com.embabel.guide.domain.drivine
 
 import com.embabel.guide.Neo4jPropertiesInitializer
 import com.embabel.guide.domain.*
-import org.drivine.manager.GraphObjectManager
+import org.drivine.manager.StatelessGraphObjectManager
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -49,7 +49,7 @@ class GuideUserRepositoryDefaultImplTest {
 
     @Autowired
     @Qualifier("neoGraphObjectManager")
-    private lateinit var graphObjectManager: GraphObjectManager
+    private lateinit var graphObjectManager: StatelessGraphObjectManager
 
     private fun createPersona(name: String): PersonaData {
         return graphObjectManager.save(PersonaData(

@@ -48,7 +48,7 @@ guide:
     versioned:
       base-url: https://docs.embabel.com/embabel-agent/guide/
       versions:
-        - 0.4.0-SNAPSHOT
+        - 1.5.3
     supplementary:
       - https://raw.githubusercontent.com/liberation-data/drivine4j/refs/heads/main/README.md
       # @springrod blog posts
@@ -114,7 +114,7 @@ spring:
     ansi:
       enabled: always
   profiles:
-    active: neo4j  # Change to 'neo4j', 'falkordb', 'memgraph', or 'default' for TestContainers
+    active: neo4j  # Change to 'neo4j', 'falkordb', 'memgraph', 'oracle', or 'default' for TestContainers
     config:
       activate:
         on-profile: neo4j
@@ -169,7 +169,9 @@ logging:
     # Drivine logging
     org.drivine: WARN
     org.drivine.manager: DEBUG
+    org.drivine.logger: DEBUG          # drivine query statements (StatementLogger) — full Cypher + params
     org.drivine.transaction: WARN
+    com.embabel.agent.rag.graph: DEBUG # GraphObjectManagerStore provisioning / search
     # Chat store debugging
     com.embabel.chat.store: DEBUG
     # WebSocket and Chat logging
@@ -223,3 +225,23 @@ database:
       userName: ""
       password: ""
       databaseName: memgraph
+
+---
+# Oracle profile — activate with: spring.profiles.active=oracle
+# Oracle Database 23ai or later (docker compose --profile oracle up). Drivine reads the graph with
+# SQL/PGQ and makes its tables in this user's schema. The datasource keeps the name 'neo', which
+# the beans are qualified by.
+spring:
+  config:
+    activate:
+      on-profile: oracle
+
+database:
+  dataSources:
+    neo:
+      type: ORACLE
+      host: ${ORACLE_HOST:localhost}
+      port: ${ORACLE_PORT:1521}
+      userName: ${ORACLE_USERNAME:guide}
+      password: ${ORACLE_PASSWORD:brahmsian}
+      databaseName: ${ORACLE_SERVICE:FREEPDB1}

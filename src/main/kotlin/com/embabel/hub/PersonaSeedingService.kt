@@ -7,7 +7,7 @@ import com.embabel.guide.domain.PersonaRepository.Companion.SYSTEM_OWNER_ID
 import com.embabel.guide.domain.PersonaView
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import org.drivine.manager.GraphObjectManager
+import org.drivine.manager.StatelessGraphObjectManager
 import org.drivine.manager.load
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
@@ -27,7 +27,7 @@ import java.util.UUID
 @Service
 class PersonaSeedingService(
     private val personaRepository: PersonaRepository,
-    @Qualifier("neoGraphObjectManager") private val graphObjectManager: GraphObjectManager,
+    @Qualifier("neoGraphObjectManager") private val graphObjectManager: StatelessGraphObjectManager,
 ) {
 
     private val logger = LoggerFactory.getLogger(PersonaSeedingService::class.java)

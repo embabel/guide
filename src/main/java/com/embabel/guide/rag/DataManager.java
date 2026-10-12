@@ -53,8 +53,11 @@ public class DataManager {
         this.guideProperties = guideProperties;
         this.hierarchicalContentReader = hierarchicalContentReader;
         this.references = LlmReferenceProviders.fromYmlFile(guideProperties.getReferencesFile());
-        store.provision();
-        // Ingestion on startup is now handled by IngestionRunner (ApplicationRunner)
+        // Provisioning is handled by ProvisioningRunner (ApplicationRunner), not here: it reads
+        // the embedding model's width to build the vector index spec, and a BYOK deployment has
+        // no embedding model until a key arrives. Doing it here made constructing this bean take
+        // down the whole context.
+        // Ingestion on startup is likewise handled by IngestionRunner (ApplicationRunner)
         // which is activated by guide.reload-content-on-startup=true
     }
 

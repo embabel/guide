@@ -2,7 +2,7 @@ package com.embabel.guide.rag;
 
 import com.embabel.agent.filter.PropertyFilter;
 import com.embabel.agent.mcpserver.McpToolExport;
-import com.embabel.agent.rag.graph.DrivineStore;
+import com.embabel.agent.rag.graph.GraphRagStore;
 import com.embabel.agent.rag.tools.ToolishRag;
 import com.embabel.guide.GuideProperties;
 import org.springframework.context.annotation.Bean;
@@ -18,7 +18,7 @@ class McpToolExportConfiguration {
 
     @Bean
     McpToolExport documentationRagTools(
-            DrivineStore drivineStore,
+            GraphRagStore drivineStore,
             GuideProperties properties
     ) {
         var toolishRag = new ToolishRag(

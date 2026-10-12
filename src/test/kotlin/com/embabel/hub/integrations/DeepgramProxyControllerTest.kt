@@ -1,12 +1,13 @@
 package com.embabel.hub.integrations
 
 import com.embabel.guide.Neo4jPropertiesInitializer
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.ai.mcp.client.common.autoconfigure.McpClientAutoConfiguration
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
@@ -58,6 +59,13 @@ class DeepgramProxyControllerTest {
 
     @Autowired
     lateinit var mockServer: MockRestServiceServer
+
+    // The server is one bean shared by every test here, and refuses new expectations once it has
+    // served a request, so each test starts it afresh whatever order they run in.
+    @BeforeEach
+    fun resetMockServer() {
+        mockServer.reset()
+    }
 
     @Test
     fun `returns 401 when x-deepgram-key header is missing`() {

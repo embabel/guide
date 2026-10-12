@@ -11,7 +11,7 @@ import com.embabel.guide.domain.GuideUserData
 import com.embabel.guide.domain.GuideUserService
 import com.embabel.hub.integrations.UserKeyStore
 import com.embabel.hub.integrations.UserModelFactory
-import org.drivine.manager.GraphObjectManager
+import org.drivine.manager.StatelessGraphObjectManager
 import org.drivine.manager.PersistenceManager
 import org.drivine.manager.PersistenceManagerFactory
 import org.springframework.ai.chat.messages.UserMessage
@@ -54,7 +54,7 @@ class ChatStoreConfig {
             val (provider, apiKey) = activeKey
             logger.info("[TITLE] Calling {} / {} for title", provider, provider.summarizerModel)
             val result = userModelFactory.getLlmService(provider, provider.summarizerModel, apiKey) as SpringAiLlmService
-            val title = result.chatModel.call(Prompt(UserMessage(prompt))).result.output.text
+            val title = result.chatModel.call(Prompt(UserMessage(prompt))).result?.output?.text
             logger.info("[TITLE] LLM returned: '{}'", title?.take(80))
             title ?: TitleGenerator.DEFAULT_FALLBACK
         }
@@ -75,9 +75,12 @@ class ChatStoreConfig {
 
     @Bean
     fun chatSessionRepository(
-        @Qualifier("neoGraphObjectManager") graphObjectManager: GraphObjectManager,
-        eventPublisher: ApplicationEventPublisher
+        @Qualifier("neoGraphObjectManager") graphObjectManager: StatelessGraphObjectManager,
+        persistenceManager: PersistenceManager,
+        eventPublisher: ApplicationEventPublisher,
     ): ChatSessionRepository {
-        return ChatSessionRepositoryImpl(graphObjectManager, eventPublisher)
+        // chat-store takes a PersistenceManager as of 0.5.0; the event publisher moved after it
+        // and is now optional.
+        return ChatSessionRepositoryImpl(graphObjectManager, persistenceManager, eventPublisher)
     }
 }
