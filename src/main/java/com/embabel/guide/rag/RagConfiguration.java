@@ -27,25 +27,19 @@ import com.embabel.agent.rag.ingestion.TikaHierarchicalContentReader;
 import kotlin.Pair;
 
 import java.util.ArrayList;
-import com.embabel.agent.rag.graph.DrivineCypherSearch;
-import com.embabel.agent.rag.graph.DrivineStore;
 import com.embabel.agent.rag.graph.GraphObjectManagerStore;
 import com.embabel.agent.rag.graph.GraphRagServiceProperties;
 import com.embabel.agent.rag.graph.GraphRagStore;
-import com.embabel.agent.rag.graph.dialect.RagDialect;
 import com.embabel.common.ai.model.EmbeddingService;
 import com.embabel.guide.GuideProperties;
-import org.drivine.connection.DataSourceMap;
 import org.drivine.manager.GraphObjectManagerFactory;
 import org.drivine.manager.PersistenceManager;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Primary;
-import org.springframework.transaction.PlatformTransactionManager;
 
 /**
  * Configuration for RAG (Retrieval Augmented Generation) components.
@@ -85,44 +79,11 @@ class RagConfiguration {
     }
 
     /**
-     * The two interchangeable {@link GraphRagStore} implementations, selected by the
-     * {@code guide.rag.store} property — hardwired to {@code gom} (the Drivine object-manager store) in
-     * {@code application.yml}; set {@code drivine} to fall back to the legacy hand-rolled Cypher store.
-     * {@code matchIfMissing} keeps {@code drivine} as the code-level fallback so the app still starts if
-     * the property is ever absent. Exactly one is present, so it is unambiguously {@code @Primary} — the
-     * A/B swap for the strangler migration.
+     * The RAG store, on Drivine's stateless object manager. It is the one implementation
+     * embabel-agent-rag-graph ships, and runs on every engine Drivine supports, Oracle included.
      */
     @Bean
     @Primary
-    @ConditionalOnProperty(name = "guide.rag.store", havingValue = "drivine", matchIfMissing = true)
-    GraphRagStore drivineStore(
-            @Qualifier("neo") PersistenceManager persistenceManager,
-            PlatformTransactionManager platformTransactionManager,
-            EmbeddingService embeddingService,
-            ChunkTransformer chunkTransformer,
-            GraphRagServiceProperties graphRagProperties,
-            GuideProperties guideProperties,
-            DataSourceMap dataSourceMap) {
-        var chunkerConfig = guideProperties.getChunkerConfig() != null
-                ? guideProperties.getChunkerConfig()
-                : new ContentChunker.Config();
-        var databaseType = dataSourceMap.getDataSources().get("neo").getType();
-        var dialect = RagDialect.Companion.forDatabaseType(databaseType);
-        return new DrivineStore(
-                persistenceManager,
-                graphRagProperties,
-                chunkerConfig,
-                chunkTransformer,
-                embeddingService,
-                platformTransactionManager,
-                new DrivineCypherSearch(persistenceManager),
-                dialect
-        );
-    }
-
-    @Bean
-    @Primary
-    @ConditionalOnProperty(name = "guide.rag.store", havingValue = "gom")
     GraphRagStore graphObjectManagerStore(
             GraphObjectManagerFactory graphObjectManagerFactory,
             @Qualifier("neo") PersistenceManager persistenceManager,
@@ -134,7 +95,7 @@ class RagConfiguration {
                 ? guideProperties.getChunkerConfig()
                 : new ContentChunker.Config();
         return new GraphObjectManagerStore(
-                graphObjectManagerFactory.get("neo"),
+                graphObjectManagerFactory.stateless("neo"),
                 persistenceManager,
                 graphRagProperties,
                 chunkerConfig,

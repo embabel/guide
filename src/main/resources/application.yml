@@ -20,12 +20,6 @@ management:
 
 guide:
 
-  # RAG backend: 'gom' = Drivine object-manager store (default), 'drivine' = legacy hand-rolled Cypher.
-  # Both implement GraphRagStore; RagConfiguration selects the @Primary bean. Override with
-  # --guide.rag.store=drivine to A/B against the old store.
-  rag:
-    store: ${GUIDE_RAG_STORE:gom}
-
   cors:
     allowed-origins: ${GUIDE_CORS_ALLOWED_ORIGINS:}
 
@@ -54,7 +48,7 @@ guide:
     versioned:
       base-url: https://docs.embabel.com/embabel-agent/guide/
       versions:
-        - 1.0.0
+        - 1.5.3
     supplementary:
       - https://raw.githubusercontent.com/liberation-data/drivine4j/refs/heads/main/README.md
       # @springrod blog posts

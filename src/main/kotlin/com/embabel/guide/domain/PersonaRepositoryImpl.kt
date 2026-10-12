@@ -1,7 +1,7 @@
 package com.embabel.guide.domain
 
 import com.embabel.guide.domain.PersonaRepository.Companion.SYSTEM_OWNER_ID
-import org.drivine.manager.GraphObjectManager
+import org.drivine.manager.StatelessGraphObjectManager
 import org.drivine.manager.delete
 import org.drivine.manager.load
 import org.drivine.query.dsl.anyOf
@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional
 
 @Repository
 class PersonaRepositoryImpl(
-    @param:Qualifier("neoGraphObjectManager") private val graphObjectManager: GraphObjectManager
+    @param:Qualifier("neoGraphObjectManager") private val graphObjectManager: StatelessGraphObjectManager
 ) : PersonaRepository {
 
     @Transactional(readOnly = true)

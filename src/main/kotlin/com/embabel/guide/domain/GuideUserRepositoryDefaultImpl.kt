@@ -1,6 +1,7 @@
 package com.embabel.guide.domain
 
-import org.drivine.manager.GraphObjectManager
+import org.drivine.manager.Replace
+import org.drivine.manager.StatelessGraphObjectManager
 import org.drivine.manager.load
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Repository
@@ -13,7 +14,7 @@ import java.util.Optional
  */
 @Repository
 class GuideUserRepositoryDefaultImpl(
-    @param:Qualifier("neoGraphObjectManager") private val graphObjectManager: GraphObjectManager
+    @param:Qualifier("neoGraphObjectManager") private val graphObjectManager: StatelessGraphObjectManager
 ) : GuideUserRepository {
 
     @Transactional(readOnly = true)
@@ -110,7 +111,9 @@ class GuideUserRepositoryDefaultImpl(
 
     @Transactional
     override fun save(guideUser: GuideUser): GuideUser {
-        return graphObjectManager.save(guideUser)
+        // A user has one persona. A stateless save adds relationships and removes none, so without
+        // Replace a user given a new persona would keep the old one beside it.
+        return graphObjectManager.save(guideUser, Replace(GuideUser::persona))
     }
 
     @Transactional
@@ -118,8 +121,7 @@ class GuideUserRepositoryDefaultImpl(
         val guideUser = findById(guideUserId).orElseThrow {
             IllegalArgumentException("GuideUser not found: $guideUserId")
         }
-        val updated = guideUser.copy(persona = persona)
-        graphObjectManager.save(updated)
+        save(guideUser.copy(persona = persona))
     }
 
     @Transactional

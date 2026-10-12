@@ -10,8 +10,9 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher
 import org.springframework.security.web.util.matcher.OrRequestMatcher
+import org.springframework.security.web.util.matcher.RequestMatcher
 
 @Configuration
 @EnableWebSecurity
@@ -26,12 +27,8 @@ class SecurityConfig(
         "/mcp/**",
     )
 
-    private val mcpMatchers = arrayOf(
-        AntPathRequestMatcher("/sse"),
-        AntPathRequestMatcher("/sse/**"),
-        AntPathRequestMatcher("/mcp"),
-        AntPathRequestMatcher("/mcp/**"),
-    )
+    private val mcpMatchers: Array<RequestMatcher> =
+        mcpPatterns.map { PathPatternRequestMatcher.withDefaults().matcher(it) }.toTypedArray()
 
     private val mcpMatcher = OrRequestMatcher(*mcpMatchers)
 
@@ -70,7 +67,7 @@ class SecurityConfig(
         // Some Cursor builds try streamable HTTP first (POST /mcp...), then fall back to SSE (/sse).
         // If any other auto-configured security chain matches /mcp first, it can result in 403s and flakey MCP.
         // This chain is scoped to MCP endpoints only and is highest precedence.
-        // Use AntPathRequestMatcher so this applies even if /mcp is registered outside Spring MVC handler mappings.
+        // Matched on the path alone, so this applies even if /mcp is registered outside Spring MVC handler mappings.
         http.securityMatcher(mcpMatcher)
             .csrf { it.disable() }
             .cors { }

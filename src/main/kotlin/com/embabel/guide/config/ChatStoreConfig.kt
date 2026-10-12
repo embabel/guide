@@ -11,7 +11,7 @@ import com.embabel.guide.domain.GuideUserData
 import com.embabel.guide.domain.GuideUserService
 import com.embabel.hub.integrations.UserKeyStore
 import com.embabel.hub.integrations.UserModelFactory
-import org.drivine.manager.GraphObjectManager
+import org.drivine.manager.StatelessGraphObjectManager
 import org.drivine.manager.PersistenceManager
 import org.drivine.manager.PersistenceManagerFactory
 import org.springframework.ai.chat.messages.UserMessage
@@ -75,7 +75,7 @@ class ChatStoreConfig {
 
     @Bean
     fun chatSessionRepository(
-        @Qualifier("neoGraphObjectManager") graphObjectManager: GraphObjectManager,
+        @Qualifier("neoGraphObjectManager") graphObjectManager: StatelessGraphObjectManager,
         persistenceManager: PersistenceManager,
         eventPublisher: ApplicationEventPublisher,
     ): ChatSessionRepository {

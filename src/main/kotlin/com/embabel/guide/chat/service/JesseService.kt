@@ -11,7 +11,7 @@ import java.time.Instant
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.drivine.manager.GraphObjectManager
+import org.drivine.manager.StatelessGraphObjectManager
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.context.event.ApplicationReadyEvent
@@ -27,7 +27,7 @@ class JesseService(
     private val chatSessionService: ChatSessionService,
     private val guideUserService: GuideUserService,
     private val guideUserRepository: GuideUserRepository,
-    @Qualifier("neoGraphObjectManager") private val graphObjectManager: GraphObjectManager
+    @Qualifier("neoGraphObjectManager") private val graphObjectManager: StatelessGraphObjectManager
 ) {
     private val logger = LoggerFactory.getLogger(JesseService::class.java)
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
