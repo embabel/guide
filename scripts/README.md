@@ -29,9 +29,14 @@ Since `append-ingest.sh` doesn't clear the store, you should comment out URLs an
 
 ```yaml
 guide:
-  urls:
-    # - https://docs.embabel.com/embabel-agent/guide/0.3.5-SNAPSHOT/  # already ingested
-    - https://some-new-url.com  # new, will be ingested
+  content:
+    versioned:
+      base-url: https://docs.embabel.com/embabel-agent/guide/
+      versions:
+        - 1.5.3  # keep this: it is also the version search is filtered by
+    supplementary:
+      # - https://github.com/embabel/embabel-agent  # already ingested
+      - https://some-new-url.com  # new, will be ingested
   directories:
     # - ~/github/jmjava/guide  # already ingested
     - ~/github/jmjava/new-repo  # new, will be ingested
