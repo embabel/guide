@@ -8,18 +8,22 @@ guide:
   reload-content-on-startup: true
   projects-path: ./embabel-projects
   default-persona: adaptive
-  chat-llm:
-    model: gpt-4.1-mini
   content-chunker:
     include-section-title-in-chunk: false
     max-chunk-size: 4000
     overlap-size: 200
     embedding-batch-size: 50
-  urls:
-    - https://docs.embabel.com/embabel-agent/guide/0.3.5-SNAPSHOT/
-    - https://github.com/embabel/embabel-agent
-    - https://github.com/embabel/embabel-agent-examples
-    - https://github.com/embabel/dice
+  content:
+    # The Embabel docs. Search sees only the first version listed (see "Docs version" in the README).
+    versioned:
+      base-url: https://docs.embabel.com/embabel-agent/guide/
+      versions:
+        - 1.5.3
+    # Anything else to ingest. It is searched whatever the docs version.
+    supplementary:
+      - https://github.com/embabel/embabel-agent
+      - https://github.com/embabel/embabel-agent-examples
+      - https://github.com/embabel/dice
   # Ingest full local repos (paths relative to working dir or absolute)
   directories:
     - ./embabel-projects/dice

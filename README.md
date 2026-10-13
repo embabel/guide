@@ -43,11 +43,45 @@ curl -X POST http://localhost:1337/api/v1/data/load-references
 
 To see stats on data, make a GET request or browse to http://localhost:1337/api/v1/data/stats
 
-RAG content storage uses the `ChunkingContentElementRepository` interface from the `embabel-agent-rag-core` library. The default backend is Neo4j via `DrivineStore`. You can plug in other backends by providing a different `ChunkingContentElementRepository` bean.
+RAG content storage uses the `ChunkingContentElementRepository` interface from the `embabel-agent-rag-core` library. The backend is `GraphObjectManagerStore` from `embabel-agent-rag-graph`, on whichever graph database the active profile points at. You can plug in other backends by providing a different `ChunkingContentElementRepository` bean.
+
+### Docs version
+
+Guide answers from one version of the Embabel docs at a time. The version is set in `application.yml`:
+
+```yaml
+guide:
+  content:
+    versioned:
+      base-url: https://docs.embabel.com/embabel-agent/guide/
+      versions:
+        - 1.5.3          # the first entry is the active version
+    supplementary:
+      - https://medium.com/...   # blog posts and other material that belongs to no version
+```
+
+The setting does two things:
+
+- **At ingestion**, each entry of `versions` is fetched from `base-url` + version + `/`, and every chunk is given a `version` property: the version in its document's URL for the versioned docs, and `supplementary` for everything else (`VersionChunkTransformer`).
+- **At search**, chat and the MCP tools only see chunks whose `version` is the active version or `supplementary` (`ChatActions.versionFilter` and `McpToolExportConfiguration`). The active version is the first entry of `versions`. With no entries there is no filter.
+
+So changing the version takes two steps: change `versions`, then ingest (`load-references`). Until the new version is ingested, the store holds only chunks of the old one, the filter hides them all, and Guide answers from the supplementary material alone. The same holds for a seeded database, such as the one in the `embabel/hub` image: its chunks have to carry the version Guide is configured with.
+
+More than one version can be listed, and each is ingested, but only the first is searched. Choosing the version per user or per request is not built: the filter is fixed when the application starts.
+
+The stamp is stored on the chunk as `metadata.version`. To see what a store holds:
+
+```cypher
+MATCH (c:Chunk) RETURN c.`metadata.version` AS version, count(*) AS chunks
+```
+
+Chunks ingested before Guide moved to `GraphObjectManagerStore` carry the stamp as a plain `version` property instead. The filter does not read that, so those chunks match no version and are hidden from search: a store that old has to be ingested again, whatever version it holds.
+
+The seed database of the `embabel/hub` image is kept in step by the Export Seed Database workflow here, which ingests the configured version into a fresh database each day and sends the export to embabel-hub as a pull request. GitHub disables a scheduled workflow after 60 days without activity in the repository, and the seed then goes stale without anything failing: check that the workflow is still enabled when coming back to this project.
 
 ## Switching the Graph Database
 
-`DrivineStore` (from `embabel-agent-rag-graph`) supports three Cypher-speaking backends: **Neo4j** (default), **FalkorDB**, and **Memgraph**. The active backend is selected by Spring profile in `src/main/resources/application.yml` — each profile sets `database.dataSources.neo.type`, and `RagConfiguration` picks the matching `RagDialect` at startup.
+`GraphObjectManagerStore` (from `embabel-agent-rag-graph`) supports three Cypher-speaking backends: **Neo4j** (default), **FalkorDB**, and **Memgraph**. The active backend is selected by Spring profile in `src/main/resources/application.yml` — each profile sets `database.dataSources.neo.type`, and Drivine speaks to whichever engine that names.
 
 | Backend  | Profile    | Default port | Compose profile |
 |----------|------------|--------------|-----------------|

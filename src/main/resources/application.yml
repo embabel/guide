@@ -45,6 +45,10 @@ guide:
 
   # Ingested via load-references (or on startup if reload-content-on-startup is true)
   content:
+    # The Embabel docs, by version. Each chunk is stamped with the version it came from, and chat
+    # and MCP search see only the FIRST version listed here, plus the supplementary material.
+    # After changing it, ingest again: until then the store has no chunks of the new version and
+    # the docs drop out of every search. See "Docs version" in the README.
     versioned:
       base-url: https://docs.embabel.com/embabel-agent/guide/
       versions:
