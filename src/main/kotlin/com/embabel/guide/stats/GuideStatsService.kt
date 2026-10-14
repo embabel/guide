@@ -75,8 +75,8 @@ class GuideStatsService(
         return ADMIN_ROLE in user.core.roles
     }
 
-    /** Top users by USER-role messages sent in their sessions since [since]. */
-    internal fun topMessagingUsers(since: Instant): List<TopMessagingUser> =
+    /** Top [limit] users by USER-role messages sent in their sessions since [since]. */
+    internal fun topMessagingUsers(since: Instant, limit: Int = TOP_USERS_LIMIT): List<TopMessagingUser> =
         graphObjectManager.groups.load(MessageData::class.java, MessageDataQueryDsl.INSTANCE) {
             where {
                 query.role eq MessageRole.USER
@@ -88,7 +88,7 @@ class GuideStatsService(
             ))
             val messages = count()
             orderBy { messages.desc() }
-            limit(TOP_USERS_LIMIT)
+            limit(limit)
             rows { TopMessagingUser(displayName = it[user].username.ifBlank { it[user].id }, messageCount = it[messages]) }
         }
 
