@@ -88,9 +88,9 @@ The seed database of the `embabel/hub` image is kept in step by the Export Seed 
 | Neo4j    | `neo4j`    | `7687` (bolt)| `neo4j`         |
 | FalkorDB | `falkordb` | `6379`       | `falkordb`      |
 | Memgraph | `memgraph` | `7688` (bolt)| `memgraph`      |
-| Oracle 23ai | `oracle` | `1521`       | `oracle`        |
+| Oracle 23ai 🆕 | `oracle` | `1521`       | `oracle`        |
 
-Oracle does not speak Cypher: Drivine runs the same object-manager calls and query DSL as SQL and SQL/PGQ. So everything Guide and the libraries it uses write or read goes through Drivine's object manager, and none of it is hand-written Cypher; code added here has to keep to that, or it works on the other three and fails on Oracle.
+[embabel-chat-store](https://github.com/embabel/embabel-chat-store) and [embabel-agent-rag-graph](https://github.com/embabel/embabel-agent-rag-graph) (see [`GraphObjectManagerStore`](https://github.com/embabel/embabel-agent-rag-graph/blob/main/src/main/kotlin/com/embabel/agent/rag/graph/GraphObjectManagerStore.kt)) use Drivine's `StatelessGraphObjectManager`, which generates openCypher in each engine's dialect, or SQL/PGQ for Oracle.
 
 ### Switching at startup
 
@@ -480,6 +480,8 @@ const client = new Client({
 
 client.activate();
 ```
+
+For a fully-fledged client, see [hub.embabel.com](https://hub.embabel.com).
 
 ## Docker
 

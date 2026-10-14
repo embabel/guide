@@ -76,11 +76,15 @@ class GuideStatsServiceTest {
             message(id, MessageRole.USER, now.minus(Duration.ofDays(8)))
         }
 
-        val top = statsService.topMessagingUsers(since = now.minus(Duration.ofDays(7)))
-            .associate { it.displayName to it.messageCount }
+        // No real cap: other data in the graph must not push these users out of the ranking.
+        val mine = setOf(busy.username, quiet.username)
+        val top = statsService.topMessagingUsers(since = now.minus(Duration.ofDays(7)), limit = Int.MAX_VALUE)
+            .filter { it.displayName in mine }
 
-        assertEquals(3L, top[busy.username])
-        assertEquals(1L, top[quiet.username])
+        assertEquals(
+            listOf(TopMessagingUser(busy.username, 3L), TopMessagingUser(quiet.username, 1L)),
+            top,
+        )
     }
 
     private fun page() = "/test/${UUID.randomUUID()}"
