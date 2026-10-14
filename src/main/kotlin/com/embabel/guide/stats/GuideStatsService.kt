@@ -6,10 +6,14 @@ import com.embabel.guide.domain.GuideUserCache
 import com.embabel.guide.domain.GuideUserData
 import com.embabel.guide.domain.GuideUserRepository
 import com.embabel.guide.rag.DataManager
+import com.embabel.chat.MessageRole
+import com.embabel.chat.store.model.MessageDataQueryDsl
+import com.embabel.guide.domain.FeedbackData
+import com.embabel.guide.domain.load
+import org.drivine.annotation.Direction
+import org.drivine.annotation.Hop
 import org.drivine.manager.StatelessGraphObjectManager
-import org.drivine.manager.PersistenceManager
-import org.drivine.query.QuerySpecification
-import org.drivine.query.transform
+import org.drivine.query.dsl.query
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -23,9 +27,8 @@ import java.time.Instant
  * Admin status is read from the caller's `roles` (granted out-of-band via Cypher). The lookup
  * reuses [GuideUserCache]; its TTL is what makes an out-of-band grant/revocation take effect.
  *
- * Totals use single-label fragment counts. `topUsersThisWeek` is a time-filtered, two-hop,
- * group-by ranking — not expressible as a node-rooted view's @Count/@Aggregate — so it uses
- * [PersistenceManager] + `.transform<T>()`, per Drivine's own guidance.
+ * Totals use single-label fragment counts. The rankings are Drivine grouped reads: one statement
+ * each, on every store Drivine supports, Oracle among them.
  */
 @Service
 class GuideStatsService(
@@ -34,7 +37,6 @@ class GuideStatsService(
     private val guideUserCache: GuideUserCache,
     private val guideUserRepository: GuideUserRepository,
     @param:Qualifier("neoGraphObjectManager") private val graphObjectManager: StatelessGraphObjectManager,
-    @param:Qualifier("neo") private val persistenceManager: PersistenceManager,
 ) {
 
     /**
@@ -74,51 +76,35 @@ class GuideStatsService(
     }
 
     /** Top users by USER-role messages sent in their sessions since [since]. */
-    private fun topMessagingUsers(since: Instant): List<TopMessagingUser> =
-        persistenceManager.query(
-            QuerySpecification
-                .withStatement(
-                    """
-                    MATCH (u:GuideUser)<-[:OWNED_BY]-(:ChatSession)-[:HAS_MESSAGE]->(m:StoredMessage)
-                    // datetime() wrap tolerates legacy rows where createdAt was persisted as an ISO
-                    // STRING (drivine <= 0.0.44). drivine 0.0.45 writes native temporals, and the
-                    // 06-migrate-string-dates.cypher seed converts old rows — once that has run in all
-                    // environments this wrap is redundant (idempotent on a native datetime) and may be
-                    // dropped, ideally alongside a range index on StoredMessage.createdAt.
-                    WHERE m.role = 'USER' AND datetime(m.createdAt) >= ${'$'}since
-                    WITH u, count(m) AS messageCount
-                    ORDER BY messageCount DESC
-                    LIMIT $TOP_USERS_LIMIT
-                    // Single-map projection: .transform<T>() maps one map/scalar per row, not multiple columns.
-                    RETURN { displayName: coalesce(u.username, u.id), messageCount: messageCount } AS user
-                    """.trimIndent()
-                )
-                .bind(mapOf("since" to since)) // Instant -> ZonedDateTime, matching how createdAt is stored
-                .transform<TopMessagingUser>()
-        )
+    internal fun topMessagingUsers(since: Instant): List<TopMessagingUser> =
+        graphObjectManager.groups.load(MessageData::class.java, MessageDataQueryDsl.INSTANCE) {
+            where {
+                query.role eq MessageRole.USER
+                query.createdAt gte since
+            }
+            val user = key(path<GuideUserData>(
+                Hop("HAS_MESSAGE", Direction.INCOMING, label = "ChatSession"),
+                Hop("OWNED_BY"),
+            ))
+            val messages = count()
+            orderBy { messages.desc() }
+            limit(TOP_USERS_LIMIT)
+            rows { TopMessagingUser(displayName = it[user].username.ifBlank { it[user].id }, messageCount = it[messages]) }
+        }
 
     /**
      * Every page with at least [FEEDBACK_MIN_VOTES] total votes, with its like/dislike tallies.
      * Filtering by total volume here keeps a page with a single vote off the rankings; the caller
      * decides which side a page falls on and how many to show.
      */
-    private fun pageRatings(): List<PageRating> =
-        persistenceManager.query(
-            QuerySpecification
-                .withStatement(
-                    """
-                    MATCH (f:Feedback)
-                    WITH f.page AS page,
-                         sum(CASE WHEN f.helpful THEN 1 ELSE 0 END) AS likes,
-                         sum(CASE WHEN f.helpful THEN 0 ELSE 1 END) AS dislikes
-                    WHERE likes + dislikes >= ${'$'}minVotes
-                    // Single-map projection: .transform<T>() maps one map/scalar per row, not multiple columns.
-                    RETURN { page: page, likes: likes, dislikes: dislikes } AS row
-                    """.trimIndent()
-                )
-                .bind(mapOf("minVotes" to FEEDBACK_MIN_VOTES))
-                .transform<PageRating>()
-        )
+    internal fun pageRatings(): List<PageRating> =
+        graphObjectManager.groups.load<FeedbackData, _> {
+            val page = key(query.page)
+            val votes = count()
+            val likes = count { query.helpful eq true }
+            having { votes gte FEEDBACK_MIN_VOTES }
+            rows { PageRating(page = it[page], likes = it[likes], dislikes = it[votes] - it[likes]) }
+        }
 
     companion object {
         const val ADMIN_ROLE = "ADMIN"
