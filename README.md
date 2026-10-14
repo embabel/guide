@@ -81,13 +81,16 @@ The seed database of the `embabel/hub` image is kept in step by the Export Seed 
 
 ## Switching the Graph Database
 
-`GraphObjectManagerStore` (from `embabel-agent-rag-graph`) supports three Cypher-speaking backends: **Neo4j** (default), **FalkorDB**, and **Memgraph**. The active backend is selected by Spring profile in `src/main/resources/application.yml` — each profile sets `database.dataSources.neo.type`, and Drivine speaks to whichever engine that names.
+`GraphObjectManagerStore` (from `embabel-agent-rag-graph`) supports four backends: **Neo4j** (default), **FalkorDB**, **Memgraph** and **Oracle 23ai**. The active backend is selected by Spring profile in `src/main/resources/application.yml` — each profile sets `database.dataSources.neo.type`, and Drivine speaks to whichever engine that names.
 
 | Backend  | Profile    | Default port | Compose profile |
 |----------|------------|--------------|-----------------|
 | Neo4j    | `neo4j`    | `7687` (bolt)| `neo4j`         |
 | FalkorDB | `falkordb` | `6379`       | `falkordb`      |
 | Memgraph | `memgraph` | `7688` (bolt)| `memgraph`      |
+| Oracle 23ai | `oracle` | `1521`       | `oracle`        |
+
+Oracle does not speak Cypher: Drivine runs the same object-manager calls and query DSL as SQL and SQL/PGQ. So everything Guide and the libraries it uses write or read goes through Drivine's object manager, and none of it is hand-written Cypher; code added here has to keep to that, or it works on the other three and fails on Oracle.
 
 ### Switching at startup
 
@@ -102,21 +105,45 @@ Change `spring.profiles.active` in `application.yml`, or override at launch:
 
 # Memgraph
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=memgraph
+
+# Oracle
+./mvnw spring-boot:run -Dspring-boot.run.profiles=oracle
 ```
 
 ### Starting the matching container
 
 ```bash
-docker compose --profile neo4j   up -d   # or falkordb / memgraph
+docker compose --profile neo4j   up -d   # or falkordb / memgraph / oracle
 ```
 
 Memgraph maps host port `7688` → container `7687` to avoid clashing with Neo4j, so you can run them side-by-side. FalkorDB uses Redis protocol on `6379`.
+
+Oracle runs from `gvenzl/oracle-free:23-faststart` and wants about 2 GB of memory; give Docker enough, or the container is killed while it starts. On first start the image creates the application user, and the `oracle` Spring profile connects as it. The profile reads all of these; compose reads the port, username and password:
+
+| Variable          | Default     |
+|-------------------|-------------|
+| `ORACLE_HOST`     | `localhost` |
+| `ORACLE_PORT`     | `1521`      |
+| `ORACLE_USERNAME` | `guide`     |
+| `ORACLE_PASSWORD` | `brahmsian` |
+| `ORACLE_SERVICE`  | `FREEPDB1`  |
+
+The user is created only when the `oracle_data` volume is new: after changing the username or password, stop the container and remove its volume (`docker rm -f embabel-oracle && docker volume rm guide_oracle_data`, which deletes the Oracle data), or create the user yourself. `docker compose down -v` would remove the Neo4j volume as well. Guide makes its tables on startup, and the RAG store is filled by an ingest as on any other backend.
 
 ### Browsing data
 
 - **Neo4j**: http://localhost:7474/browser/ (user `neo4j`, password `brahmsian`)
 - **FalkorDB**: http://localhost:3001 (FalkorDB Browser, started with the `falkordb` compose profile)
 - **Memgraph**: connect via [Memgraph Lab](https://memgraph.com/lab) to `bolt://localhost:7688`
+- **Oracle**: SQL*Plus in the container. Nodes are rows of `drivine_node`, with their labels and properties as JSON, and relationships are rows of `drivine_edge`:
+
+  ```bash
+  docker exec -it embabel-oracle sqlplus guide/brahmsian@FREEPDB1
+  ```
+
+  ```sql
+  select count(*) from drivine_node where json_exists(labels, '$[*]?(@ == "Chunk")');
+  ```
 
 ## Viewing and Deleting Data
 
