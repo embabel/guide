@@ -88,7 +88,7 @@ The seed database of the `embabel/hub` image is kept in step by the Export Seed 
 | Neo4j    | `neo4j`    | `7687` (bolt)| `neo4j`         |
 | FalkorDB | `falkordb` | `6379`       | `falkordb`      |
 | Memgraph | `memgraph` | `7688` (bolt)| `memgraph`      |
-| Oracle 23ai 🆕 | `oracle` | `1521`       | `oracle`        |
+| Oracle 23ai ![New](https://img.shields.io/badge/NEW-ff3e00?style=flat-square) | `oracle` | `1521`       | `oracle`        |
 
 [embabel-chat-store](https://github.com/embabel/embabel-chat-store) and [embabel-agent-rag-graph](https://github.com/embabel/embabel-agent-rag-graph) (see [`GraphObjectManagerStore`](https://github.com/embabel/embabel-agent-rag-graph/blob/main/src/main/kotlin/com/embabel/agent/rag/graph/GraphObjectManagerStore.kt)) use Drivine's `StatelessGraphObjectManager`, which generates openCypher in each engine's dialect, or SQL/PGQ for Oracle.
 
