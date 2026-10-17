@@ -9,6 +9,18 @@
 Guide exposes resources relating to the Embabel Agent Framework, such
 as documentation, relevant blogs and other content, and up-to-the-minute API information.
 
+Use Guide in one of the following ways: 
+
+- Via a chat server (WebSocket/STOMP) for custom front-ends
+- Via an MCP server for integration with Claude Desktop, Claude Code and
+  other MCP clients
+- Via spring shell
+
+> **Note:** The chat server and Spring Shell conflict with each other. By default, the chat server is enabled. To use
+> Spring Shell instead, uncomment the relevant lines in `pom.xml`.
+
+----
+
 This repository is the backend for [Embabel Hub](https://hub.embabel.com) — the Guide powers the
 natural-language "Talk to the Docs" experience there.
 
@@ -23,17 +35,10 @@ natural-language "Talk to the Docs" experience there.
   </a>
 </p>
 
-This is exposed in two ways:
-
-- Via a chat server (WebSocket/STOMP) for custom front-ends
-- Via spring shell
-- Via an MCP server for integration with Claude Desktop, Claude Code and
-  other MCP clients
 
 **Blog:** [The Voice, The Word, and The Wheel](https://medium.com/embabel/the-voice-the-word-and-the-wheel-d6e2ef2ab26e) — adding voice interaction (TTS/STT) to the Guide with Deepgram, a narrator agent, and natural-language commands.
 
-> **Note:** The chat server and Spring Shell conflict with each other. By default, the chat server is enabled. To use
-> Spring Shell instead, uncomment the relevant lines in `pom.xml`.
+----
 
 ## Loading data
 
