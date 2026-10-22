@@ -74,14 +74,22 @@
             <groupId>org.drivine</groupId>
             <artifactId>drivine4j-spring-boot-starter</artifactId>
             <!-- Keep in step with embabel-agent-rag-graph and embabel-chat-store, and with drivineVersion
-                 in codegen-gradle/build.gradle.kts: code compiled against 0.0.x does not link with 0.1.x. -->
-            <version>0.1.6</version>
+                 in codegen-gradle/build.gradle.kts: code compiled against one Drivine minor line need not link
+                 with another (0.0.x does not link with 0.1.x). -->
+            <version>0.2.0</version>
         </dependency>
 
         <!-- Oracle JDBC driver, for the `oracle` profile. Drivine does not bring it. -->
         <dependency>
             <groupId>com.oracle.database.jdbc</groupId>
             <artifactId>ojdbc11</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Postgres JDBC driver, for the `postgres` profile. Drivine does not bring it. -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
 

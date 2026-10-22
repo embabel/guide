@@ -42,7 +42,7 @@ import java.util.*
 @ContextConfiguration(initializers = [Neo4jPropertiesInitializer::class])
 @ImportAutoConfiguration(exclude = [McpClientAutoConfiguration::class])
 @Transactional
-class GuideUserRepositoryDefaultImplTest {
+open class GuideUserRepositoryDefaultImplTest {
 
     @Autowired
     private lateinit var repository: GuideUserRepositoryDefaultImpl

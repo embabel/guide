@@ -118,7 +118,7 @@ spring:
     ansi:
       enabled: always
   profiles:
-    active: neo4j  # Change to 'neo4j', 'falkordb', 'memgraph', 'oracle', or 'default' for TestContainers
+    active: neo4j  # Change to 'neo4j', 'falkordb', 'memgraph', 'oracle', 'postgres', or 'default' for TestContainers
     config:
       activate:
         on-profile: neo4j
@@ -249,3 +249,23 @@ database:
       userName: ${ORACLE_USERNAME:guide}
       password: ${ORACLE_PASSWORD:brahmsian}
       databaseName: ${ORACLE_SERVICE:FREEPDB1}
+
+---
+# Postgres profile — activate with: spring.profiles.active=postgres
+# Postgres 14 or later, with pgvector for vector search (docker compose --profile postgres up).
+# Drivine reads the graph with plain SQL and makes its tables in this database. The datasource keeps
+# the name 'neo', which the beans are qualified by.
+spring:
+  config:
+    activate:
+      on-profile: postgres
+
+database:
+  dataSources:
+    neo:
+      type: POSTGRES
+      host: ${POSTGRES_HOST:localhost}
+      port: ${POSTGRES_PORT:5432}
+      userName: ${POSTGRES_USERNAME:guide}
+      password: ${POSTGRES_PASSWORD:brahmsian}
+      databaseName: ${POSTGRES_DATABASE:guide}

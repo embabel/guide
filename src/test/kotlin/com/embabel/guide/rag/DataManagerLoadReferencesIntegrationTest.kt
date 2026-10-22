@@ -44,7 +44,7 @@ import org.springframework.test.context.TestPropertySource
         "guide.directories[0]=./src/test/resources/sample-repo-for-ingestion"
     ]
 )
-class DataManagerLoadReferencesIntegrationTest {
+open class DataManagerLoadReferencesIntegrationTest {
 
     @Autowired
     private lateinit var dataManager: DataManager

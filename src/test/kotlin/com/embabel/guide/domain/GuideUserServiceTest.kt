@@ -31,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional
 @ContextConfiguration(initializers = [Neo4jPropertiesInitializer::class])
 @ImportAutoConfiguration(exclude = [McpClientAutoConfiguration::class])
 @Transactional
-class GuideUserServiceTest {
+open class GuideUserServiceTest {
 
     @Autowired
     private lateinit var guideUserService: GuideUserService

@@ -1,0 +1,10 @@
+# The test datasource, on Postgres. Active beside `test` in the *PostgresTest classes.
+# @EnableDrivineTestConfig starts Postgres with pgvector in a container and connects as its user to its database.
+database:
+  datasources:
+    neo:
+      type: POSTGRES
+      port: 5432
+      user-name: drivine
+      password: drivine
+      database-name: drivine

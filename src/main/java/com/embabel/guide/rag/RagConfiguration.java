@@ -80,7 +80,7 @@ class RagConfiguration {
 
     /**
      * The RAG store, on Drivine's stateless object manager. It is the one implementation
-     * embabel-agent-rag-graph ships, and runs on every engine Drivine supports, Oracle included.
+     * embabel-agent-rag-graph ships, and runs on every engine Drivine supports, Oracle and Postgres included.
      */
     @Bean
     @Primary

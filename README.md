@@ -86,7 +86,7 @@ The seed database of the `embabel/hub` image is kept in step by the Export Seed 
 
 ## Switching the Graph Database
 
-`GraphObjectManagerStore` (from `embabel-agent-rag-graph`) supports four backends: **Neo4j** (default), **FalkorDB**, **Memgraph** and **Oracle 23ai**. The active backend is selected by Spring profile in `src/main/resources/application.yml` — each profile sets `database.dataSources.neo.type`, and Drivine speaks to whichever engine that names.
+`GraphObjectManagerStore` (from `embabel-agent-rag-graph`) supports five backends: **Neo4j** (default), **FalkorDB**, **Memgraph**, **Oracle 23ai** and **Postgres**. The active backend is selected by Spring profile in `src/main/resources/application.yml` — each profile sets `database.dataSources.neo.type`, and Drivine speaks to whichever engine that names.
 
 | Backend  | Profile    | Default port | Compose profile |
 |----------|------------|--------------|-----------------|
@@ -94,8 +94,9 @@ The seed database of the `embabel/hub` image is kept in step by the Export Seed 
 | FalkorDB | `falkordb` | `6379`       | `falkordb`      |
 | Memgraph | `memgraph` | `7688` (bolt)| `memgraph`      |
 | Oracle 23ai ![New](https://img.shields.io/badge/NEW-ff3e00?style=flat-square) | `oracle` | `1521`       | `oracle`        |
+| Postgres ![New](https://img.shields.io/badge/NEW-ff3e00?style=flat-square) | `postgres` | `5432`       | `postgres`      |
 
-[embabel-chat-store](https://github.com/embabel/embabel-chat-store) and [embabel-agent-rag-graph](https://github.com/embabel/embabel-agent-rag-graph) (see [`GraphObjectManagerStore`](https://github.com/embabel/embabel-agent-rag-graph/blob/main/src/main/kotlin/com/embabel/agent/rag/graph/GraphObjectManagerStore.kt)) use Drivine's `StatelessGraphObjectManager`, which generates openCypher in each engine's dialect, or SQL/PGQ for Oracle.
+[embabel-chat-store](https://github.com/embabel/embabel-chat-store) and [embabel-agent-rag-graph](https://github.com/embabel/embabel-agent-rag-graph) (see [`GraphObjectManagerStore`](https://github.com/embabel/embabel-agent-rag-graph/blob/main/src/main/kotlin/com/embabel/agent/rag/graph/GraphObjectManagerStore.kt)) use Drivine's `StatelessGraphObjectManager`, which generates openCypher in each engine's dialect, SQL/PGQ for Oracle, or plain SQL for Postgres.
 
 ### Switching at startup
 
@@ -113,12 +114,15 @@ Change `spring.profiles.active` in `application.yml`, or override at launch:
 
 # Oracle
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=oracle
+
+# Postgres
+./mvnw spring-boot:run -Dspring-boot.run.profiles=postgres
 ```
 
 ### Starting the matching container
 
 ```bash
-docker compose --profile neo4j   up -d   # or falkordb / memgraph / oracle
+docker compose --profile neo4j   up -d   # or falkordb / memgraph / oracle / postgres
 ```
 
 Memgraph maps host port `7688` → container `7687` to avoid clashing with Neo4j, so you can run them side-by-side. FalkorDB uses Redis protocol on `6379`.
@@ -135,6 +139,18 @@ Oracle runs from `gvenzl/oracle-free:23-faststart` and wants about 2 GB of memor
 
 The user is created only when the `oracle_data` volume is new: after changing the username or password, stop the container and remove its volume (`docker rm -f embabel-oracle && docker volume rm guide_oracle_data`, which deletes the Oracle data), or create the user yourself. `docker compose down -v` would remove the Neo4j volume as well. Guide makes its tables on startup, and the RAG store is filled by an ingest as on any other backend.
 
+Postgres runs from `pgvector/pgvector:pg17`: Postgres 17 with the pgvector extension, which vector search uses. On first start the image creates the user and its database, and the `postgres` Spring profile connects as that user. On startup Guide makes its tables in that database, and the `vector` and `pg_trgm` extensions (pg_trgm backs full-text search). The profile reads all of these; compose reads the port, username, password and database:
+
+| Variable            | Default     |
+|---------------------|-------------|
+| `POSTGRES_HOST`     | `localhost` |
+| `POSTGRES_PORT`     | `5432`      |
+| `POSTGRES_USERNAME` | `guide`     |
+| `POSTGRES_PASSWORD` | `brahmsian` |
+| `POSTGRES_DATABASE` | `guide`     |
+
+As with Oracle, the user and database are created only when the `postgres_data` volume is new: after changing them, stop the container and remove its volume (`docker rm -f embabel-postgres && docker volume rm guide_postgres_data`, which deletes the Postgres data), or create them yourself.
+
 ### Browsing data
 
 - **Neo4j**: http://localhost:7474/browser/ (user `neo4j`, password `brahmsian`)
@@ -148,6 +164,15 @@ The user is created only when the `oracle_data` volume is new: after changing th
 
   ```sql
   select count(*) from drivine_node where json_exists(labels, '$[*]?(@ == "Chunk")');
+  ```
+- **Postgres**: psql in the container. The tables are as on Oracle, with `labels` and `props` as `jsonb`:
+
+  ```bash
+  docker exec -it embabel-postgres psql -U guide -d guide
+  ```
+
+  ```sql
+  select count(*) from drivine_node where labels @> '["Chunk"]';
   ```
 
 ## Viewing and Deleting Data

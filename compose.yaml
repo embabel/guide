@@ -106,6 +106,28 @@ services:
     networks:
       - embabel-network
 
+  # Postgres 17 with pgvector, for the `postgres` Spring profile. The image makes the user and its database.
+  postgres:
+    profiles:
+      - postgres
+    image: pgvector/pgvector:${POSTGRES_VERSION:-pg17}
+    container_name: embabel-postgres
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USERNAME:-guide}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-brahmsian}
+      - POSTGRES_DB=${POSTGRES_DATABASE:-guide}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      - embabel-network
+
   memgraph:
     profiles:
       - memgraph
@@ -158,6 +180,8 @@ volumes:
   falkordb_data:
     driver: local
   oracle_data:
+    driver: local
+  postgres_data:
     driver: local
   memgraph_data:
     driver: local

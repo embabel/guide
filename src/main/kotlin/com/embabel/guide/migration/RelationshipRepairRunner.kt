@@ -45,7 +45,7 @@ import org.springframework.stereotype.Component
  *   `guide.repair.fields` (`View.field`, comma separated). An ambiguous finding is not repaired.
  *
  * Run it once against each database, `report` first, after backing the store up. The tools are
- * written in Cypher and have nothing to repair on Oracle.
+ * written in Cypher and have nothing to repair on Oracle or Postgres.
  */
 @Component
 @ConditionalOnProperty(name = ["guide.repair.mode"])
