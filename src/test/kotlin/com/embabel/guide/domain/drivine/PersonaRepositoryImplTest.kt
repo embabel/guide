@@ -22,7 +22,7 @@ import java.util.UUID
 @ContextConfiguration(initializers = [Neo4jPropertiesInitializer::class])
 @ImportAutoConfiguration(exclude = [McpClientAutoConfiguration::class])
 @Transactional
-class PersonaRepositoryImplTest {
+open class PersonaRepositoryImplTest {
 
     @Autowired
     private lateinit var repository: PersonaRepositoryImpl

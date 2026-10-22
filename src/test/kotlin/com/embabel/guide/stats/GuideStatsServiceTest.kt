@@ -31,7 +31,7 @@ import java.util.UUID
 @ContextConfiguration(initializers = [Neo4jPropertiesInitializer::class])
 @ImportAutoConfiguration(exclude = [McpClientAutoConfiguration::class])
 @Transactional
-class GuideStatsServiceTest {
+open class GuideStatsServiceTest {
 
     @Autowired
     private lateinit var statsService: GuideStatsService
