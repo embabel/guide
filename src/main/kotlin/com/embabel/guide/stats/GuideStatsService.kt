@@ -28,7 +28,7 @@ import java.time.Instant
  * reuses [GuideUserCache]; its TTL is what makes an out-of-band grant/revocation take effect.
  *
  * Totals use single-label fragment counts. The rankings are Drivine grouped reads: one statement
- * each, on every store Drivine supports, Oracle among them.
+ * each, on every store Drivine supports, Oracle and Postgres among them.
  */
 @Service
 class GuideStatsService(

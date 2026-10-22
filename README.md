@@ -644,7 +644,7 @@ Tests require the following:
 export OPENAI_API_KEY=sk-your-key-here
 ```
 
-2. **Neo4j**: See the [Local vs CI Testing](#local-vs-ci-testing) section below.
+2. **Neo4j**, and **Docker** for the Postgres tests: See the [Local vs CI Testing](#local-vs-ci-testing) section below.
 
 3. **A JDK between 21 and 25**. The build targets Java 21 bytecode, so the resulting jar
    runs on any JRE 21+, but it builds on anything up to 25 — CI runs the suite on both 21
@@ -686,6 +686,11 @@ export USE_LOCAL_NEO4J=true
 #### For CI
 
 Leave `USE_LOCAL_NEO4J` unset (the default). GitHub Actions uses Testcontainers to automatically spin up Neo4j.
+
+#### Postgres tests
+
+The `*PostgresTest` classes rerun the store tests on Postgres. They start Postgres with pgvector in a Testcontainer
+whatever `USE_LOCAL_NEO4J` says, so `./mvnw test` needs Docker even with a local Neo4j.
 
 ### Running Tests
 
