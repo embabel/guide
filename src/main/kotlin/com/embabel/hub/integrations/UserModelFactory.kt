@@ -1,13 +1,18 @@
 package com.embabel.hub.integrations
 
+import com.embabel.agent.api.models.AnthropicModels
 import com.embabel.agent.api.models.DeepSeekModels
 import com.embabel.agent.api.models.MistralAiModels
 import com.embabel.agent.api.models.OpenAiModels
 import com.embabel.agent.anthropic.AnthropicModelFactory
+import com.embabel.agent.anthropic.AnthropicPlatform
+import com.embabel.agent.openai.DeepSeekPlatform
+import com.embabel.agent.openai.MistralAiPlatform
 import com.embabel.agent.openai.OpenAiCompatibleModelFactory
+import com.embabel.agent.openai.OpenAiPlatform
 import com.embabel.common.byok.InvalidApiKeyException
 import com.embabel.agent.spi.LlmService
-import com.embabel.common.ai.model.PricingModel
+import com.embabel.common.ai.model.ProviderCredential
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.time.Duration
@@ -95,15 +100,16 @@ class UserModelFactory(
         val DEFAULT_TTL: Duration = Duration.ofMinutes(5)
     }
 
+    // Each platform knows its provider's endpoint, so no base URL is written here.
     private fun createLlmService(provider: LlmProvider, model: String, apiKey: String): LlmService<*> {
-        return when (provider) {
-            LlmProvider.OPENAI -> OpenAiCompatibleModelFactory(null, apiKey, null, null)
-                .openAiCompatibleLlm(model, PricingModel.ALL_YOU_CAN_EAT, OpenAiModels.PROVIDER, null)
-            LlmProvider.ANTHROPIC -> AnthropicModelFactory(apiKey = apiKey).build(model)
-            LlmProvider.MISTRAL -> OpenAiCompatibleModelFactory("https://api.mistral.ai/v1", apiKey, null, null)
-                .openAiCompatibleLlm(model, PricingModel.ALL_YOU_CAN_EAT, MistralAiModels.PROVIDER, null)
-            LlmProvider.DEEPSEEK -> OpenAiCompatibleModelFactory("https://api.deepseek.com", apiKey, null, null)
-                .openAiCompatibleLlm(model, PricingModel.ALL_YOU_CAN_EAT, DeepSeekModels.PROVIDER, null)
+        val (platform, providerName) = when (provider) {
+            LlmProvider.OPENAI -> OpenAiPlatform() to OpenAiModels.PROVIDER
+            LlmProvider.ANTHROPIC -> AnthropicPlatform() to AnthropicModels.PROVIDER
+            LlmProvider.MISTRAL -> MistralAiPlatform() to MistralAiModels.PROVIDER
+            LlmProvider.DEEPSEEK -> DeepSeekPlatform() to DeepSeekModels.PROVIDER
+        }
+        return requireNotNull(platform.model(ProviderCredential(providerName, apiKey), LlmService.KIND, model)) {
+            "$platform built no chat model $model for $provider"
         }
     }
 
