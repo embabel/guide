@@ -27,17 +27,17 @@ jobs:
 
     steps:
       - name: Checkout guide
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up JDK 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           java-version: '25'
           distribution: 'temurin'
           cache: maven
 
       - name: Configure Maven Settings
-        uses: s4u/maven-settings-action@v2.8.0
+        uses: s4u/maven-settings-action@v4.0.0
         with:
           servers: ${{ secrets.EMBABEL_ARTIFACTORY }}
 
@@ -200,14 +200,14 @@ jobs:
           echo "Graph:  $(wc -l < seed-output/02-graph.cypher) lines, $(du -h seed-output/02-graph.cypher | cut -f1)"
 
       - name: Upload seed artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: seed-files
           path: seed-output/
           retention-days: 30
 
       - name: Trigger hub update
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           github-token: ${{ secrets.HUB_DISPATCH_TOKEN }}
           script: |
