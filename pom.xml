@@ -26,9 +26,13 @@
         <kotlin.version>2.3.21</kotlin.version>
     </properties>
 
-    <!-- Drivine 0.0.73 uses Jackson 2.21 APIs (e.g. com.fasterxml.jackson.annotation.JsonSerializeAs), but
-         Spring Boot 4 defaults to Jackson 3 and pins the Jackson 2.x line to 2.19.4. Bump Jackson 2 to 2.21
-         so drivine's self-owned Jackson 2 mapper resolves; it coexists with Boot 4's Jackson 3 (tools.jackson). -->
+    <!-- Jackson 2 on the 2.21 line. This was added for Drivine 0.0.73, which used Jackson 2.21 APIs
+         (com.fasterxml.jackson.annotation.JsonSerializeAs) when Spring Boot 4 managed Jackson 2 at 2.19.4.
+         Drivine no longer needs it: 0.4.0 builds on Jackson 2.19.2 and uses no 2.21 API. What still wants
+         2.20 or later is Boot 4's Jackson 3 (tools.jackson), which uses the Jackson 2 annotations at 2.21,
+         and jinjava, the MCP SDK and Tika, which ask for 2.20 or 2.21. Boot 4.1 now manages Jackson 2 at
+         2.21.5 itself, so these entries hold databind and core one patch below Boot. Jackson 2 coexists
+         with Boot 4's Jackson 3. -->
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -76,7 +80,7 @@
             <!-- Keep in step with embabel-agent-rag-graph and embabel-chat-store, and with drivineVersion
                  in codegen-gradle/build.gradle.kts: code compiled against one Drivine minor line need not link
                  with another (0.0.x does not link with 0.1.x). -->
-            <version>0.3.0</version>
+            <version>0.4.0</version>
         </dependency>
 
         <!-- Oracle JDBC driver, for the `oracle` profile. Drivine does not bring it. -->
