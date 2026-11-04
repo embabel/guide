@@ -72,10 +72,22 @@ class RagConfiguration {
 
         var routes = new ArrayList<Pair<String, ContentFetcher>>();
         routes.add(new Pair<>("https://medium.com/**", mediumFetcher));
+        // A site's pages are read from the markdown beside each, and keep the page's URL.
+        var markdownSibling = new MarkdownSiblingFetcher(http);
+        for (SiteConfig site : guideProperties.getContent().getSites()) {
+            for (String pattern : site.getInclude()) {
+                routes.add(new Pair<>(pattern, markdownSibling));
+            }
+        }
         for (FetchRoute route : guideProperties.getFetchRoutes()) {
             routes.add(new Pair<>(route.getPattern(), route.buildFetcher()));
         }
         return new TikaHierarchicalContentReader(new RoutingContentFetcher(http, routes));
+    }
+
+    @Bean
+    SitePages sitePages() {
+        return new SitePages(new HttpContentFetcher());
     }
 
     /**

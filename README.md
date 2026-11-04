@@ -74,6 +74,25 @@ So changing the version takes two steps: change `versions`, then ingest (`load-r
 
 More than one version can be listed, and each is ingested, but only the first is searched. Choosing the version per user or per request is not built: the filter is fixed when the application starts.
 
+The hub's pages follow the same version: embabel-hub's `convert-docs` converts embabel-agent's AsciiDoc at the tag of the first entry of `versions`, read from this file on `main`.
+
+### Sites
+
+A site is ingested page by page, each page a document under its own URL, so search results link to the page itself:
+
+```yaml
+guide:
+  content:
+    sites:
+      - sitemap: https://drivine.org/sitemap-index.xml
+        include:
+          - https://drivine.org/jvm/**
+        exclude:
+          - https://drivine.org/jvm/license/
+```
+
+At ingestion the sitemap gives the pages (a sitemap index is followed to its sitemaps), and those the patterns select are fetched from the markdown the site serves beside each page: `/jvm/testing/` from `/jvm/testing.md` (`SitePages`, `MarkdownSiblingFetcher`). The markdown has no sidebar, header or footer to fill the store with, and its headings become the document's sections. The site has to serve that markdown: drivine.org writes it at build time (`website/src/pages/[...slug].md.ts` in liberation-data/drivine). Site pages are supplementary material, searched whatever the docs version. A sitemap that can't be read is listed among the failed URLs, and the other sources still load.
+
 The stamp is stored on the chunk as `metadata.version`. To see what a store holds:
 
 ```cypher

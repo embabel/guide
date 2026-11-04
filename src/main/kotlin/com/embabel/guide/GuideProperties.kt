@@ -3,6 +3,7 @@ package com.embabel.guide
 import com.embabel.agent.rag.ingestion.ContentChunker
 import com.embabel.agent.rag.ingestion.FetchRoute
 import com.embabel.common.util.StringTransformer
+import com.embabel.guide.rag.SiteConfig
 import com.embabel.hub.integrations.LlmProvider
 import jakarta.validation.constraints.NotBlank
 import org.springframework.boot.context.properties.ConfigurationProperties
@@ -24,10 +25,14 @@ data class VersionedContentConfig(
 
 /**
  * Content source configuration, separating versioned docs from supplementary material.
+ *
+ * @param sites sites ingested page by page from the markdown beside each page, each under the page's
+ *              URL. They are supplementary material, searched whatever the docs version.
  */
 data class ContentConfig(
     @NestedConfigurationProperty val versioned: VersionedContentConfig,
     val supplementary: List<String> = emptyList(),
+    val sites: List<SiteConfig> = emptyList(),
 ) {
     fun allUrls(): List<String> = versioned.urls() + supplementary
 

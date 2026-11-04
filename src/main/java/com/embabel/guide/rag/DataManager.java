@@ -38,6 +38,7 @@ public class DataManager {
     private final ChunkingContentElementRepository store;
 
     private final HierarchicalContentReader hierarchicalContentReader;
+    private final SitePages sitePages;
 
     // Refresh only snapshots
     private final ContentRefreshPolicy contentRefreshPolicy = UrlSpecificContentRefreshPolicy.containingAny(
@@ -47,11 +48,13 @@ public class DataManager {
     public DataManager(
             ChunkingContentElementRepository store,
             GuideProperties guideProperties,
-            HierarchicalContentReader hierarchicalContentReader
+            HierarchicalContentReader hierarchicalContentReader,
+            SitePages sitePages
     ) {
         this.store = store;
         this.guideProperties = guideProperties;
         this.hierarchicalContentReader = hierarchicalContentReader;
+        this.sitePages = sitePages;
         this.references = LlmReferenceProviders.fromYmlFile(guideProperties.getReferencesFile());
         // Provisioning is handled by ProvisioningRunner (ApplicationRunner), not here: it reads
         // the embedding model's width to build the vector index spec, and a BYOK deployment has
@@ -153,7 +156,19 @@ public class DataManager {
         var failedDirs = new ArrayList<IngestionFailure>();
         var failedDocuments = new ArrayList<IngestionFailure>();
 
-        for (var url : guideProperties.getUrls()) {
+        var urls = new ArrayList<>(guideProperties.getUrls());
+        for (SiteConfig site : guideProperties.getContent().getSites()) {
+            try {
+                var pages = sitePages.pages(site);
+                logger.info("Site {}: {} pages to ingest", site.getSitemap(), pages.size());
+                urls.addAll(pages);
+            } catch (Throwable t) {
+                logger.error("❌ Failure reading sitemap {}: {}", site.getSitemap(), t.getMessage(), t);
+                failedUrls.add(IngestionFailure.fromException(site.getSitemap(), t));
+            }
+        }
+
+        for (var url : urls) {
             try {
                 logger.info("⏳ Loading URL: {}...", url);
                 ingestPage(url);
@@ -165,7 +180,7 @@ public class DataManager {
             }
         }
         logger.info("Loaded {}/{} URLs successfully ({} failed)",
-                loadedUrls.size(), guideProperties.getUrls().size(), failedUrls.size());
+                loadedUrls.size(), urls.size(), failedUrls.size());
 
         List<String> dirs = guideProperties.getDirectories();
         if (dirs != null && !dirs.isEmpty()) {
