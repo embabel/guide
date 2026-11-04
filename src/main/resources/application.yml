@@ -53,8 +53,18 @@ guide:
       base-url: https://docs.embabel.com/embabel-agent/guide/
       versions:
         - 1.5.4
+    # Sites read page by page from the markdown each serves beside its pages (/jvm/testing/ as
+    # /jvm/testing.md), every page a document under its own URL. Searched whatever the docs version.
+    sites:
+      # Drivine's Kotlin & Java docs. drivine4j's README no longer holds them.
+      - sitemap: https://drivine.org/sitemap-index.xml
+        include:
+          - https://drivine.org/jvm/**
+        exclude:
+          - https://drivine.org/jvm/license/
+          - https://drivine.org/jvm/links/
+          - https://drivine.org/jvm/building-from-source/
     supplementary:
-      - https://raw.githubusercontent.com/liberation-data/drivine4j/refs/heads/main/README.md
       # @springrod blog posts
       - https://medium.com/@springrod/embabel-a-new-agent-platform-for-the-jvm-1c83402e0014
       - https://medium.com/@springrod/production-ready-gen-ai-beyond-the-python-prototype-439bf213a8c0
