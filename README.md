@@ -60,7 +60,7 @@ guide:
     versioned:
       base-url: https://docs.embabel.com/embabel-agent/guide/
       versions:
-        - 1.5.3          # the first entry is the active version
+        - 1.5.4          # the first entry is the active version
     supplementary:
       - https://medium.com/...   # blog posts and other material that belongs to no version
 ```
