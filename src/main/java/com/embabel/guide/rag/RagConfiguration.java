@@ -16,6 +16,7 @@
 package com.embabel.guide.rag;
 
 import com.embabel.agent.rag.ingestion.ChunkTransformer;
+import com.embabel.agent.rag.ingestion.transform.ChainedChunkTransformer;
 import com.embabel.agent.rag.ingestion.ContentChunker;
 import com.embabel.agent.rag.ingestion.ContentFetcher;
 import com.embabel.agent.rag.ingestion.FetchRoute;
@@ -27,6 +28,7 @@ import com.embabel.agent.rag.ingestion.TikaHierarchicalContentReader;
 import kotlin.Pair;
 
 import java.util.ArrayList;
+import java.util.List;
 import com.embabel.agent.rag.graph.GraphObjectManagerStore;
 import com.embabel.agent.rag.graph.GraphRagServiceProperties;
 import com.embabel.agent.rag.graph.GraphRagStore;
@@ -56,7 +58,9 @@ class RagConfiguration {
 
     @Bean
     ChunkTransformer chunkTransformer(GuideProperties guideProperties) {
-        return new VersionChunkTransformer(guideProperties);
+        return new ChainedChunkTransformer(List.of(
+                new VersionChunkTransformer(guideProperties),
+                SectionUrlChunkTransformer.INSTANCE));
     }
 
     @Bean
@@ -72,17 +76,13 @@ class RagConfiguration {
 
         var routes = new ArrayList<Pair<String, ContentFetcher>>();
         routes.add(new Pair<>("https://medium.com/**", mediumFetcher));
-        // A site's pages are read from the markdown beside each, and keep the page's URL.
-        var markdownSibling = new MarkdownSiblingFetcher(http);
-        for (SiteConfig site : guideProperties.getContent().allSites()) {
-            for (String pattern : site.getInclude()) {
-                routes.add(new Pair<>(pattern, markdownSibling));
-            }
-        }
         for (FetchRoute route : guideProperties.getFetchRoutes()) {
             routes.add(new Pair<>(route.getPattern(), route.buildFetcher()));
         }
-        return new TikaHierarchicalContentReader(new RoutingContentFetcher(http, routes));
+        var tika = new TikaHierarchicalContentReader(new RoutingContentFetcher(http, routes));
+        // A site's pages are read from the markdown beside each, keeping the page's URL, and each section the
+        // URL of its heading's anchor.
+        return new SiteMarkdownReader(guideProperties.getContent().allSites(), new MarkdownSiblingFetcher(http), tika);
     }
 
     @Bean
