@@ -101,6 +101,25 @@ jobs:
           fi
         timeout-minutes: 25
 
+      # Each source fails on its own and ingestion still answers 200, so check the docs made it:
+      # a seed without them (the hub not yet at a new docs version, or down) would leave every
+      # search with the supplementary material alone.
+      - name: Check the docs were ingested
+        run: |
+          python3 -I - src/main/resources/application.yml /tmp/ingestion-response.txt <<'PY'
+          import json, sys, urllib.parse, yaml
+          docs = [d for d in yaml.safe_load_all(open(sys.argv[1])) if d and 'guide' in d]
+          versioned = docs[0]['guide']['content']['versioned']
+          host = urllib.parse.urlparse(versioned['site']['sitemap']).netloc
+          result = json.load(open(sys.argv[2]))
+          failed = [f for f in result['failedUrls'] if urllib.parse.urlparse(f['source']).netloc == host]
+          loaded = [u for u in result['loadedUrls'] if urllib.parse.urlparse(u).netloc == host]
+          for f in failed:
+              print(f"::error::{f['source']}: {f['reason']}")
+          print(f"Docs {versioned['version']}: {len(loaded)} pages from {host} loaded, {len(failed)} failed")
+          sys.exit(1 if failed or not loaded else 0)
+          PY
+
       - name: Remove Persona nodes before export
         run: |
           echo "Removing Persona nodes from export (managed by the app, not the seed)..."

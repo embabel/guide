@@ -4,20 +4,25 @@ import com.embabel.agent.rag.ingestion.ContentFetcher
 import com.embabel.agent.rag.ingestion.FetchResult
 import com.embabel.agent.rag.ingestion.RoutingContentFetcher
 import com.embabel.agent.rag.ingestion.TikaHierarchicalContentReader
+import com.embabel.guide.VersionedContentConfig
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.springframework.util.MimeType
 import java.net.URI
 
 class SiteSourceTest {
 
-    /** Serves [pages] by URL, recording each URL fetched. */
-    private class FakeFetcher(private val pages: Map<String, String>) : ContentFetcher {
+    /** Serves [pages] by URL, as [contentType], recording each URL fetched. */
+    private class FakeFetcher(
+        private val pages: Map<String, String>,
+        private val contentType: MimeType? = null,
+    ) : ContentFetcher {
         val fetched = mutableListOf<String>()
         override fun fetch(uri: URI): FetchResult {
             fetched += uri.toString()
             val body = pages[uri.toString()] ?: error("Not found: $uri")
-            return FetchResult(body.toByteArray())
+            return FetchResult(body.toByteArray(), contentType)
         }
     }
 
@@ -56,8 +61,21 @@ class SiteSourceTest {
     }
 
     @Test
-    fun `a site's root page has no markdown beside it`() {
-        assertThrows<IllegalArgumentException> { MarkdownSiblingFetcher.markdownOf(URI("https://drivine.org/")) }
+    fun `markdown beside a site's root page is index md`() {
+        assertEquals(URI("https://hub.embabel.com/index.md"), MarkdownSiblingFetcher.markdownOf(URI("https://hub.embabel.com/")))
+        assertEquals(URI("https://hub.embabel.com/index.md"), MarkdownSiblingFetcher.markdownOf(URI("https://hub.embabel.com")))
+    }
+
+    @Test
+    fun `sibling fetcher refuses HTML, as a site serving its app for every path answers a missing page`() {
+        val fake = FakeFetcher(
+            mapOf("https://hub.embabel.com/reference/nope.md" to "<!DOCTYPE html><html></html>"),
+            MimeType("text", "html", Charsets.UTF_8),
+        )
+        val failure = assertThrows<IllegalStateException> {
+            MarkdownSiblingFetcher(fake).fetch(URI("https://hub.embabel.com/reference/nope"))
+        }
+        assertTrue(failure.message!!.contains("https://hub.embabel.com/reference/nope.md"), failure.message)
     }
 
     @Test
@@ -131,5 +149,44 @@ class SiteSourceTest {
         assertEquals("https://drivine.org/jvm/testing/", document.uri)
         val titles = document.descendants().map { it.title }.toList()
         assertTrue(titles.contains("Automated Test Configuration"), "sections: $titles")
+    }
+
+    private val hub = SiteConfig(
+        sitemap = "https://hub.embabel.com/sitemap.xml",
+        include = listOf("https://hub.embabel.com/**"),
+    )
+
+    private fun hubFetcher(publishedVersion: String) = FakeFetcher(
+        mapOf(
+            "https://hub.embabel.com/sitemap.xml" to
+                urlset("https://hub.embabel.com/", "https://hub.embabel.com/reference/flow"),
+            "https://hub.embabel.com/docs-version.txt" to "$publishedVersion\n",
+        )
+    )
+
+    @Test
+    fun `docs pages are the site's when it says they're at the docs version`() {
+        val docs = VersionedContentConfig("1.5.4", hub, "https://hub.embabel.com/docs-version.txt")
+
+        assertEquals(
+            listOf("https://hub.embabel.com/", "https://hub.embabel.com/reference/flow"),
+            SitePages(hubFetcher("1.5.4")).pages(docs),
+        )
+    }
+
+    @Test
+    fun `docs pages are refused when the site says they're at another version`() {
+        val docs = VersionedContentConfig("1.5.5", hub, "https://hub.embabel.com/docs-version.txt")
+        val fake = hubFetcher("1.5.4")
+
+        val failure = assertThrows<IllegalStateException> { SitePages(fake).pages(docs) }
+
+        assertTrue(failure.message!!.contains("are at 1.5.4, not at the docs version 1.5.5"), failure.message)
+        assertEquals(listOf("https://hub.embabel.com/docs-version.txt"), fake.fetched, "the sitemap isn't read")
+    }
+
+    @Test
+    fun `docs pages without a version URL aren't checked`() {
+        assertEquals(2, SitePages(hubFetcher("anything")).pages(VersionedContentConfig("1.5.4", hub)).size)
     }
 }

@@ -52,29 +52,31 @@ RAG content storage uses the `ChunkingContentElementRepository` interface from t
 
 ### Docs version
 
-Guide answers from one version of the Embabel docs at a time. The version is set in `application.yml`:
+Guide answers from one version of the Embabel docs at a time, read page by page from Embabel Hub. The version is set in `application.yml`:
 
 ```yaml
 guide:
   content:
     versioned:
-      base-url: https://docs.embabel.com/embabel-agent/guide/
-      versions:
-        - 1.5.4          # the first entry is the active version
+      version: 1.5.4
+      site:                                  # read like any other site (see Sites below)
+        sitemap: https://hub.embabel.com/sitemap.xml
+        include:
+          - https://hub.embabel.com/**
+      version-url: https://hub.embabel.com/docs-version.txt
     supplementary:
       - https://medium.com/...   # blog posts and other material that belongs to no version
 ```
 
-The setting does two things:
+The setting does three things:
 
-- **At ingestion**, each entry of `versions` is fetched from `base-url` + version + `/`, and every chunk is given a `version` property: the version in its document's URL for the versioned docs, and `supplementary` for everything else (`VersionChunkTransformer`).
-- **At search**, chat and the MCP tools only see chunks whose `version` is the active version or `supplementary` (`ChatActions.versionFilter` and `McpToolExportConfiguration`). The active version is the first entry of `versions`. With no entries there is no filter.
+- **The hub follows it.** embabel-hub's `convert-docs` converts embabel-agent's AsciiDoc at the tag of `version`, read from this file on `main`, and opens a pull request with the pages. Its deploy writes each page as markdown beside it (`/reference/flow.md`, `scripts/export-markdown.mjs` in embabel-hub), a sitemap of them, and `docs-version.txt`, the version the pages were converted at.
+- **At ingestion**, the hub's pages are read once `version-url` says they're at `version`, and every chunk is given a `version` property: `version` for the hub's pages, and `supplementary` for everything else (`VersionChunkTransformer`). When the hub says another version (it hasn't deployed the new version's pages yet), none of its pages is ingested, the failure is listed among the failed URLs, and the seed export fails rather than ship a seed without the docs.
+- **At search**, chat and the MCP tools only see chunks whose `version` is `version` or `supplementary` (`ChatActions.versionFilter` and `McpToolExportConfiguration`). With no `version` there is no filter.
 
-So changing the version takes two steps: change `versions`, then ingest (`load-references`). Until the new version is ingested, the store holds only chunks of the old one, the filter hides them all, and Guide answers from the supplementary material alone. The same holds for a seeded database, such as the one in the `embabel/hub` image: its chunks have to carry the version Guide is configured with.
+So a new version goes out in order: change `version` on `main`, merge the hub's docs pull request (its deploy publishes the pages and `docs-version.txt`), then ingest (`load-references`, or the daily `export-seed`). Until the new version is ingested, the store holds only chunks of the old one, the filter hides them all, and Guide answers from the supplementary material alone. The same holds for a seeded database, such as the one in the `embabel/hub` image: its chunks have to carry the version Guide is configured with.
 
-More than one version can be listed, and each is ingested, but only the first is searched. Choosing the version per user or per request is not built: the filter is fixed when the application starts.
-
-The hub's pages follow the same version: embabel-hub's `convert-docs` converts embabel-agent's AsciiDoc at the tag of the first entry of `versions`, read from this file on `main`.
+Choosing the version per user or per request is not built: the filter is fixed when the application starts.
 
 ### Sites
 
@@ -91,7 +93,7 @@ guide:
           - https://drivine.org/jvm/license/
 ```
 
-At ingestion the sitemap gives the pages (a sitemap index is followed to its sitemaps), and those the patterns select are fetched from the markdown the site serves beside each page: `/jvm/testing/` from `/jvm/testing.md` (`SitePages`, `MarkdownSiblingFetcher`). The markdown has no sidebar, header or footer to fill the store with, and its headings become the document's sections. The site has to serve that markdown: drivine.org writes it at build time (`website/src/pages/[...slug].md.ts` in liberation-data/drivine). Site pages are supplementary material, searched whatever the docs version. A sitemap that can't be read is listed among the failed URLs, and the other sources still load.
+At ingestion the sitemap gives the pages (a sitemap index is followed to its sitemaps), and those the patterns select are fetched from the markdown the site serves beside each page: `/jvm/testing/` from `/jvm/testing.md` (`SitePages`, `MarkdownSiblingFetcher`). The markdown has no sidebar, header or footer to fill the store with, and its headings become the document's sections. The site has to serve that markdown: drivine.org writes it at build time (`website/src/pages/[...slug].md.ts` in liberation-data/drivine), as does Embabel Hub. A page whose markdown comes back as HTML, as a site that serves its app at every path answers a missing page, fails. The pages of `sites` are supplementary material, searched whatever the docs version. A sitemap that can't be read is listed among the failed URLs, and the other sources still load.
 
 The stamp is stored on the chunk as `metadata.version`. To see what a store holds:
 

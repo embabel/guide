@@ -13,15 +13,20 @@ import org.springframework.validation.annotation.Validated
 import java.nio.file.Path
 
 /**
- * Versioned content source configuration.
- * URLs are built from baseUrl + version + "/".
+ * The Embabel docs: one version of them, read page by page from the site that serves it (Embabel Hub),
+ * every page a document under its own URL.
+ *
+ * @param version    the docs version. Each chunk of [site]'s pages is stamped with it, and chat and MCP
+ *                   search see only it, plus the supplementary material. Blank for no versioned docs.
+ * @param site       the site serving the docs at [version], with the markdown beside each page
+ * @param versionUrl where [site] says which version its pages are. When it says another than [version],
+ *                   the pages aren't ingested: they would go into the store under the wrong version.
  */
 data class VersionedContentConfig(
-    val baseUrl: String,
-    val versions: List<String> = emptyList(),
-) {
-    fun urls(): List<String> = versions.map { version -> "${baseUrl}$version/" }
-}
+    val version: String = "",
+    val site: SiteConfig? = null,
+    val versionUrl: String? = null,
+)
 
 /**
  * Content source configuration, separating versioned docs from supplementary material.
@@ -30,13 +35,15 @@ data class VersionedContentConfig(
  *              URL. They are supplementary material, searched whatever the docs version.
  */
 data class ContentConfig(
-    @NestedConfigurationProperty val versioned: VersionedContentConfig,
+    @NestedConfigurationProperty val versioned: VersionedContentConfig = VersionedContentConfig(),
     val supplementary: List<String> = emptyList(),
     val sites: List<SiteConfig> = emptyList(),
 ) {
-    fun allUrls(): List<String> = versioned.urls() + supplementary
+    /** The docs version search sees, or null for no versioned docs. */
+    val activeVersion: String? get() = versioned.version.ifBlank { null }
 
-    val activeVersion: String? get() = versioned.versions.firstOrNull()
+    /** Every site read page by page: the docs' site, when there is one, then [sites]. */
+    fun allSites(): List<SiteConfig> = listOfNotNull(versioned.site) + sites
 }
 
 /**
@@ -48,7 +55,7 @@ data class ContentConfig(
  * @param projectsPath           path to projects root: absolute, or relative to the process working directory (user.dir)
  * @param chunkerConfig          chunker configuration for RAG ingestion
  * @param referencesFile         YML files containing LLM references such as GitHub repositories and classpath info
- * @param content                content source configuration (versioned docs + supplementary)
+ * @param content                content source configuration (versioned docs, sites, supplementary)
  * @param directories            optional list of local directory paths to ingest (full tree); resolved like projectsPath
  * @param toolGroups             toolGroups, such as "web", that are allowed
  */
@@ -72,9 +79,6 @@ data class GuideProperties(
     val toolGroups: Set<String>,
     val fetchRoutes: List<FetchRoute> = emptyList(),
 ) {
-
-    /** All URLs to ingest (versioned + supplementary). */
-    val urls: List<String> get() = content.allUrls()
 
     fun toolNamingStrategy(): StringTransformer = StringTransformer { name -> toolPrefix + name }
 
