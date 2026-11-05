@@ -38,9 +38,9 @@ import org.springframework.test.context.TestPropertySource
 @ImportAutoConfiguration(exclude = [McpClientAutoConfiguration::class])
 @TestPropertySource(
     properties = [
-        "guide.content.versioned.base-url=https://docs.embabel.com/embabel-agent/guide/",
-        "guide.content.versioned.versions=",
+        "guide.content.versioned.version=",
         "guide.content.supplementary=",
+        "guide.content.sites=",
         "guide.directories[0]=./src/test/resources/sample-repo-for-ingestion"
     ]
 )

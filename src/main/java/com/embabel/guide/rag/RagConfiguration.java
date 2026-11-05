@@ -74,7 +74,7 @@ class RagConfiguration {
         routes.add(new Pair<>("https://medium.com/**", mediumFetcher));
         // A site's pages are read from the markdown beside each, and keep the page's URL.
         var markdownSibling = new MarkdownSiblingFetcher(http);
-        for (SiteConfig site : guideProperties.getContent().getSites()) {
+        for (SiteConfig site : guideProperties.getContent().allSites()) {
             for (String pattern : site.getInclude()) {
                 routes.add(new Pair<>(pattern, markdownSibling));
             }

@@ -14,11 +14,9 @@ guide:
     overlap-size: 200
     embedding-batch-size: 50
   content:
-    # The Embabel docs. Search sees only the first version listed (see "Docs version" in the README).
+    # The Embabel docs version, read from Embabel Hub; search sees only it (see "Docs version" in the README).
     versioned:
-      base-url: https://docs.embabel.com/embabel-agent/guide/
-      versions:
-        - 1.5.4
+      version: 1.5.4
     # Anything else to ingest. It is searched whatever the docs version.
     supplementary:
       - https://github.com/embabel/embabel-agent

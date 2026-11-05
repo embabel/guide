@@ -156,8 +156,22 @@ public class DataManager {
         var failedDirs = new ArrayList<IngestionFailure>();
         var failedDocuments = new ArrayList<IngestionFailure>();
 
-        var urls = new ArrayList<>(guideProperties.getUrls());
-        for (SiteConfig site : guideProperties.getContent().getSites()) {
+        var content = guideProperties.getContent();
+        var urls = new ArrayList<String>();
+        var docs = content.getVersioned();
+        if (content.getActiveVersion() != null && docs.getSite() != null) {
+            try {
+                var pages = sitePages.pages(docs);
+                logger.info("Docs {} at {}: {} pages to ingest", docs.getVersion(), docs.getSite().getSitemap(),
+                        pages.size());
+                urls.addAll(pages);
+            } catch (Throwable t) {
+                logger.error("❌ Failure reading the docs pages {}: {}", docs.getSite().getSitemap(), t.getMessage(), t);
+                failedUrls.add(IngestionFailure.fromException(docs.getSite().getSitemap(), t));
+            }
+        }
+        urls.addAll(content.getSupplementary());
+        for (SiteConfig site : content.getSites()) {
             try {
                 var pages = sitePages.pages(site);
                 logger.info("Site {}: {} pages to ingest", site.getSitemap(), pages.size());

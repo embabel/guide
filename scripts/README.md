@@ -31,9 +31,7 @@ Since `append-ingest.sh` doesn't clear the store, you should comment out URLs an
 guide:
   content:
     versioned:
-      base-url: https://docs.embabel.com/embabel-agent/guide/
-      versions:
-        - 1.5.4  # keep this: it is also the version search is filtered by
+      version: 1.5.4  # keep this: it is also the version search is filtered by
     supplementary:
       # - https://github.com/embabel/embabel-agent  # already ingested
       - https://some-new-url.com  # new, will be ingested
