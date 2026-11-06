@@ -120,15 +120,19 @@ jobs:
           sys.exit(1 if failed or not loaded else 0)
           PY
 
-      - name: Remove Persona nodes before export
+      # The seed is content alone. Guide makes app nodes on start (the bot, the anonymous user, the system personas),
+      # which the app owns on the target. Exported, the seed's bot collided with the target's, so the hub's cleanup
+      # deleted the target's bot each apply, cutting its system personas loose: Guide then made 7 more every time.
+      # Drivine's schema record stays: the hub's cleanup replaces the target's with it.
+      - name: Remove app nodes before export
         run: |
-          echo "Removing Persona nodes from export (managed by the app, not the seed)..."
+          echo "Removing app nodes from export (owned by the app on the target, not the seed)..."
           RESULT=$(curl -sf \
             -u "neo4j:testpassword" \
             -H "Content-Type: application/json" \
             "http://localhost:7474/db/neo4j/tx/commit" \
-            -d '{"statements": [{"statement": "MATCH (p:Persona) DETACH DELETE p RETURN count(p) AS removed"}]}')
-          echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Removed {d[\"results\"][0][\"data\"][0][\"row\"][0]} Persona nodes')"
+            -d '{"statements": [{"statement": "MATCH (n) WHERE NOT n:ContentElement AND NOT n:_DrivineSchema DETACH DELETE n RETURN count(n) AS removed"}]}')
+          echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Removed {d[\"results\"][0][\"data\"][0][\"row\"][0]} app nodes')"
 
       - name: Tag all nodes with managedBy
         run: |
