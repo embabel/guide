@@ -86,10 +86,10 @@ On 2026-11-06, from prod Aura (Neo4j 5.27) into a local Postgres 17 holding the 
 - Nodes in 2.9 s, edges in 170 ms. A second run replaced the first.
 - Read back through Guide's services: 220 users with their personas (the 221st is the bot, which uses none), 104
   sessions, 1,161 messages, 93 personas, 48 feedback. Guide found the copied bot and personas rather than making them.
-- Prod holds 91 system personas, 13 copies of each of 7: 84 have lost their owner, and they are the ones users use.
-  Each seed apply on Aura deletes `bot:jesse` (embabel-hub `docker/seed/00-cleanup.cypher`), which cuts its
-  `OWNED_BY` edges; Guide then finds no system personas and makes 7 more. All are copied, so every user keeps theirs.
-  The Postgres seed holds content only and its loader deletes nothing else, so this stops at cutover.
+- Prod held 91 system personas, 13 copies of each of 7, 84 of them ownerless and in use: each seed apply on Aura
+  deleted `bot:jesse`, cutting its `OWNED_BY` edges, and Guide then seeded 7 more. All were copied. Fixed by
+  embabel/guide#72 and embabel/embabel-hub#84, and prod cleaned on 2026-11-06 (users moved to the owned copy of
+  the same persona, orphans deleted): the next rehearsal expects 9 personas.
 - Guide started on the copy, and a user logged in through OAuth found their sessions.
 
 A rehearsal copies users' email addresses, password hashes and chats onto the machine it runs on: drop the database
