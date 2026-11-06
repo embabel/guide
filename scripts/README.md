@@ -5,6 +5,7 @@
 | `fresh-ingest.sh` | Wipes Neo4j RAG data and re-ingests everything from scratch. Use for first-time setup or when you want a clean slate. |
 | `append-ingest.sh` | Re-ingests without clearing existing data. Use when you've added new URLs or directories. Comment out already-ingested items in your profile to avoid re-processing them. |
 | `shell.sh` | Runs the application in interactive shell mode. |
+| `export-postgres-seed.sh` | Dumps the content of a Guide database on Postgres, just ingested, as a seed: `nodes.tsv` and `edges.tsv`, with `seed/postgres/apply.sql` beside them, which loads them into another Guide database on Postgres in place of its content, keeping the app's data. The Export Seed Database workflow runs it. |
 
 Both ingestion scripts start Neo4j in Docker, load your personal profile, and print an **INGESTION COMPLETE** banner when done.
 
