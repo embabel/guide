@@ -40,8 +40,16 @@ class Neo4jToPostgresMigration {
 
     @Test
     fun migrate() {
-        val (nodes, edges) = read()
+        val (nodes, edges, crossing) = read()
         println("Read ${nodes.size} nodes and ${edges.size} edges from Neo4j")
+
+        // Everything that can refuse the source is checked before Postgres is touched.
+        check(crossing.isEmpty()) {
+            "Edges between app data and content or schema nodes, which neither the seed nor this copy carries: $crossing"
+        }
+        // Edges go in by SQL (see below), which is only sound while no edge has properties for Drivine to encode.
+        val withProps = edges.filter { it.props.isNotEmpty() }.map { it.type }.distinct()
+        check(withProps.isEmpty()) { "Edges with properties, which the SQL insert would not encode: $withProps" }
 
         val ds = PGSimpleDataSource().apply {
             setURL(env("MIGRATE_POSTGRES_URL"))
@@ -49,16 +57,15 @@ class Neo4jToPostgresMigration {
             password = env("MIGRATE_POSTGRES_PASSWORD")
         }
         // Guide's first start makes the bot, the anonymous user and the system personas, which are replaced here.
-        // Chats mean the target is already in use: refuse unless told to replace them, as on a rehearsal rerun.
-        val chats = ds.connection.use { c ->
-            c.createStatement().executeQuery(
-                "SELECT count(*) FROM drivine_node WHERE labels @> '[\"ChatSession\"]' OR labels @> '[\"StoredMessage\"]'",
-            ).use { it.next(); it.getLong(1) }
+        // Anything else is someone's data: refuse unless told to replace it, as on a rehearsal rerun.
+        val inUse = ds.connection.use { c ->
+            c.createStatement().executeQuery("SELECT count(*) FROM drivine_node WHERE ${pgAppNode()} AND NOT ($MADE_ON_START)")
+                .use { it.next(); it.getLong(1) }
         }
-        check(chats == 0L || System.getenv("MIGRATE_REPLACE") == "true") {
-            "The target already holds $chats chat sessions and messages, which this would delete: set MIGRATE_REPLACE=true to replace them"
+        check(inUse == 0L || System.getenv("MIGRATE_REPLACE") == "true") {
+            "The target already holds $inUse users, logins, chats or feedback, which this would delete: set MIGRATE_REPLACE=true to replace them"
         }
-        sql(ds, "DELETE FROM drivine_node WHERE $APP_NODE").also { println("Deleted $it app nodes from Postgres") }
+        sql(ds, "DELETE FROM drivine_node WHERE ${pgAppNode()}").also { println("Deleted $it app nodes from Postgres") }
 
         val registry = SubtypeRegistry()
         val pm = NonTransactionalPersistenceManager(
@@ -77,10 +84,8 @@ class Neo4jToPostgresMigration {
             }
         }
         // Edges go in by SQL, joined on the marks in one statement: a Cypher MATCH on a row's value scans every
-        // node for each row (drivine4j#617). That is only sound while no edge has properties, which Drivine
-        // would otherwise encode, and Guide's have none.
-        val withProps = edges.filter { it.props.isNotEmpty() }.map { it.type }.distinct()
-        check(withProps.isEmpty()) { "Edges with properties, which the SQL insert would not encode: $withProps" }
+        // node for each row (drivine4j#617). This writes Drivine's tables directly (drivine_edge, on the default
+        // graph), so check it against the Drivine version the cutover ships.
         timed("edges") {
             ds.connection.use { c ->
                 c.autoCommit = false
@@ -106,7 +111,10 @@ class Neo4jToPostgresMigration {
         assertEquals(expected.second, actual.second, "edge counts by type")
     }
 
-    private fun read(): Pair<List<Node>, List<Edge>> =
+    /** The source's app nodes and the edges between them, and the types of any edges from them to other nodes. */
+    private data class Source(val nodes: List<Node>, val edges: List<Edge>, val crossing: List<String>)
+
+    private fun read(): Source =
         GraphDatabase.driver(env("MIGRATE_NEO4J_URI"), AuthTokens.basic(env("MIGRATE_NEO4J_USERNAME"), env("MIGRATE_NEO4J_PASSWORD"))).use { driver ->
             driver.session(SessionConfig.builder().withDefaultAccessMode(AccessMode.READ).build()).use { session ->
                 session.executeRead { tx ->
@@ -117,7 +125,10 @@ class Neo4jToPostgresMigration {
                         "MATCH (a)-[r]->(b) WHERE ${appNode("a")} AND ${appNode("b")} " +
                             "RETURN elementId(a) AS from, type(r) AS type, elementId(b) AS to, properties(r) AS props",
                     ).list { Edge(it["from"].asString(), it["type"].asString(), it["to"].asString(), it["props"].asMap()) }
-                    nodes to edges
+                    val crossing = tx.run(
+                        "MATCH (a)-[r]->(b) WHERE (${appNode("a")}) <> (${appNode("b")}) RETURN DISTINCT type(r) AS type",
+                    ).list { it["type"].asString() }
+                    Source(nodes, edges, crossing)
                 }
             }
         }
@@ -127,11 +138,10 @@ class Neo4jToPostgresMigration {
             buildMap { while (rs.next()) put(rs.getString(1), rs.getInt(2)) }.toSortedMap()
         }
         query(
-            "SELECT (SELECT string_agg(l, ',' ORDER BY l) FROM jsonb_array_elements_text(labels) l), count(*) FROM drivine_node WHERE $APP_NODE GROUP BY 1",
+            "SELECT (SELECT string_agg(l, ',' ORDER BY l) FROM jsonb_array_elements_text(labels) l), count(*) FROM drivine_node WHERE ${pgAppNode()} GROUP BY 1",
         ) to query(
             "SELECT e.type, count(*) FROM drivine_edge e JOIN drivine_node a ON a.nid = e.src JOIN drivine_node b ON b.nid = e.dst " +
-                "WHERE ${APP_NODE.replace("labels", "a.labels").replace("props", "a.props")} " +
-                "AND ${APP_NODE.replace("labels", "b.labels").replace("props", "b.props")} GROUP BY 1",
+                "WHERE ${pgAppNode("a.")} AND ${pgAppNode("b.")} GROUP BY 1",
         )
     }
 
@@ -146,8 +156,15 @@ class Neo4jToPostgresMigration {
         /** Whether [v] is an app node in Neo4j: not content, not Drivine's own schema record. */
         fun appNode(v: String) = "coalesce($v.managedBy, '') <> 'embabel' AND NOT $v:_DrivineSchema"
 
-        /** The same on Postgres. */
-        const val APP_NODE = "coalesce(props->>'managedBy', '') <> 'embabel' AND NOT labels @> '[\"_DrivineSchema\"]'"
+        /** The same on Postgres, for a row of drivine_node aliased by [alias] ("a." or none). */
+        fun pgAppNode(alias: String = "") =
+            "coalesce(${alias}props->>'managedBy', '') <> 'embabel' AND NOT ${alias}labels @> '[\"_DrivineSchema\"]'"
+
+        /** The app nodes Guide makes on its first start: the bot, the anonymous user and the system personas. */
+        const val MADE_ON_START = "props->>'id' = 'bot:jesse' OR labels @> '[\"Anonymous\"]' " +
+            "OR (labels @> '[\"Persona\"]' AND props->>'isSystem' = 'true') " +
+            "OR (labels @> '[\"GuideUser\"]' AND EXISTS (SELECT 1 FROM drivine_edge e JOIN drivine_node w ON w.nid = e.dst " +
+            "WHERE e.src = drivine_node.nid AND e.type = 'IS_WEB_USER' AND w.labels @> '[\"Anonymous\"]'))"
 
         /** Each node's Neo4j element id while edges are made, removed after. */
         const val MARK = "_migratedFrom"
