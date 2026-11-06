@@ -39,8 +39,10 @@ reads Aura, so it is as it was at the freeze. Chats made on Postgres since the s
 ## Running the migration
 
 It is a test class, enabled only when its target is set, so it never runs in the ordinary build. It reads Neo4j in
-read mode only. On Postgres it deletes every app node, then copies the source's: so it refuses a target that already
-holds chats, unless `MIGRATE_REPLACE=true` (a rehearsal rerun, or a rerun after a failed copy).
+read mode only. Before it touches Postgres it refuses a source with edges between app data and content, or edges
+with properties. On Postgres it deletes every app node, then copies the source's: so it refuses a target holding
+anything beyond what Guide makes on its first start (the bot, the anonymous user, the system personas), unless
+`MIGRATE_REPLACE=true` (a rehearsal rerun, or a rerun after a failed copy).
 
 ```bash
 MIGRATE_NEO4J_URI=neo4j+s://… MIGRATE_NEO4J_USERNAME=… MIGRATE_NEO4J_PASSWORD=… \
@@ -53,7 +55,8 @@ user back through Guide's services:
 
 ```bash
 USE_LOCAL_POSTGRES=true POSTGRES_HOST=localhost POSTGRES_DATABASE=guide POSTGRES_PASSWORD=… \
-MIGRATE_EXPECT_SESSIONS=<ChatSession count> MIGRATE_EXPECT_MESSAGES=<StoredMessage count> \
+MIGRATE_EXPECT_SESSIONS=<ChatSession> MIGRATE_EXPECT_MESSAGES=<StoredMessage> \
+MIGRATE_EXPECT_PERSONAS=<Persona> MIGRATE_EXPECT_FEEDBACK=<Feedback> \
 ./mvnw -q test -Dtest=MigratedDataReadBackTest -Dsurefire.failIfNoSpecifiedTests=false
 ```
 
@@ -81,8 +84,12 @@ On 2026-11-06, from prod Aura (Neo4j 5.27) into a local Postgres 17 holding the 
 
 - 2,052 nodes and 3,128 edges read; counts by labels and by type equal on Postgres.
 - Nodes in 2.9 s, edges in 170 ms. A second run replaced the first.
-- Read back through Guide's services: 220 users (the 221st is the bot, which owns no sessions), 104 sessions, 1,161
-  messages, personas and page ratings. Guide found the copied bot rather than making one.
+- Read back through Guide's services: 220 users with their personas (the 221st is the bot, which uses none), 104
+  sessions, 1,161 messages, 93 personas, 48 feedback. Guide found the copied bot and personas rather than making them.
+- Prod holds 91 system personas, 13 copies of each of 7: 84 have lost their owner, and they are the ones users use.
+  Each seed apply on Aura deletes `bot:jesse` (embabel-hub `docker/seed/00-cleanup.cypher`), which cuts its
+  `OWNED_BY` edges; Guide then finds no system personas and makes 7 more. All are copied, so every user keeps theirs.
+  The Postgres seed holds content only and its loader deletes nothing else, so this stops at cutover.
 - Guide started on the copy, and a user logged in through OAuth found their sessions.
 
 A rehearsal copies users' email addresses, password hashes and chats onto the machine it runs on: drop the database
