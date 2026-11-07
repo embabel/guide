@@ -11,17 +11,20 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped
  * identical to what the endpoint returned before (it serialized the same object directly) — the
  * front-end keeps reading `chunkCount` etc. unchanged.
  *
+ * [database] is public: the store Guide runs on (Postgres, Neo4j, ...), which the hub's About page shows.
+ *
  * [popularPages]/[unpopularPages] are public — they rank the guide's own pages by reader feedback,
  * which is doc-quality signal rather than anything user-sensitive, so everyone sees them.
  *
  * The remaining fields are admin-only and are populated solely when the caller has the ADMIN role.
  * With [JsonInclude.Include.NON_NULL] they are omitted entirely for everyone else, so the default
- * (non-admin) response is exactly the legacy payload plus the page rankings — no user/message
+ * (non-admin) response is exactly the legacy payload plus the store and the page rankings — no user/message
  * figures leak to the public.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class GuideStats(
     @get:JsonUnwrapped val content: ContentElementRepositoryInfo,
+    val database: String? = null,
     val popularPages: List<PageRating>? = null,
     val unpopularPages: List<PageRating>? = null,
     val userCount: Long? = null,

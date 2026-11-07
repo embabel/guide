@@ -46,6 +46,14 @@ open class GuideStatsServiceTest {
     @Qualifier("neoGraphObjectManager")
     private lateinit var graphObjectManager: StatelessGraphObjectManager
 
+    /** The store this test's profile runs on, as the stats name it. */
+    protected open val expectedDatabase = "Neo4j"
+
+    @Test
+    fun `everyone is told which store Guide runs on`() {
+        assertEquals(expectedDatabase, statsService.stats(null).database)
+    }
+
     @Test
     fun `a page is rated once it has enough votes, with its likes and dislikes`() {
         val liked = page()

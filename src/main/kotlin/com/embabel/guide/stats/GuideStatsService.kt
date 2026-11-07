@@ -15,6 +15,7 @@ import org.drivine.annotation.Hop
 import org.drivine.manager.StatelessGraphObjectManager
 import org.drivine.query.dsl.query
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Duration
@@ -37,7 +38,11 @@ class GuideStatsService(
     private val guideUserCache: GuideUserCache,
     private val guideUserRepository: GuideUserRepository,
     @param:Qualifier("neoGraphObjectManager") private val graphObjectManager: StatelessGraphObjectManager,
+    @param:Value("\${database.datasources.neo.type:}") databaseType: String = "",
 ) {
+
+    /** The store Guide runs on, by the name people know it by, or null if the type is not one of these. */
+    private val database: String? = DATABASE_NAMES[databaseType.uppercase()]
 
     /**
      * @param webUserId the authenticated caller (JWT subject), or null for anonymous/unauthenticated.
@@ -53,10 +58,13 @@ class GuideStatsService(
         val unpopularPages = ratings.filter { it.dislikes > it.likes }
             .sortedByDescending { it.dislikes }.take(TOP_PAGES_LIMIT)
         if (!isAdmin(webUserId)) {
-            return GuideStats(content = content, popularPages = popularPages, unpopularPages = unpopularPages)
+            return GuideStats(
+                content = content, database = database, popularPages = popularPages, unpopularPages = unpopularPages,
+            )
         }
         return GuideStats(
             content = content,
+            database = database,
             popularPages = popularPages,
             unpopularPages = unpopularPages,
             userCount = graphObjectManager.count(GuideUserData::class.java),
@@ -111,5 +119,14 @@ class GuideStatsService(
         const val TOP_USERS_LIMIT = 5
         const val TOP_PAGES_LIMIT = 5
         const val FEEDBACK_MIN_VOTES = 5
+
+        /** Drivine's database types (database.datasources.neo.type), as the About page names them. */
+        private val DATABASE_NAMES = mapOf(
+            "POSTGRES" to "Postgres",
+            "NEO4J" to "Neo4j",
+            "ORACLE" to "Oracle",
+            "FALKORDB" to "FalkorDB",
+            "MEMGRAPH" to "Memgraph",
+        )
     }
 }
