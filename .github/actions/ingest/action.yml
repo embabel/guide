@@ -1,0 +1,111 @@
+name: Ingest into a store
+description: >-
+  Builds Guide, starts it against the store the Java options name, ingests the references and checks the
+  docs made it. Leaves Guide running, its PID in GUIDE_PID, for the job to export the store and stop it.
+
+inputs:
+  java-options:
+    description: System properties that point Guide at its store (a Spring profile, a host)
+    required: true
+  artifactory-servers:
+    description: Maven servers for the Embabel Artifactory, from secrets.EMBABEL_ARTIFACTORY
+    required: true
+  openai-api-key:
+    description: Unused by ingestion, which embeds with ONNX; Guide starts with it set
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Set up JDK 25
+      uses: actions/setup-java@v4
+      with:
+        java-version: '25'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Configure Maven Settings
+      uses: s4u/maven-settings-action@v2.8.0
+      with:
+        servers: ${{ inputs.artifactory-servers }}
+
+    - name: Build guide (skip tests)
+      shell: bash
+      run: mvn -U -B package -DskipTests
+
+    - name: Pre-cache ONNX embedding model
+      shell: bash
+      run: |
+        echo "HACK: Pre-downloading ONNX model with curl -L to work around HuggingFace redirects not being followed by OnnxModelLoader. Remove this step once the upstream embabel-agent-starter-onnx handles redirects correctly."
+        MODEL_DIR="$HOME/.embabel/models/all-MiniLM-L6-v2"
+        mkdir -p "$MODEL_DIR"
+        echo "Downloading ONNX model to $MODEL_DIR..."
+        curl -L -o "$MODEL_DIR/model.onnx" \
+          "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/onnx/model.onnx"
+        curl -L -o "$MODEL_DIR/tokenizer.json" \
+          "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer.json"
+        echo "model.onnx: $(du -h "$MODEL_DIR/model.onnx" | cut -f1)"
+        echo "tokenizer.json: $(du -h "$MODEL_DIR/tokenizer.json" | cut -f1)"
+
+    - name: Start guide
+      shell: bash
+      env:
+        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+        ANTHROPIC_API_KEY: dummy-key
+        JAVA_OPTIONS: ${{ inputs.java-options }}
+      run: |
+        java $JAVA_OPTIONS -jar target/*.jar > /tmp/guide.log 2>&1 &
+        echo "GUIDE_PID=$!" >> $GITHUB_ENV
+
+    - name: Wait for guide to be ready
+      shell: bash
+      run: |
+        echo "Waiting for guide to start..."
+        for i in $(seq 1 60); do
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:1337/api/v1/data/stats 2>/dev/null || echo "000")
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "Guide is ready after ~${i}0 seconds"
+            exit 0
+          fi
+          echo "--- Attempt $i (${i}0s elapsed) HTTP=$HTTP_CODE ---"
+          tail -5 /tmp/guide.log 2>/dev/null || true
+          sleep 10
+        done
+        echo "ERROR: Guide did not start within 10 minutes"
+        cat /tmp/guide.log
+        exit 1
+
+    - name: Trigger ingestion and wait for completion
+      shell: bash
+      run: |
+        echo "Triggering ingestion via load-references endpoint..."
+        HTTP_CODE=$(curl -s -o /tmp/ingestion-response.txt -w "%{http_code}" --max-time 1500 \
+          -X POST http://localhost:1337/api/v1/data/load-references)
+        echo "Ingestion completed with HTTP $HTTP_CODE"
+        cat /tmp/ingestion-response.txt
+        if [ "$HTTP_CODE" != "200" ]; then
+          echo "ERROR: Ingestion failed"
+          tail -100 /tmp/guide.log
+          exit 1
+        fi
+
+    # Each source fails on its own and ingestion still answers 200, so check the docs made it:
+    # a seed without them (the hub not yet at a new docs version, or down) would leave every
+    # search with the supplementary material alone.
+    - name: Check the docs were ingested
+      shell: bash
+      run: |
+        python3 -I - src/main/resources/application.yml /tmp/ingestion-response.txt <<'PY'
+        import json, sys, urllib.parse, yaml
+        docs = [d for d in yaml.safe_load_all(open(sys.argv[1])) if d and 'guide' in d]
+        versioned = docs[0]['guide']['content']['versioned']
+        host = urllib.parse.urlparse(versioned['site']['sitemap']).netloc
+        result = json.load(open(sys.argv[2]))
+        failed = [f for f in result['failedUrls'] if urllib.parse.urlparse(f['source']).netloc == host]
+        loaded = [u for u in result['loadedUrls'] if urllib.parse.urlparse(u).netloc == host]
+        for f in failed:
+            print(f"::error::{f['source']}: {f['reason']}")
+        print(f"Docs {versioned['version']}: {len(loaded)} pages from {host} loaded, {len(failed)} failed")
+        sys.exit(1 if failed or not loaded else 0)
+        PY

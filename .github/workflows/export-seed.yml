@@ -6,8 +6,10 @@ on:
     - cron: '0 5 * * *' # Daily at 5am UTC (before hub docs workflow at 6am)
 
 jobs:
+  # The seed for Neo4j, which Aura runs on. It goes when Guide moves to Postgres.
   export-seed:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     services:
       neo4j:
@@ -29,96 +31,12 @@ jobs:
       - name: Checkout guide
         uses: actions/checkout@v4
 
-      - name: Set up JDK 25
-        uses: actions/setup-java@v4
+      - name: Ingest into Neo4j
+        uses: ./.github/actions/ingest
         with:
-          java-version: '25'
-          distribution: 'temurin'
-          cache: maven
-
-      - name: Configure Maven Settings
-        uses: s4u/maven-settings-action@v2.8.0
-        with:
-          servers: ${{ secrets.EMBABEL_ARTIFACTORY }}
-
-      - name: Build guide (skip tests)
-        run: mvn -U -B package -DskipTests
-
-      - name: Pre-cache ONNX embedding model
-        run: |
-          echo "HACK: Pre-downloading ONNX model with curl -L to work around HuggingFace redirects not being followed by OnnxModelLoader. Remove this step once the upstream embabel-agent-starter-onnx handles redirects correctly."
-          MODEL_DIR="$HOME/.embabel/models/all-MiniLM-L6-v2"
-          mkdir -p "$MODEL_DIR"
-          echo "Downloading ONNX model to $MODEL_DIR..."
-          curl -L -o "$MODEL_DIR/model.onnx" \
-            "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/onnx/model.onnx"
-          curl -L -o "$MODEL_DIR/tokenizer.json" \
-            "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer.json"
-          echo "model.onnx: $(du -h "$MODEL_DIR/model.onnx" | cut -f1)"
-          echo "tokenizer.json: $(du -h "$MODEL_DIR/tokenizer.json" | cut -f1)"
-
-      - name: Start guide
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: dummy-key
-        run: |
-          java \
-            -DNEO4J_URI=bolt://localhost:7687 \
-            -DNEO4J_USERNAME=neo4j \
-            -DNEO4J_PASSWORD=testpassword \
-            -jar target/*.jar > /tmp/guide.log 2>&1 &
-          echo "GUIDE_PID=$!" >> $GITHUB_ENV
-
-      - name: Wait for guide to be ready
-        run: |
-          echo "Waiting for guide to start..."
-          for i in $(seq 1 60); do
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:1337/api/v1/data/stats 2>/dev/null || echo "000")
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "Guide is ready after ~${i}0 seconds"
-              exit 0
-            fi
-            echo "--- Attempt $i (${i}0s elapsed) HTTP=$HTTP_CODE ---"
-            tail -5 /tmp/guide.log 2>/dev/null || true
-            sleep 10
-          done
-          echo "ERROR: Guide did not start within 10 minutes"
-          cat /tmp/guide.log
-          exit 1
-        timeout-minutes: 12
-
-      - name: Trigger ingestion and wait for completion
-        run: |
-          echo "Triggering ingestion via load-references endpoint..."
-          HTTP_CODE=$(curl -s -o /tmp/ingestion-response.txt -w "%{http_code}" \
-            -X POST http://localhost:1337/api/v1/data/load-references)
-          echo "Ingestion completed with HTTP $HTTP_CODE"
-          cat /tmp/ingestion-response.txt
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "ERROR: Ingestion failed"
-            tail -100 /tmp/guide.log
-            exit 1
-          fi
-        timeout-minutes: 25
-
-      # Each source fails on its own and ingestion still answers 200, so check the docs made it:
-      # a seed without them (the hub not yet at a new docs version, or down) would leave every
-      # search with the supplementary material alone.
-      - name: Check the docs were ingested
-        run: |
-          python3 -I - src/main/resources/application.yml /tmp/ingestion-response.txt <<'PY'
-          import json, sys, urllib.parse, yaml
-          docs = [d for d in yaml.safe_load_all(open(sys.argv[1])) if d and 'guide' in d]
-          versioned = docs[0]['guide']['content']['versioned']
-          host = urllib.parse.urlparse(versioned['site']['sitemap']).netloc
-          result = json.load(open(sys.argv[2]))
-          failed = [f for f in result['failedUrls'] if urllib.parse.urlparse(f['source']).netloc == host]
-          loaded = [u for u in result['loadedUrls'] if urllib.parse.urlparse(u).netloc == host]
-          for f in failed:
-              print(f"::error::{f['source']}: {f['reason']}")
-          print(f"Docs {versioned['version']}: {len(loaded)} pages from {host} loaded, {len(failed)} failed")
-          sys.exit(1 if failed or not loaded else 0)
-          PY
+          java-options: -DNEO4J_URI=bolt://localhost:7687 -DNEO4J_USERNAME=neo4j -DNEO4J_PASSWORD=testpassword
+          artifactory-servers: ${{ secrets.EMBABEL_ARTIFACTORY }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
 
       # The seed is content alone. Guide makes app nodes on start (the bot, the anonymous user, the system personas),
       # which the app owns on the target. Exported, the seed's bot collided with the target's, so the hub's cleanup
@@ -244,6 +162,61 @@ jobs:
               }
             })
             console.log('Dispatched seed-updated event to embabel/embabel-hub')
+
+      - name: Stop guide
+        if: always()
+        run: |
+          if [ -n "$GUIDE_PID" ]; then
+            kill $GUIDE_PID 2>/dev/null || true
+          fi
+  # The seed for Postgres: the content rows, and seed/postgres/apply.sql to load them. Not yet sent to the hub;
+  # it is the artifact `seed-postgres` until Guide runs on Postgres.
+  export-seed-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: guide
+          POSTGRES_PASSWORD: brahmsian
+          POSTGRES_DB: guide
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U guide -d guide"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: guide
+      PGPASSWORD: brahmsian
+      PGDATABASE: guide
+
+    steps:
+      - name: Checkout guide
+        uses: actions/checkout@v4
+
+      - name: Ingest into Postgres
+        uses: ./.github/actions/ingest
+        with:
+          java-options: -Dspring.profiles.active=postgres
+          artifactory-servers: ${{ secrets.EMBABEL_ARTIFACTORY }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Export seed database
+        run: scripts/export-postgres-seed.sh seed-output
+
+      - name: Upload seed artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed-postgres
+          path: seed-output/
+          retention-days: 30
 
       - name: Stop guide
         if: always()
