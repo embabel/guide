@@ -283,3 +283,7 @@ database:
       userName: ${POSTGRES_USERNAME:guide}
       password: ${POSTGRES_PASSWORD:brahmsian}
       databaseName: ${POSTGRES_DATABASE:guide}
+      # Connections in the pool, all held open. Cloud SQL's db-g1-small allows 47 to the guide user,
+      # and a Cloud Run deploy runs the new revision beside the old one until it takes the traffic,
+      # so two pools must fit: without a setting the pool was 40, and the next deploy could not start.
+      poolMax: ${POSTGRES_POOL_MAX:5}
