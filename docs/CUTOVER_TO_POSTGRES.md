@@ -94,3 +94,27 @@ On 2026-11-06, from prod Aura (Neo4j 5.27) into a local Postgres 17 holding the 
 
 A rehearsal copies users' email addresses, password hashes and chats onto the machine it runs on: drop the database
 after.
+
+## The cutover, 2026-11-07
+
+Run from a laptop, through `cloud-sql-proxy`, on Drivine 0.6.0:
+
+1. Tables: Guide started once against Cloud SQL (embabel/cloud-infrastructure#6, `db-g1-small`).
+2. Content: the `seed-postgres` artifact applied with `psql -f apply.sql` in 28 s.
+3. Freeze, 22:41:56 UTC: `gcloud run services update embabel-guide --ingress=internal`.
+4. Copy: 1,984 nodes and 3,151 edges in 54 s, counts equal. Read back: 222 users, 105 sessions, 1,168 messages,
+   9 personas, 50 feedback.
+5. Switch, 22:44:41 UTC: `gcloud run services replace` with the hub's `.github/cloud-run/guide-postgres.yaml` and an
+   image already built from `main`, which reopened ingress. Deploy to GCP uses that file since embabel/embabel-hub#89.
+   Chat was down about 3 minutes.
+
+Rollback is the last Aura revision, `embabel-guide-00048-sw6`:
+`gcloud run services update-traffic embabel-guide --to-revisions=embabel-guide-00048-sw6=100`.
+
+Learned on the way:
+
+- Set the pool size. Unset, Drivine's pool held 40 connections; `db-g1-small` allows 47 to the `guide` user, and a
+  deploy runs the new revision beside the old one, so the next deploy could not have started. `poolMax` is
+  `POSTGRES_POOL_MAX`, 5 by default (#74).
+- Text search is the slow part: about 1 s slower than on Aura (timed from a laptop, both services in us-east1), growing with the common
+  words in the query (the same shape on a laptop, about 3 times faster). Vector search is within 40 ms of Aura.
