@@ -6,7 +6,8 @@ on:
     - cron: '0 5 * * *' # Daily at 5am UTC (before hub docs workflow at 6am)
 
 jobs:
-  # The seed for Neo4j, which Aura runs on. It goes when Guide moves to Postgres.
+  # The seed for Neo4j: the hub's all-in-one Docker image (embabel/hub on Docker Hub) bundles Neo4j and loads it at start.
+  # Prod Guide runs on Postgres and takes the seed below.
   export-seed:
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -147,30 +148,13 @@ jobs:
           path: seed-output/
           retention-days: 30
 
-      - name: Trigger hub update
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.HUB_DISPATCH_TOKEN }}
-          script: |
-            await github.rest.repos.createDispatchEvent({
-              owner: 'embabel',
-              repo: 'embabel-hub',
-              event_type: 'seed-updated',
-              client_payload: {
-                run_id: String(context.runId),
-                repo: context.repo.owner + '/' + context.repo.repo
-              }
-            })
-            console.log('Dispatched seed-updated event to embabel/embabel-hub')
-
       - name: Stop guide
         if: always()
         run: |
           if [ -n "$GUIDE_PID" ]; then
             kill $GUIDE_PID 2>/dev/null || true
           fi
-  # The seed for Postgres: the content rows, and seed/postgres/apply.sql to load them. Not yet sent to the hub;
-  # it is the artifact `seed-postgres` until Guide runs on Postgres.
+  # The seed for Postgres, which prod Guide runs on: the content rows, and seed/postgres/apply.sql to load them.
   export-seed-postgres:
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -224,3 +208,24 @@ jobs:
           if [ -n "$GUIDE_PID" ]; then
             kill $GUIDE_PID 2>/dev/null || true
           fi
+
+  # Both seeds are ready: the hub's update-seed downloads them from this run and opens one pull request with them.
+  notify-hub:
+    needs: [export-seed, export-seed-postgres]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger hub update
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.HUB_DISPATCH_TOKEN }}
+          script: |
+            await github.rest.repos.createDispatchEvent({
+              owner: 'embabel',
+              repo: 'embabel-hub',
+              event_type: 'seed-updated',
+              client_payload: {
+                run_id: String(context.runId),
+                repo: context.repo.owner + '/' + context.repo.repo
+              }
+            })
+            console.log('Dispatched seed-updated event to embabel/embabel-hub')

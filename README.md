@@ -103,7 +103,7 @@ MATCH (c:Chunk) RETURN c.`metadata.version` AS version, count(*) AS chunks
 
 Chunks ingested before Guide moved to `GraphObjectManagerStore` carry the stamp as a plain `version` property instead. The filter does not read that, so those chunks match no version and are hidden from search: a store that old has to be ingested again, whatever version it holds.
 
-The seed database of the `embabel/hub` image is kept in step by the Export Seed Database workflow here, which ingests the configured version into a fresh database each day and sends the export to embabel-hub as a pull request. A second job makes the same seed for Postgres (`scripts/export-postgres-seed.sh`), the artifact `seed-postgres`, which nothing applies yet. GitHub disables a scheduled workflow after 60 days without activity in the repository, and the seed then goes stale without anything failing: check that the workflow is still enabled when coming back to this project.
+Guide's content is kept in step by the Export Seed Database workflow here, which ingests the configured version into a fresh database each day and sends the export to embabel-hub as a pull request. It makes two seeds: one for Postgres (`scripts/export-postgres-seed.sh`, loaded by `seed/postgres/apply.sql`), which the hub applies to prod's Cloud SQL when the pull request is merged; and one for Neo4j, which the all-in-one `embabel/hub` image loads at start. GitHub disables a scheduled workflow after 60 days without activity in the repository, and the seed then goes stale without anything failing: check that the workflow is still enabled when coming back to this project.
 
 ## Switching the Graph Database
 
