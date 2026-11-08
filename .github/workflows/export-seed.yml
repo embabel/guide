@@ -35,7 +35,7 @@ jobs:
       - name: Ingest into Neo4j
         uses: ./.github/actions/ingest
         with:
-          java-options: -DNEO4J_URI=bolt://localhost:7687 -DNEO4J_USERNAME=neo4j -DNEO4J_PASSWORD=testpassword
+          java-options: -Dspring.profiles.active=neo4j -DNEO4J_URI=bolt://localhost:7687 -DNEO4J_USERNAME=neo4j -DNEO4J_PASSWORD=testpassword
           artifactory-servers: ${{ secrets.EMBABEL_ARTIFACTORY }}
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
 
