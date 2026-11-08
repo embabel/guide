@@ -52,6 +52,7 @@ services:
     ports:
       - "${GUIDE_PORT:-1337}:1337"
     environment:
+      - SPRING_PROFILES_ACTIVE=neo4j  # this service runs beside the neo4j container; Guide's default is postgres
       - NEO4J_URI=bolt://neo4j:7687
       - NEO4J_HOST=neo4j
       - NEO4J_USERNAME=${NEO4J_USERNAME:-neo4j}

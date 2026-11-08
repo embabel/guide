@@ -107,24 +107,34 @@ Guide's content is kept in step by the Export Seed Database workflow here, which
 
 ## Switching the Graph Database
 
-`GraphObjectManagerStore` (from `embabel-agent-rag-graph`) supports five backends: **Neo4j** (default), **FalkorDB**, **Memgraph**, **Oracle 23ai** and **Postgres**. The active backend is selected by Spring profile in `src/main/resources/application.yml` — each profile sets `database.dataSources.neo.type`, and Drivine speaks to whichever engine that names.
+`GraphObjectManagerStore` (from `embabel-agent-rag-graph`) supports five backends: **Neo4j**, **FalkorDB**, **Memgraph**, **Oracle 23ai** and **Postgres** (the default, and what production runs on). The active backend is selected by Spring profile in `src/main/resources/application.yml` — each profile sets `database.dataSources.neo.type`, and Drivine speaks to whichever engine that names.
 
 | Backend  | Profile    | Default port | Compose profile |
 |----------|------------|--------------|-----------------|
+| Postgres (default) | `postgres` | `5432`       | `postgres`      |
 | Neo4j    | `neo4j`    | `7687` (bolt)| `neo4j`         |
 | FalkorDB | `falkordb` | `6379`       | `falkordb`      |
 | Memgraph | `memgraph` | `7688` (bolt)| `memgraph`      |
 | Oracle 23ai ![New](https://img.shields.io/badge/NEW-ff3e00?style=flat-square) | `oracle` | `1521`       | `oracle`        |
-| Postgres ![New](https://img.shields.io/badge/NEW-ff3e00?style=flat-square) | `postgres` | `5432`       | `postgres`      |
 
 [embabel-chat-store](https://github.com/embabel/embabel-chat-store) and [embabel-agent-rag-graph](https://github.com/embabel/embabel-agent-rag-graph) (see [`GraphObjectManagerStore`](https://github.com/embabel/embabel-agent-rag-graph/blob/main/src/main/kotlin/com/embabel/agent/rag/graph/GraphObjectManagerStore.kt)) use Drivine's `StatelessGraphObjectManager`, which generates openCypher in each engine's dialect, SQL/PGQ for Oracle, or plain SQL for Postgres.
+
+### Running locally on Postgres
+
+```bash
+docker compose --profile postgres up -d   # Postgres 17 with pgvector, on 5432
+./mvnw clean spring-boot:run              # the postgres profile, the default
+```
+
+Guide makes its tables, indexes and extensions in the `guide` database on first start. The database starts empty:
+fill it with an ingest (see [Loading data](#loading-data)).
 
 ### Switching at startup
 
 Change `spring.profiles.active` in `application.yml`, or override at launch:
 
 ```bash
-# Neo4j (default)
+# Neo4j
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=neo4j
 
 # FalkorDB
@@ -136,8 +146,11 @@ Change `spring.profiles.active` in `application.yml`, or override at launch:
 # Oracle
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=oracle
 
-# Postgres
-./mvnw spring-boot:run -Dspring-boot.run.profiles=postgres
+# Postgres (the default)
+./mvnw spring-boot:run
+
+# The jar, on another backend
+java -Dspring.profiles.active=neo4j -jar target/guide-*.jar
 ```
 
 ### Starting the matching container
@@ -538,7 +551,7 @@ For a fully-fledged client, see [hub.embabel.com](https://hub.embabel.com).
 
 ### Start (Docker Compose)
 
-Start `neo4j` + `guide` (the Java application):
+Start `neo4j` + `guide` (the Java application, on the `neo4j` profile):
 
 ```bash
 docker compose --profile java up --build -d
@@ -560,7 +573,7 @@ This approach ensures consistency across environments and simplifies onboarding 
 
 #### Running Neo4j only (for local Java development)
 
-If you're running the Java application locally (e.g., from your IDE), you can start only Neo4j:
+If you're running the Java application locally on Neo4j (e.g., from your IDE, with the `neo4j` profile), you can start only Neo4j:
 
 ```bash
 COMPOSE_PROFILES= docker compose up -d

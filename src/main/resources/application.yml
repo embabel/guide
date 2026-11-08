@@ -132,7 +132,7 @@ spring:
     ansi:
       enabled: always
   profiles:
-    active: neo4j  # Change to 'neo4j', 'falkordb', 'memgraph', 'oracle', 'postgres', or 'default' for TestContainers
+    active: postgres  # Change to 'neo4j', 'falkordb', 'memgraph', 'oracle', 'postgres', or 'default' for TestContainers
     config:
       activate:
         on-profile: neo4j
