@@ -79,9 +79,10 @@
             <artifactId>drivine4j-spring-boot-starter</artifactId>
             <!-- Keep in step with embabel-agent-rag-graph and embabel-chat-store, and with drivineVersion
                  in codegen-gradle/build.gradle.kts: code compiled against one Drivine minor line need not link
-                 with another (0.0.x does not link with 0.1.x). 0.6.0 is a drop-in for code built on 0.4.1: every
-                 Drivine member those libraries call is still there, checked with javap. -->
-            <version>0.6.0</version>
+                 with another (0.0.x does not link with 0.1.x). From 0.8.0 Drivine keeps a Postgres graph in store
+                 layout 2 and refuses one written in layout 1 (by 0.7.0 and before): a database Guide wrote on 0.6.0
+                 is migrated once, by StoreLayoutMigrationRunner, before this version first starts against it. -->
+            <version>0.9.0</version>
         </dependency>
 
         <!-- Oracle JDBC driver, for the `oracle` profile. Drivine does not bring it. -->
